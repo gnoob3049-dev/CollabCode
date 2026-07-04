@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
-import archiver from 'archiver';
+import archiver = require('archiver');
 
 export async function GET(
   _request: NextRequest,
