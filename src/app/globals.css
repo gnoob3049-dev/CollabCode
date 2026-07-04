@@ -163,7 +163,7 @@ button, a, [role="button"] {
   background-repeat: repeat;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.7;
+  opacity: 0.5;
 }
 
 /* Animated gradient orb */
@@ -686,4 +686,290 @@ textarea:focus,
 
 .fade-in-up {
   animation: fade-in-up 0.3s ease-out both;
+}
+
+/* ---- Task 6-d: Comprehensive styling enhancements ---- */
+
+/* 1. Breathing glow effect */
+@keyframes breathe-glow {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 0.8;
+  }
+}
+
+.breathe-glow {
+  animation: breathe-glow 3s ease-in-out infinite;
+}
+
+/* 2. Staggered grid animation (12 items) */
+.stagger-grid > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-grid > *:nth-child(2) { animation-delay: 50ms; }
+.stagger-grid > *:nth-child(3) { animation-delay: 100ms; }
+.stagger-grid > *:nth-child(4) { animation-delay: 150ms; }
+.stagger-grid > *:nth-child(5) { animation-delay: 200ms; }
+.stagger-grid > *:nth-child(6) { animation-delay: 250ms; }
+.stagger-grid > *:nth-child(7) { animation-delay: 300ms; }
+.stagger-grid > *:nth-child(8) { animation-delay: 350ms; }
+.stagger-grid > *:nth-child(9) { animation-delay: 400ms; }
+.stagger-grid > *:nth-child(10) { animation-delay: 450ms; }
+.stagger-grid > *:nth-child(11) { animation-delay: 500ms; }
+.stagger-grid > *:nth-child(12) { animation-delay: 550ms; }
+
+/* 3. Text gradient animation */
+@keyframes text-gradient-shift {
+  0% { background-position: 0% 50%; }
+  25% { background-position: 50% 100%; }
+  50% { background-position: 100% 50%; }
+  75% { background-position: 50% 0%; }
+  100% { background-position: 0% 50%; }
+}
+
+.gradient-text-animated {
+  background: linear-gradient(135deg, #238636, #58a6ff, #a371f7, #238636);
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: text-gradient-shift 4s ease infinite;
+}
+
+/* 4. Subtle float animation */
+@keyframes subtle-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.subtle-float {
+  animation: subtle-float 4s ease-in-out infinite;
+}
+
+/* 5. Skeleton loading shimmer */
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  background: rgba(48, 54, 61, 0.3);
+  border-radius: 4px;
+}
+
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(230, 237, 243, 0.04) 20%,
+    rgba(230, 237, 243, 0.08) 50%,
+    rgba(230, 237, 243, 0.04) 80%,
+    transparent 100%
+  );
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+/* 6. Badge pulse animation */
+@keyframes badge-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+.badge-pulse {
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+/* 7. Button press effect */
+.btn-press:active {
+  transform: scale(0.96);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+/* 8. Tooltip entrance */
+@keyframes tooltip-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.tooltip-enter {
+  animation: tooltip-enter 0.15s ease-out both;
+}
+
+/* 9. Scroll indicator bounce */
+@keyframes scroll-bounce {
+  0%, 100% {
+    transform: translateY(0) translateX(-50%);
+  }
+  50% {
+    transform: translateY(-3px) translateX(-50%);
+  }
+}
+
+.scroll-bounce {
+  animation: scroll-bounce 1.5s ease-in-out infinite;
+}
+
+/* 10. Connection status breathing */
+@keyframes status-breathe {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(35, 134, 54, 0.4);
+    opacity: 1;
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(35, 134, 54, 0);
+    opacity: 0.7;
+  }
+}
+
+.status-breathe {
+  animation: status-breathe 2.5s ease-in-out infinite;
+}
+
+/* 11. Radial gradient spotlight on hover */
+.spotlight-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.spotlight-glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  background: radial-gradient(
+    300px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(35, 134, 54, 0.06) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+.spotlight-glow:hover::after {
+  opacity: 1;
+}
+
+/* 13. Typing indicator animation (improved) */
+.typing-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.typing-indicator span {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: #8b949e;
+  animation: typing-dot-advanced 1.4s ease-in-out infinite;
+}
+
+.typing-indicator span:nth-child(1) {
+  animation-delay: 0s;
+}
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes typing-dot-advanced {
+  0%, 60%, 100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-4px) scale(1.2);
+    opacity: 1;
+  }
+}
+
+/* 14. Glow text shadow */
+.glow-text-green {
+  text-shadow: 0 0 20px rgba(35, 134, 54, 0.5);
+}
+
+/* 15. Editor panel border glow */
+.panel-glow {
+  box-shadow: inset 3px 0 8px -2px rgba(35, 134, 54, 0.15);
+}
+
+/* Code line staggered fade-in for landing page */
+@keyframes code-line-in {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.code-line-stagger {
+  animation: code-line-in 0.3s ease-out both;
+}
+
+/* Hover underline animation for links */
+.hover-underline-anim {
+  position: relative;
+  display: inline-block;
+}
+
+.hover-underline-anim::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 50%;
+  width: 0;
+  height: 1.5px;
+  background: #238636;
+  transition: width 0.3s ease, left 0.3s ease;
+}
+
+.hover-underline-anim:hover::after {
+  width: 100%;
+  left: 0;
+}
+
+/* Input animated bottom border on focus */
+.input-focus-line {
+  position: relative;
+}
+
+.input-focus-line::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: #238636;
+  border-radius: 1px;
+  transition: width 0.3s ease, left 0.3s ease;
+}
+
+.input-focus-line:focus-within::after {
+  width: 100%;
+  left: 0;
 }

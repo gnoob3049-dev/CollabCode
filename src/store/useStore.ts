@@ -14,14 +14,26 @@ export interface RoomFile {
   content: string;
 }
 
+export interface ActivityLogEntry {
+  id: string;
+  type: 'join' | 'leave' | 'create' | 'save' | 'run' | 'file_add' | 'file_delete' | 'settings_change' | 'language_change';
+  userId: string;
+  userName: string;
+  userColor: string;
+  detail: string;
+  timestamp: string;
+}
+
 export interface Room {
   id: string;
   name: string;
   inviteCode: string;
   isPublic: boolean;
+  isReadOnly?: boolean;
   language: string;
   files: RoomFile[];
   collaborators: string[];
+  activityLog?: ActivityLogEntry[];
   ownerId?: string;
   ownerName?: string;
   lastActiveAt?: string;

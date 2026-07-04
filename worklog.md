@@ -605,3 +605,393 @@ CollabCode is now at 20 components, 12 API routes, 1 mini-service, and 2 utility
 8. **Read-only mode** — Allow room owners to set rooms as read-only for collaborators
 9. **Collaborative selection highlighting** — Visual improvements to remote user selections (multi-line)
 10. **Audio notifications** — Sound effects for chat messages, run completion, errors
+
+---
+
+## Audio Notifications System (Task 6-c)
+
+### Overview
+Implemented a complete audio notification system for CollabCode using the Web Audio API, providing short, pleasant sound feedback for key events without requiring any external audio files.
+
+### Part 1: Audio Utility (`src/lib/audio.ts`)
+- Created `SoundType` union type: `'message' | 'success' | 'error' | 'join' | 'leave' | 'save' | 'run_start' | 'run_complete'`
+- `playSound(type, options?)` — generates sounds programmatically using `OscillatorNode` + `GainNode`:
+  - **message**: Two ascending tones (800Hz → 1200Hz, 100ms each)
+  - **success**: C-E-G arpeggio (523Hz, 659Hz, 784Hz, 80ms each)
+  - **error**: Low descending sawtooth buzz (300Hz → 200Hz, 200ms)
+  - **join**: Pleasant 880Hz sine chime with gentle attack/decay (200ms)
+  - **leave**: Soft descending tone (600Hz → 400Hz, 200ms)
+  - **save**: Quick 1000Hz sine blip (50ms)
+  - **run_start**: Short noise-burst click via high-freq square wave (30ms)
+  - **run_complete**: Delegates to `success` or `error` based on `hasErrors` option
+- `isAudioEnabled()` / `setAudioEnabled(bool)` / `toggleAudio()` — persists to `localStorage` key `collabcode-audio-enabled` (default: enabled)
+- Lazy `AudioContext` initialization — only created on first user interaction, auto-resumes if suspended
+
+### Part 2: Bell Icon Toggle
+- **EditorTopBar.tsx**: Added `Bell`/`BellOff` icon button before the Settings button with tooltip showing on/off state; filled `Bell` when enabled, outline `BellOff` when disabled; dimmed color when disabled
+- **EditorStatusBar.tsx**: Added small bell icon in the right section before the Live indicator with matching tooltip; consistent visual indicator
+
+### Part 3: Event Sound Integration (EditorPage.tsx)
+- **Chat message received** (panel not open): plays `message` sound + sonner toast with sender name and 50-char preview, auto-dismiss 4s, "Open chat" action opens panel
+- **User joined**: plays `join` chime
+- **User left**: plays `leave` tone
+- **Code run started**: plays `run_start` click
+- **Code run completed (success)**: plays `run_complete` (delegates to `success`) + toast "Code executed successfully"
+- **Code run completed (error)**: plays `run_complete` (delegates to `error`) + toast with first line of error
+- **Room saved**: plays `save` blip
+- **Save failed**: plays `error` sound
+- **Audio toggle**: plays `success` preview sound when enabling; shows toast confirmation
+
+### Files Modified
+- `src/lib/audio.ts` (new)
+- `src/components/collab/EditorTopBar.tsx`
+- `src/components/collab/EditorStatusBar.tsx`
+- `src/components/collab/EditorPage.tsx`
+---
+
+## Task 6-a: Version History Panel Component
+
+### New Files
+- `src/components/collab/VersionHistoryPanel.tsx` — Version History slide-in panel component with:
+  - Timeline of document snapshots showing relative timestamps ("2 min ago", "just now")
+  - Change type indicators (edit/add/delete) with colored icons and left accent lines (green=add, blue=edit, red=delete)
+  - Diff preview showing added lines in green, removed lines in red, with monospace font and line numbers
+  - Character/line count change stats per version entry
+  - "Restore" button to revert editor content to a snapshot
+  - "Preview" button to expand/collapse full file content at that point
+  - Search/filter versions by keyword
+  - Empty state with Clock icon and "No history yet. Start editing to see changes."
+  - GitHub-dark theme: bg-[#0d1117], bg-[#161b22], border-[#30363d], text-[#e6edf3]
+  - w-[380px] slide-in panel with AnimatePresence + motion animation
+  - Custom scrollbar styling, scrollable list
+
+### Modified Files
+- `src/components/collab/EditorTopBar.tsx`:
+  - Added `History` icon import from lucide-react
+  - Added `onToggleHistory: () => void` and `historyOpen: boolean` props
+  - Added History button before Settings button with blue highlight when active, tooltip "Version History (Ctrl+Shift+H)"
+
+- `src/components/collab/EditorPage.tsx`:
+  - Imported `History` icon, `VersionHistoryPanel` component, and `VersionSnapshot` type
+  - Added state: `versionHistoryOpen`, `versionSnapshots`, refs for `undoManagerRef`, `debounceTimerRef`, `lastSnapshotContentRef`
+  - Created Y.js `UndoManager` in the Y.js init effect, tracking local changes with debounced 3-second snapshot capture
+  - Initial snapshot created 1 second after doc loads
+  - Snapshots limited to 50 (oldest removed when exceeded)
+  - Each snapshot: `{ id, timestamp, content, type, lineCount, charCount, fileName, prevContent }`
+  - Added `handleVersionRestore` to restore editor content from a snapshot
+  - Added `handleToggleVersionHistory` toggle callback
+  - Added `Ctrl+Shift+H` keyboard shortcut to toggle version history
+  - Added "Toggle Version History" command to command palette under View category with History icon
+  - Escape key also closes version history panel
+  - Passed `onToggleHistory` and `historyOpen` props to EditorTopBar
+  - Rendered `<VersionHistoryPanel>` after the right panel (Chat/AI) in the main content flex container
+
+### Verification
+- ESLint: Zero errors
+- Dev server compiles successfully
+
+---
+
+## Completed: Activity Log Panel and Read-Only Mode (Task 6-b)
+
+### Part 1: Activity Log Panel
+
+Created `src/components/collab/ActivityLogPanel.tsx` — a slide-in panel showing room activity events.
+
+- **Props**: `isOpen`, `onClose`, `activities: ActivityLogEntry[]`
+- **Event type config** with icons/colors:
+  - join → LogIn, #238636 (green)
+  - leave → LogOut, #f85149 (red)
+  - create → Plus, #58a6ff (blue)
+  - save → Save, #a371f7 (purple)
+  - run → Play, #f0883e (orange)
+  - file_add → FilePlus, #238636
+  - file_delete → Trash2, #f85149
+  - settings_change → Settings, #8b949e
+  - language_change → Code, #79c0ff
+- **Visual design**: Panel slides in from right (w-[360px]), GitHub-dark theme (#161b22 background), header with Activity icon + event count badge, scrollable feed with `ScrollArea`, each entry shows colored avatar (first letter), user name, detail text with type icon, and relative timestamp ("just now", "2m ago", "1h ago", "1d ago")
+- **Time grouping**: Activities grouped into "Today", "Yesterday", "Earlier" sections with sticky headers
+- **Empty state**: Activity icon with "No activity yet" message
+- **Animation**: Framer Motion slide-in/out from right edge
+
+### Part 2: Read-Only Mode
+
+**RoomSettingsModal.tsx**:
+- Added "Read-Only Mode" toggle using shadcn/ui Switch component (only visible to room owner via `isOwner` check)
+- Description text: "Prevent collaborators from editing files"
+- Lock icon that changes color when enabled (#f0883e orange)
+- When toggled, shows confirmation AlertDialog with ShieldAlert icon
+- AlertDialog explains the effect and has Cancel/Enable(or Disable) buttons
+- Immediately persists to room via PUT API call
+- Local state rollback on failure
+
+**EditorTopBar.tsx**:
+- Added `isReadOnly` and `isOwner` props
+- Computed `isLockedForUser = isReadOnly && !isOwner`
+- Lock icon shown next to room name when locked for user
+- Run button disabled when locked for user
+- Save button disabled when locked for user
+
+**FileTree.tsx**:
+- Added `isReadOnly` prop
+- "New File" button disabled when read-only
+- Context menu Rename/Delete items hidden when read-only
+- Double-click to rename blocked when read-only
+- "New File" button at bottom of list hidden when read-only
+
+**EditorPage.tsx**:
+- Computed `isOwner` and `isLockedForUser` from `currentRoom` and `user`
+- Monaco editor set to `readOnly: true` when `isLockedForUser` (both initial options and reactive `useEffect`)
+- Orange banner displayed below top bar: "🔒 This room is in read-only mode"
+- File operations (create/delete) show toast error when locked
+- Run code shows toast error when locked
+- `isReadOnly` and `isOwner` passed to EditorTopBar
+- `isReadOnly` passed to FileTree
+
+### Part 3: Activity Logging
+
+**EditorPage.tsx** — Added `logActivity(type, detail)` helper:
+- Creates `ActivityLogEntry` with unique ID, user info, timestamp
+- Appends to local `activities` state
+- Persists to room via PUT `/api/rooms/[roomId]` with `activityLog` field
+- Non-blocking (fire-and-forget, errors silently caught)
+
+**Logged events**:
+- `file_add` → "added file {name}" (in handleCreateFile)
+- `file_delete` → "deleted file {name}" (in handleDeleteFile)
+- `run` → "ran code in {filename}" (in handleRun)
+- `save` → "saved the document" (in handleSave)
+- `language_change` → "changed language to {lang}" (in handleLanguageChange)
+
+**ActivityLogPanel** rendered in EditorPage, toggled via `activityLogOpen` state
+
+### API Changes
+
+**`/api/rooms/[roomId]` (GET)**: Now returns `isReadOnly` and `activityLog` fields in response
+
+**`/api/rooms/[roomId]` (PUT)**: Now accepts `isReadOnly` (boolean) and `activityLog` (array) in request body; updates `lastActiveAt` on every update
+
+**`/api/rooms` (POST)**: Now accepts `isReadOnly` field in request body; returns `isReadOnly` in response
+
+### Verification
+- ESLint: Zero errors
+- Dev server compiles successfully
+
+---
+
+## Task 6-d: Comprehensive Styling Enhancements
+
+### Part 1: globals.css — 15 New Animations & Effects
+- **breathe-glow**: Scale 1→1.02→1 + opacity 0.5→0.8→0.5 (3s infinite)
+- **stagger-grid**: Nth-child delays up to 12 items (50ms apart)
+- **text-gradient-shift / gradient-text-animated**: Green→blue→purple cycling gradient text (4s)
+- **subtle-float**: translateY 0→-3px (4s infinite)
+- **skeleton-shimmer**: Moving highlight overlay for loading states
+- **badge-pulse**: Scale 1→1.15 notification badge pulse
+- **btn-press:active**: scale(0.96) with darker shadow on press
+- **tooltip-enter**: scale(0.95)→1 + opacity entrance
+- **scroll-bounce**: Bounce for scroll-to-bottom buttons
+- **status-breathe**: Box-shadow + opacity breathing for connection indicators
+- **spotlight-glow**: Radial gradient glow behind cards on hover (::after)
+- **typing-indicator**: 3 bouncing dots with scale+opacity variation
+- **glow-text-green**: text-shadow 0 0 20px green
+- **panel-glow**: Inset box-shadow for editor panel left borders
+- **noise-bg::before opacity**: Updated from 0.7 to 0.5 for subtler effect
+- **code-line-stagger**: Slide-in animation for code lines
+- **hover-underline-anim**: Animated underline from center on hover
+- **input-focus-line**: Animated bottom border slides from center on focus
+
+### Part 2: Landing Page Enhancements
+- Stats counter values: Changed to `gradient-text-animated` for cycling color effect
+- Feature cards: Added `hover-lift` and `spotlight-glow` classes
+- Footer: Replaced solid border-t with gradient top border (green→blue), improved spacing
+- Get Started button: Added `glow-btn-green btn-press` classes
+- View Demo button: Added `glow-purple btn-press` on hover
+
+### Part 3: Dashboard Enhancements
+- Room cards: Added `hover-lift` class + gradient overlay at bottom for depth
+- Empty state: Larger illustration (w-24 h-24), `float-bob` on icon, `breathe-glow` pulsing ring
+- Stats bar: Individual stat cards with subtle gradient backgrounds, `hover:scale-[1.03]`
+- Create Room dialog: Template grid uses `stagger-grid` class
+- Search input: Focus glow effect (`focus:shadow`)
+- Profile dropdown: Menu items have `hover:translate-x-0.5` transition
+
+### Part 4: Editor Enhancements
+- **EditorStatusBar**: `status-breathe` on connection dot, `panel-glow` on accent line, `backdrop-blur-sm` on all tooltips
+- **FileTree**: Active file dot uses `status-breathe` with enhanced glow, New File button has `glow-btn-green` on hover, empty state uses `breathe-glow` + `float-bob`
+- **ChatPanel**: Message bubbles have enhanced hover (gradient border hint, shadow), improved typing indicator with `typing-indicator` class, scroll button has `scroll-bounce`, timestamps have `fade-in-up`, avatars have ring pulse on hover
+- **OutputPanel**: Tab active states have colored glow shadows, output lines have staggered `fade-in-up` animation
+- **AIPanel**: Quick action buttons have `hover-lift btn-press`, response area has gradient border-left (green→blue→purple), improved streaming indicator dots, enhanced input focus glow
+
+### Part 5: Command Palette Polish
+- Backdrop: Enhanced to `backdrop-blur-md`
+- Command items: Smooth `transition-all duration-150` hover
+- Keyboard shortcut badges: Subtle gradient background
+- Left accent line: Already present, enhanced with smooth transitions
+
+### Part 6: Login/Register Page Polish
+- Form cards: Added `shimmer-border` for animated gradient border
+- Input fields: Added `input-focus-line` for animated bottom border on focus
+- Submit buttons: Added `btn-press` for press effect
+- Links (Register/Sign in/Forgot password): Changed to `hover-underline-anim` for animated underline
+- Decorative code: Reduced opacity from 0.04 to 0.03, added subtle blur(0.3px)
+
+### Verification (Task 6-d)
+- ESLint: Zero errors
+
+---
+Task ID: 6
+Agent: Main Agent + 4 Subagents (full-stack-developer)
+Task: QA testing, bug fixes, 4 new features, and comprehensive styling improvements (Cycle 6)
+
+Work Log:
+- Read worklog.md (Cycles 1-5) to understand full project state
+- QA tested via agent-browser: landing → register → dashboard → create room (with templates) → editor → all panels
+- Found and fixed: Register API 500 on duplicate email (Prisma P2002 race condition → catch returns 409)
+- Launched 4 parallel subagents for features and styling
+
+- Subagent 6-a: Version History Panel
+  - New file: src/components/collab/VersionHistoryPanel.tsx
+  - Features: Y.js UndoManager tracking, debounced 3s snapshots, 50-snapshot limit, diff preview (green/red), restore/preview buttons, search filter, relative timestamps
+  - Updated EditorPage.tsx: UndoManager init, snapshot capture, Ctrl+Shift+H shortcut, command palette entry
+  - Updated EditorTopBar.tsx: History button with blue highlight, tooltip
+
+- Subagent 6-b: Activity Log + Read-Only Mode
+  - New file: src/components/collab/ActivityLogPanel.tsx
+  - Features: 9 event types with colored icons, grouped by Today/Yesterday/Earlier, chronological feed, relative timestamps
+  - Read-Only Mode: Toggle in RoomSettingsModal (owner-only), Monaco readOnly, editor banner, disabled Run/Save/FileOps for non-owners, Lock icon in topbar
+  - Activity Logging: logActivity() helper, events logged (file_add, file_delete, run, save, language_change), persisted to API
+  - API: Updated rooms POST/GET/PUT to handle isReadOnly and activityLog fields
+  - Schema: Added isReadOnly and activityLog columns to Room model
+
+- Subagent 6-c: Audio Notifications
+  - New file: src/lib/audio.ts (Web Audio API, 8 sound types, localStorage persistence)
+  - Sounds: message (ascending tones), success (C-E-G arpeggio), error (descending buzz), join (chime), leave (soft tone), save (blip), run_start (click), run_complete
+  - Bell/BellOff toggle in EditorTopBar and EditorStatusBar
+  - Sound integration: chat (panel closed), run start/complete, save, user join/leave
+  - Toast enhancements: Chat toast with preview, run success/error toasts
+
+- Subagent 6-d: Comprehensive Styling Enhancements
+  - globals.css: 15+ new CSS animations (breathe-glow, stagger-grid, gradient-text-animated, subtle-float, skeleton-shimmer, badge-pulse, btn-press, tooltip-enter, scroll-bounce, status-breathe, spotlight-glow, glow-text-green, panel-glow, typing-indicator, input-focus-line, code-line-stagger, hover-underline-anim)
+  - Landing Page: gradient-text-animated stats, hover-lift + spotlight-glow on feature cards, gradient footer border, glow effects on CTA buttons
+  - Dashboard: Room card depth overlay, enhanced empty state (breathe-glow, float-bob), stat card gradients, stagger-grid on templates, search glow, dropdown translate hover
+  - Editor: StatusBar (status-breathe, panel-glow), FileTree (enhanced active glow, glow New File), ChatPanel (gradient hover, improved typing, scroll-bounce, timestamp fade-in, avatar ring pulse), OutputPanel (colored tab glow, staggered output lines), AIPanel (hover-lift, gradient response border, enhanced streaming dots)
+  - Command Palette: backdrop-blur-md, smooth hover transitions, gradient shortcut badges
+  - Login/Register: shimmer-border on cards, input-focus-line animated borders, btn-press, hover-underline-anim on links, refined decorative code
+
+Stage Summary:
+- 1 bug fix: Register API race condition (P2002 → 409)
+- 4 new features: Version History, Activity Log, Read-Only Mode, Audio Notifications
+- 2 schema changes: isReadOnly (Boolean), activityLog (String) on Room model
+- 3 new files: VersionHistoryPanel.tsx, ActivityLogPanel.tsx, audio.ts
+- Comprehensive styling overhaul across 10+ components with 15+ new CSS animations
+- ESLint: Zero errors throughout
+- Dev server: All compiles successful
+- QA verified: All 13 toolbar buttons present, all panels open correctly, settings show Read-Only toggle
+
+## Current Project Status Assessment (After Cycle 6)
+
+CollabCode is now at 23+ components, 12 API routes, 1 mini-service, and 3 utility modules. This cycle added 4 major new features (Version History with Y.js UndoManager, Activity Log with 9 event types, Read-Only Mode with owner controls, Audio Notifications with 8 Web Audio API sounds) and a comprehensive styling overhaul with 15+ new CSS animations across all components. The application now has a significantly more polished UI with breathing glows, gradient text animations, spotlight hover effects, press feedback, and enhanced micro-interactions throughout.
+
+## Completed in This Round (Cron Review Cycle 6)
+
+### Bug Fixes
+1. **Register API Race Condition (500 → 409)** — When two registration requests arrive simultaneously, both pass the `findUnique` check and one fails with Prisma P2002 unique constraint violation. Added `error.code === 'P2002'` catch to return 409 "Email already registered" instead of 500.
+
+### New Features (4)
+
+1. **Version History Panel** — New `VersionHistoryPanel.tsx`:
+   - Y.js UndoManager tracks document changes per file
+   - Debounced snapshots every 3s of inactivity, 50-snapshot limit
+   - Colored accent lines (green=add, blue=edit, red=delete), diff preview, restore/preview, search filter
+   - Ctrl+Shift+H shortcut, command palette entry, History button in toolbar
+
+2. **Activity Log Panel** — New `ActivityLogPanel.tsx`:
+   - 9 event types with colored icons, grouped by Today/Yesterday/Earlier
+   - logActivity() helper persists to API, slide-in panel (w-360px)
+
+3. **Read-Only Mode** — Full read-only room support:
+   - Toggle in Room Settings (owner-only, with confirmation)
+   - Monaco readOnly, orange banner, disabled Run/Save/FileOps for non-owners
+   - Lock icon in topbar, schema + API support
+
+4. **Audio Notifications** — Web Audio API sound system:
+   - 8 programmatically generated sounds (no audio files)
+   - Bell/BellOff toggle in toolbar and status bar
+   - Context-aware (chat sound only when panel closed)
+   - Enhanced toasts with chat preview and run feedback
+
+### Major Styling Improvements (15+ new CSS animations)
+- globals.css: breathe-glow, stagger-grid, gradient-text-animated, subtle-float, skeleton-shimmer, badge-pulse, btn-press, tooltip-enter, scroll-bounce, status-breathe, spotlight-glow, glow-text-green, panel-glow, typing-indicator, input-focus-line, hover-underline-anim
+- Landing: gradient text stats, spotlight-glow on cards, gradient footer, glow buttons
+- Dashboard: room card depth overlay, enhanced empty state, stat gradients, stagger templates
+- Editor: StatusBar breathe, FileTree glow, ChatPanel gradient hover, OutputPanel staggered lines, AIPanel gradient border
+- Command Palette: backdrop-blur-md, gradient badges
+- Login/Register: shimmer-border, input-focus-line, btn-press, hover-underline-anim
+
+### Schema Changes
+- Room: added `isReadOnly Boolean @default(false)`, `activityLog String @default("[]")`
+
+### QA Testing Results
+- ✅ All pages render with new styling
+- ✅ All 13 toolbar buttons present (including History, Audio)
+- ✅ Version History panel opens, Settings shows Read-Only toggle
+- ✅ Keyboard shortcuts dialog works
+- ✅ ESLint: Zero errors
+- ✅ Dev server: All compiles successful
+
+### QA Screenshots Saved (22 screenshots)
+- qa-6-01 through qa-6-25 in /home/z/my-project/download/
+
+## File Changes Summary
+
+### New Files
+- `src/components/collab/VersionHistoryPanel.tsx`
+- `src/components/collab/ActivityLogPanel.tsx`
+- `src/lib/audio.ts`
+
+### Modified Files
+- `prisma/schema.prisma` — isReadOnly, activityLog on Room
+- `src/store/useStore.ts` — ActivityLogEntry interface, Room updates
+- `src/app/api/auth/register/route.ts` — P2002 race condition fix
+- `src/app/api/rooms/route.ts` — Accept isReadOnly
+- `src/app/api/rooms/[roomId]/route.ts` — Return/accept isReadOnly, activityLog
+- `src/components/collab/EditorPage.tsx` — All 4 features integrated
+- `src/components/collab/EditorTopBar.tsx` — History, Audio, Lock buttons
+- `src/components/collab/EditorStatusBar.tsx` — Audio toggle, status-breathe, panel-glow
+- `src/components/collab/RoomSettingsModal.tsx` — Read-Only toggle
+- `src/components/collab/FileTree.tsx` — Read-only, styling
+- `src/components/collab/ChatPanel.tsx` — Styling enhancements
+- `src/components/collab/OutputPanel.tsx` — Styling enhancements
+- `src/components/collab/AIPanel.tsx` — Styling enhancements
+- `src/components/collab/LandingPage.tsx` — Styling enhancements
+- `src/components/collab/DashboardPage.tsx` — Styling enhancements
+- `src/components/collab/LoginPage.tsx` — Styling enhancements
+- `src/components/collab/RegisterPage.tsx` — Styling enhancements
+- `src/components/collab/CommandPalette.tsx` — Styling enhancements
+- `src/app/globals.css` — 15+ new CSS animations
+
+## Services Running
+- Next.js dev server: port 3000
+- CollabCode WebSocket service: port 3003
+
+## Unresolved Issues / Risks
+1. **Socket.io connection shows "Offline"** — Caddy gateway may not properly proxy WebSocket for Socket.io polling transport. Critical for chat/presence.
+2. **Y.js Document Persistence** — In-memory on WebSocket server. Unsaved documents lost on restart.
+3. **Mobile bottom sheets** — CSS animations defined but not yet integrated into chat/AI panels.
+4. **Collaborative cursors** — Requires 2+ connected users to test visually. Implementation complete.
+5. **Code Execution** — Only JS and Python supported. Other languages return "Unsupported language".
+6. **Version History persistence** — Currently client-side only. Could be persisted to room data via API.
+7. **agent-browser limitations** — Cannot type into Monaco editor. Radix overlays interfere with click targeting.
+
+## Priority Recommendations for Next Phase
+1. **Fix Socket.io WebSocket through Caddy** — Critical for chat and presence
+2. **Mobile responsive overhaul** — Bottom sheets, responsive file tree, touch-friendly toolbar
+3. **Version History persistence** — Save snapshots to room data via API
+4. **Multi-language code execution** — TypeScript (ts-node), HTML (iframe), CSS (preview)
+5. **File tree drag-and-drop** — Reorder files by dragging
+6. **Collaborative selection highlighting** — Multi-line remote selections
+7. **Performance optimization** — Lazy load Monaco, optimize Y.js for large files
+8. **Diff view in Version History** — Side-by-side diff comparison
+9. **Emoji reactions in chat** — Reaction picker on messages
+10. **Export/Download room** — Download all files as ZIP

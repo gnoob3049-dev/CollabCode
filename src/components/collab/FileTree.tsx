@@ -43,6 +43,7 @@ interface FileTreeProps {
   onDeleteFile: (name: string) => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
+  isReadOnly?: boolean;
 }
 
 function getFileIcon(fileName: string) {
@@ -79,6 +80,7 @@ export default function FileTree({
   onDeleteFile,
   collapsed,
   onToggleCollapse,
+  isReadOnly = false,
 }: FileTreeProps) {
   const [showNewFileInput, setShowNewFileInput] = useState(false);
   const [newFileName, setNewFileName] = useState('');
@@ -177,24 +179,28 @@ export default function FileTree({
                       </button>
                     </ContextMenuTrigger>
                     <ContextMenuContent className="w-48 bg-[#161b22] border-[#30363d] text-[#e6edf3]">
-                      <ContextMenuItem
-                        className="text-[#e6edf3] focus:bg-[#30363d] focus:text-[#e6edf3]"
-                        onClick={() => {
-                          setRenamingFile(file);
-                          setRenameValue(file);
-                        }}
-                      >
-                        <Pencil className="size-4 mr-2" />
-                        Rename
-                      </ContextMenuItem>
-                      <ContextMenuSeparator className="bg-[#30363d]" />
-                      <ContextMenuItem
-                        className="text-red-400 focus:bg-[#30363d] focus:text-red-400"
-                        onClick={() => onDeleteFile(file)}
-                      >
-                        <Trash2 className="size-4 mr-2" />
-                        Delete
-                      </ContextMenuItem>
+                      {!isReadOnly && (
+                        <ContextMenuItem
+                          className="text-[#e6edf3] focus:bg-[#30363d] focus:text-[#e6edf3]"
+                          onClick={() => {
+                            setRenamingFile(file);
+                            setRenameValue(file);
+                          }}
+                        >
+                          <Pencil className="size-4 mr-2" />
+                          Rename
+                        </ContextMenuItem>
+                      )}
+                      {!isReadOnly && <ContextMenuSeparator className="bg-[#30363d]" />}
+                      {!isReadOnly && (
+                        <ContextMenuItem
+                          className="text-red-400 focus:bg-[#30363d] focus:text-red-400"
+                          onClick={() => onDeleteFile(file)}
+                        >
+                          <Trash2 className="size-4 mr-2" />
+                          Delete
+                        </ContextMenuItem>
+                      )}
                     </ContextMenuContent>
                   </ContextMenu>
                 </TooltipTrigger>
@@ -225,6 +231,7 @@ export default function FileTree({
                 size="icon"
                 className="size-6 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#161b22]"
                 onClick={() => setShowNewFileInput(true)}
+                disabled={isReadOnly}
               >
                 <Plus className="size-3.5" />
               </Button>
@@ -307,15 +314,16 @@ export default function FileTree({
                       )}
                       onClick={() => onSelectFile(file)}
                       onDoubleClick={() => {
+                        if (isReadOnly) return;
                         setRenamingFile(file);
                         setRenameValue(file);
                       }}
                     >
-                      {/* Active file animated green dot */}
+                      {/* Active file - enhanced glow left border */}
                       {isActive && (
                         <span
-                          className="shrink-0 w-2 h-2 rounded-full bg-[#238636] animate-[pulse-dot_2s_ease-in-out_infinite]"
-                          style={{ boxShadow: '0 0 6px rgba(35, 134, 54, 0.6)' }}
+                          className="shrink-0 w-2 h-2 rounded-full bg-[#238636] animate-[status-breathe_2.5s_ease-in-out_infinite]"
+                          style={{ boxShadow: '0 0 8px rgba(35, 134, 54, 0.6), 0 0 16px rgba(35, 134, 54, 0.2)' }}
                         />
                       )}
                       {!isActive && (
@@ -347,24 +355,28 @@ export default function FileTree({
                     </div>
                   </ContextMenuTrigger>
                   <ContextMenuContent className="w-48 bg-[#161b22] border-[#30363d] text-[#e6edf3]">
-                    <ContextMenuItem
-                      className="text-[#e6edf3] focus:bg-[#30363d] focus:text-[#e6edf3]"
-                      onClick={() => {
-                        setRenamingFile(file);
-                        setRenameValue(file);
-                      }}
-                    >
-                      <Pencil className="size-4 mr-2" />
-                      Rename
-                    </ContextMenuItem>
-                    <ContextMenuSeparator className="bg-[#30363d]" />
-                    <ContextMenuItem
-                      className="text-red-400 focus:bg-[#30363d] focus:text-red-400"
-                      onClick={() => onDeleteFile(file)}
-                    >
-                      <Trash2 className="size-4 mr-2" />
-                      Delete
-                    </ContextMenuItem>
+                    {!isReadOnly && (
+                      <ContextMenuItem
+                        className="text-[#e6edf3] focus:bg-[#30363d] focus:text-[#e6edf3]"
+                        onClick={() => {
+                          setRenamingFile(file);
+                          setRenameValue(file);
+                        }}
+                      >
+                        <Pencil className="size-4 mr-2" />
+                        Rename
+                      </ContextMenuItem>
+                    )}
+                    {!isReadOnly && <ContextMenuSeparator className="bg-[#30363d]" />}
+                    {!isReadOnly && (
+                      <ContextMenuItem
+                        className="text-red-400 focus:bg-[#30363d] focus:text-red-400"
+                        onClick={() => onDeleteFile(file)}
+                      >
+                        <Trash2 className="size-4 mr-2" />
+                        Delete
+                      </ContextMenuItem>
+                    )}
                   </ContextMenuContent>
                 </ContextMenu>
                 {/* Subtle divider between files */}
@@ -376,10 +388,10 @@ export default function FileTree({
           })}
 
           {/* NEW FILE button at bottom of list */}
-          {files.length > 0 && !showNewFileInput && (
+          {files.length > 0 && !showNewFileInput && !isReadOnly && (
             <button
               onClick={() => setShowNewFileInput(true)}
-              className="flex items-center gap-2 px-3 py-2 mx-1 mt-1 rounded-md text-xs text-[#238636] hover:bg-[#238636]/10 transition-colors duration-150 w-full"
+              className="flex items-center gap-2 px-3 py-2 mx-1 mt-1 rounded-md text-xs text-[#238636] hover:bg-[#238636]/10 hover:glow-btn-green transition-all duration-200 w-full"
             >
               <Plus className="size-3" />
               <span className="font-medium">New File</span>
@@ -388,11 +400,11 @@ export default function FileTree({
 
           {files.length === 0 && !showNewFileInput && (
             <div className="px-2 py-8 text-center">
-              {/* Pulsing border container with animated FileCode icon */}
+              {/* Breathing glow container with animated FileCode icon */}
               <div
-                className="w-14 h-14 mx-auto mb-3 rounded-xl border border-[#30363d] flex items-center justify-center animate-[pulse-border-glow_3s_ease-in-out_infinite] bg-[#0d1117]"
+                className="w-14 h-14 mx-auto mb-3 rounded-xl border border-[#30363d] flex items-center justify-center breathe-glow bg-[#0d1117]"
               >
-                <FileCode className="size-7 text-[#484f58] animate-pulse" />
+                <FileCode className="size-7 text-[#484f58] float-bob" />
               </div>
               <p className="text-[#8b949e] text-xs font-medium">
                 No files yet

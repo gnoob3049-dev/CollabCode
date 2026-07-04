@@ -275,7 +275,7 @@ export default function AIPanel({
               size="sm"
               className={cn(
                 'justify-start gap-1.5 h-7 text-xs text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#161b22] px-2 group transition-all duration-200',
-                'hover:shadow-sm hover:translate-y-[-1px]',
+                'hover:shadow-sm hover:-translate-y-0.5 hover-lift btn-press',
               )}
               onClick={() => handleQuickAction(action)}
               disabled={loading || isStreaming || !currentCode.trim()}
@@ -311,10 +311,10 @@ export default function AIPanel({
 
           {isStreaming && response && (
             <div className="flex items-center gap-1.5 mb-3 text-[10px] text-purple-400">
-              <span className="flex gap-0.5">
-                <span className="w-1 h-1 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-1 h-1 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-1 h-1 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+              <span className="typing-indicator">
+                <span style={{ backgroundColor: '#a371f7', width: '4px', height: '4px' }} />
+                <span style={{ backgroundColor: '#a371f7', width: '4px', height: '4px' }} />
+                <span style={{ backgroundColor: '#a371f7', width: '4px', height: '4px' }} />
               </span>
               <span>Generating...</span>
             </div>
@@ -327,7 +327,11 @@ export default function AIPanel({
           )}
 
           {response && (
-            <div className="prose prose-invert prose-sm max-w-none text-[#e6edf3] [&_code]:bg-[#161b22] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_code]:text-purple-300 [&_code]:border [&_code]:border-[#30363d]/50 [&_pre]:bg-[#0d1117] [&_pre]:border [&_pre]:border-[#30363d] [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:my-2 [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-xs [&_p]:text-sm [&_p]:leading-relaxed [&_ul]:text-sm [&_ol]:text-sm [&_li]:text-sm [&_strong]:text-[#e6edf3] [&_a]:text-[#58a6ff] [&_a]:no-underline">
+            <div className="prose prose-invert prose-sm max-w-none text-[#e6edf3] [&_code]:bg-[#161b22] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_code]:text-purple-300 [&_code]:border [&_code]:border-[#30363d]/50 [&_pre]:bg-[#0d1117] [&_pre]:border [&_pre]:border-[#30363d] [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:my-2 [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-xs [&_p]:text-sm [&_p]:leading-relaxed [&_ul]:text-sm [&_ol]:text-sm [&_li]:text-sm [&_strong]:text-[#e6edf3] [&_a]:text-[#58a6ff] [&_a]:no-underline border-l-2 border-transparent pl-3"
+              style={{
+                borderImage: 'linear-gradient(to bottom, #238636, #58a6ff, #a371f7) 1',
+              }}
+            >
               <ReactMarkdown>{response}</ReactMarkdown>
               {!isStreaming && !loading && (
                 <div className="border-t border-[#30363d]/50 mt-4 pt-2 text-[10px] text-[#30363d] text-right">
@@ -353,7 +357,7 @@ export default function AIPanel({
 
       {/* Input */}
       <div className="p-3 border-t border-[#30363d] shrink-0">
-        <div className="flex items-end gap-2 bg-[#161b22] rounded-xl border border-[#30363d] p-2 focus-within:border-purple-500/40 focus-within:shadow-[0_0_8px_rgba(188,140,255,0.15)] transition-all">
+        <div className="flex items-end gap-2 bg-[#161b22] rounded-xl border border-[#30363d] p-2 focus-within:border-purple-500/40 focus-within:shadow-[0_0_8px_rgba(188,140,255,0.15),0_0_16px_rgba(188,140,255,0.08)] transition-all">
           <textarea
             value={question}
             onChange={(e) => setQuestion(e.target.value)}

@@ -18,6 +18,10 @@ import {
   WifiOff,
   HelpCircle,
   Eye,
+  Bell,
+  BellOff,
+  History,
+  Lock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -74,6 +78,12 @@ interface EditorTopBarProps {
   previewOpen: boolean;
   showPreview: boolean;
   isConnected?: boolean;
+  audioEnabled?: boolean;
+  onToggleAudio?: () => void;
+  onToggleHistory: () => void;
+  historyOpen: boolean;
+  isReadOnly?: boolean;
+  isOwner?: boolean;
 }
 
 export default function EditorTopBar({
@@ -101,7 +111,14 @@ export default function EditorTopBar({
   previewOpen,
   showPreview,
   isConnected = true,
+  audioEnabled = true,
+  onToggleAudio,
+  onToggleHistory,
+  historyOpen,
+  isReadOnly = false,
+  isOwner = false,
 }: EditorTopBarProps) {
+  const isLockedForUser = isReadOnly && !isOwner;
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState('');
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -159,6 +176,9 @@ export default function EditorTopBar({
 
           <div className="flex items-center gap-1.5 min-w-0">
             <FolderCode className="size-3.5 text-[#8b949e] shrink-0" />
+            {isLockedForUser && (
+              <Lock className="size-3.5 text-[#f0883e] shrink-0" />
+            )}
             {isEditingName ? (
               <input
                 ref={nameInputRef}
@@ -308,7 +328,7 @@ export default function EditorTopBar({
                 size="icon"
                 className="size-8 text-[#238636] hover:text-[#3fb950] hover:bg-[#238636]/10 hover:shadow-[0_0_12px_rgba(35,134,54,0.2)]"
                 onClick={onRun}
-                disabled={isRunning}
+                disabled={isRunning || isLockedForUser}
                 aria-label="Run code"
               >
                 {isRunning ? (
@@ -329,7 +349,7 @@ export default function EditorTopBar({
                 size="icon"
                 className="size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d]"
                 onClick={onSave}
-                disabled={isSaving}
+                disabled={isSaving || isLockedForUser}
                 aria-label="Save room"
               >
                 {isSaving ? (
@@ -435,6 +455,50 @@ export default function EditorTopBar({
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">Toggle team chat ({unreadChatCount > 0 ? `${unreadChatCount} unread` : 'no new messages'})</TooltipContent>
+          </Tooltip>
+
+          {/* Audio notifications toggle */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  'size-8 hover:bg-[#30363d]',
+                  audioEnabled
+                    ? 'text-[#e6edf3]'
+                    : 'text-[#484f58] hover:text-[#8b949e]'
+                )}
+                onClick={onToggleAudio}
+                aria-label={audioEnabled ? 'Disable audio notifications' : 'Enable audio notifications'}
+              >
+                {audioEnabled ? <Bell className="size-4" /> : <BellOff className="size-4" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              Audio notifications {audioEnabled ? 'on' : 'off'}
+            </TooltipContent>
+          </Tooltip>
+
+          {/* History */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  'size-8 hover:bg-[#30363d]',
+                  historyOpen
+                    ? 'text-[#58a6ff] bg-[#58a6ff]/10'
+                    : 'text-[#8b949e] hover:text-[#e6edf3]'
+                )}
+                onClick={onToggleHistory}
+                aria-label="Version History"
+              >
+                <History className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Version History (Ctrl+Shift+H)</TooltipContent>
           </Tooltip>
 
           {/* Settings */}

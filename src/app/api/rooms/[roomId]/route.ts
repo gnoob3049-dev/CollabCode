@@ -36,11 +36,15 @@ export async function GET(
 
     let parsedFiles: Array<{ name: string; content: string }> = [];
     let collaborators: string[] = [];
+    let activityLog: any[] = [];
     try {
       parsedFiles = JSON.parse(room.files);
     } catch { /* empty */ }
     try {
       collaborators = JSON.parse(room.collaborators);
+    } catch { /* empty */ }
+    try {
+      activityLog = JSON.parse(room.activityLog);
     } catch { /* empty */ }
 
     return NextResponse.json({
@@ -49,10 +53,13 @@ export async function GET(
         name: room.name,
         inviteCode: room.inviteCode,
         isPublic: room.isPublic,
+        isReadOnly: room.isReadOnly,
         language: room.language,
         files: parsedFiles,
         collaborators,
         ownerId: room.ownerId,
+        ownerName: undefined,
+        activityLog,
         createdAt: room.createdAt,
         lastActiveAt: room.lastActiveAt,
       },
@@ -76,7 +83,7 @@ export async function PUT(
 
     const { roomId } = await params;
     const body = await request.json();
-    const { name, isPublic, language } = body;
+    const { name, isPublic, language, isReadOnly, activityLog } = body;
 
     const room = await db.room.findUnique({ where: { id: roomId } });
     if (!room) {
@@ -93,8 +100,24 @@ export async function PUT(
         ...(name !== undefined && { name }),
         ...(isPublic !== undefined && { isPublic }),
         ...(language !== undefined && { language }),
+        ...(isReadOnly !== undefined && { isReadOnly }),
+        ...(activityLog !== undefined && { activityLog: JSON.stringify(activityLog) }),
+        lastActiveAt: new Date(),
       },
     });
+
+    let parsedFiles: Array<{ name: string; content: string }> = [];
+    let collaborators: string[] = [];
+    let parsedActivityLog: any[] = [];
+    try {
+      parsedFiles = JSON.parse(updated.files);
+    } catch { /* empty */ }
+    try {
+      collaborators = JSON.parse(updated.collaborators);
+    } catch { /* empty */ }
+    try {
+      parsedActivityLog = JSON.parse(updated.activityLog);
+    } catch { /* empty */ }
 
     return NextResponse.json({
       room: {
@@ -102,10 +125,12 @@ export async function PUT(
         name: updated.name,
         inviteCode: updated.inviteCode,
         isPublic: updated.isPublic,
+        isReadOnly: updated.isReadOnly,
         language: updated.language,
-        files: JSON.parse(updated.files),
-        collaborators: JSON.parse(updated.collaborators),
+        files: parsedFiles,
+        collaborators,
         ownerId: updated.ownerId,
+        activityLog: parsedActivityLog,
         createdAt: updated.createdAt,
         lastActiveAt: updated.lastActiveAt,
       },

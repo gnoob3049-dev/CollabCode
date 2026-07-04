@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, language = 'javascript', files: customFiles } = body;
+    const { name, language = 'javascript', files: customFiles, isReadOnly } = body;
 
     if (!name) {
       return NextResponse.json({ error: 'Room name is required' }, { status: 400 });
@@ -112,6 +112,7 @@ export async function POST(request: NextRequest) {
         ownerId: payload.userId,
         files,
         collaborators,
+        ...(isReadOnly !== undefined && { isReadOnly }),
       },
     });
 
@@ -121,6 +122,7 @@ export async function POST(request: NextRequest) {
         name: room.name,
         inviteCode: room.inviteCode,
         isPublic: room.isPublic,
+        isReadOnly: room.isReadOnly,
         language: room.language,
         files: JSON.parse(room.files),
       },

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Copy, Check, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Copy, Check, Loader2, Eye, EyeOff, Lock, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Select,
   SelectContent,
@@ -57,8 +67,13 @@ export default function RoomSettingsModal({
   const [name, setName] = useState(room?.name || '');
   const [language, setLanguage] = useState(room?.language || 'javascript');
   const [isPublic, setIsPublic] = useState(room?.isPublic ?? true);
+  const [isReadOnly, setIsReadOnly] = useState(room?.isReadOnly ?? false);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [readOnlyDialogOpen, setReadOnlyDialogOpen] = useState(false);
+  const [pendingReadOnly, setPendingReadOnly] = useState(false);
+
+  const isOwner = user?.id === room?.ownerId;
 
   const handleCopyInviteCode = () => {
     if (!room?.inviteCode) return;
@@ -67,6 +82,46 @@ export default function RoomSettingsModal({
       toast.success('Invite code copied!');
       setTimeout(() => setCopied(false), 2000);
     });
+  };
+
+  const handleReadOnlyToggle = (checked: boolean) => {
+    if (checked !== isReadOnly) {
+      setPendingReadOnly(checked);
+      setReadOnlyDialogOpen(true);
+    }
+  };
+
+  const confirmReadOnly = async () => {
+    setReadOnlyDialogOpen(false);
+    setIsReadOnly(pendingReadOnly);
+
+    if (!room?.id) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/rooms/${room.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ isReadOnly: pendingReadOnly }),
+      });
+      const data = await res.json();
+      if (data.room) {
+        onUpdate(data.room);
+        toast.success(
+          pendingReadOnly
+            ? 'Read-only mode enabled'
+            : 'Read-only mode disabled'
+        );
+      } else {
+        toast.error(data.error || 'Failed to update');
+        setIsReadOnly(!pendingReadOnly);
+      }
+    } catch {
+      toast.error('Failed to update');
+      setIsReadOnly(!pendingReadOnly);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSave = async () => {
@@ -87,6 +142,7 @@ export default function RoomSettingsModal({
           name: trimmedName,
           language,
           isPublic,
+          isReadOnly,
         }),
       });
       const data = await res.json();
@@ -105,6 +161,7 @@ export default function RoomSettingsModal({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent
         className="sm:max-w-md"
@@ -177,6 +234,29 @@ export default function RoomSettingsModal({
               />
             </div>
           </div>
+
+          {/* Read-Only Mode — only visible to owner */}
+          {isOwner && (
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label className="text-[#e6edf3]">Read-Only Mode</Label>
+                <p className="text-xs text-[#8b949e]">
+                  Prevent collaborators from editing files
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {isReadOnly ? (
+                  <Lock className="size-4 text-[#f0883e]" />
+                ) : (
+                  <Lock className="size-4 text-[#8b949e]" />
+                )}
+                <Switch
+                  checked={isReadOnly}
+                  onCheckedChange={handleReadOnlyToggle}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Invite Code */}
           <div className="space-y-2">
@@ -258,5 +338,39 @@ export default function RoomSettingsModal({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+      {/* Confirmation dialog for read-only toggle */}
+      <AlertDialog open={readOnlyDialogOpen} onOpenChange={setReadOnlyDialogOpen}>
+        <AlertDialogContent
+          style={{ background: '#161b22', border: '1px solid #30363d' }}
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[#e6edf3] flex items-center gap-2">
+              <ShieldAlert className="size-4 text-[#f0883e]" />
+              {pendingReadOnly ? 'Enable Read-Only Mode?' : 'Disable Read-Only Mode?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[#8b949e]">
+              {pendingReadOnly
+                ? 'Collaborators will no longer be able to edit files, run code, create or delete files in this room. The room owner will still have full access.'
+                : 'Collaborators will regain the ability to edit files, run code, and manage files in this room.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              className="text-[#8b949e] hover:text-[#e6edf3] border-[#30363d] hover:bg-[#21262d]"
+              onClick={() => setReadOnlyDialogOpen(false)}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-[#f0883e] hover:bg-[#d47630] text-white"
+              onClick={confirmReadOnly}
+            >
+              {pendingReadOnly ? 'Enable' : 'Disable'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

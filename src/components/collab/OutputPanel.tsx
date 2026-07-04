@@ -122,7 +122,7 @@ export default function OutputPanel({
             className={cn(
               'px-2.5 py-1 text-xs font-medium rounded-md transition-all duration-200',
               activeTab === 'output'
-                ? 'bg-[#0d1117] text-[#e6edf3] shadow-sm'
+                ? 'bg-[#0d1117] text-[#e6edf3] shadow-sm shadow-[#238636]/10'
                 : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#0d1117]/50'
             )}
           >
@@ -136,7 +136,7 @@ export default function OutputPanel({
             className={cn(
               'px-2.5 py-1 text-xs font-medium rounded-md transition-all duration-200',
               activeTab === 'problems'
-                ? 'bg-[#0d1117] text-[#e6edf3] shadow-sm'
+                ? 'bg-[#0d1117] text-[#e6edf3] shadow-sm shadow-[#d29922]/10'
                 : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#0d1117]/50'
             )}
           >
@@ -221,11 +221,12 @@ export default function OutputPanel({
                     <div
                       key={i}
                       className={cn(
-                        'px-1 -mx-1 rounded-sm',
+                        'px-1 -mx-1 rounded-sm fade-in-up',
                         isError && 'bg-[#f85149]/10 text-[#f85149]',
                         isWarning && !isError && 'text-[#d29922]',
                         !isError && !isWarning && 'text-[#e6edf3]'
                       )}
+                      style={{ animationDelay: `${Math.min(i * 20, 500)}ms` }}
                     >
                       <span className="inline-block w-6 text-right mr-3 text-[#30363d] select-none shrink-0">
                         {i + 1}

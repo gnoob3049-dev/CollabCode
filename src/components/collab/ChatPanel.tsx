@@ -172,9 +172,9 @@ export default function ChatPanel({
                     isOwn ? 'self-end flex-row-reverse' : 'self-start'
                   )}
                 >
-                  {/* Avatar */}
+                  {/* Avatar with ring pulse on hover */}
                   <div
-                    className="shrink-0 size-7 rounded-full flex items-center justify-center text-xs font-bold text-white mt-0.5 shadow-sm"
+                    className="shrink-0 size-7 rounded-full flex items-center justify-center text-xs font-bold text-white mt-0.5 shadow-sm transition-all duration-200 hover:shadow-[0_0_0_2px_rgba(35,134,54,0.5),0_0_8px_rgba(35,134,54,0.2)] hover:scale-110"
                     style={{ backgroundColor: msg.senderColor || '#484f58' }}
                   >
                     {msg.senderName?.charAt(0)?.toUpperCase() || '?'}
@@ -193,16 +193,16 @@ export default function ChatPanel({
                           {msg.senderName}
                         </span>
                       )}
-                      <span className="text-[10px] text-[#30363d]">
+                      <span className="text-[10px] text-[#30363d] fade-in-up">
                         {formatTime(msg.createdAt)}
                       </span>
                     </div>
                     <div
                       className={cn(
-                        'px-3 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap transition-colors duration-150',
+                        'px-3 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap transition-all duration-200',
                         isOwn
-                          ? 'bg-[#238636] text-white rounded-2xl rounded-br-md shadow-[0_2px_8px_rgba(35,134,54,0.2)] hover:bg-[#2ea043]'
-                          : 'bg-[#161b22] text-[#e6edf3] rounded-2xl rounded-bl-md border border-[#30363d]/60 shadow-sm hover:border-[#484f58]/60'
+                          ? 'bg-[#238636] text-white rounded-2xl rounded-br-md shadow-[0_2px_8px_rgba(35,134,54,0.2)] hover:bg-[#2ea043] hover:shadow-[0_2px_12px_rgba(35,134,54,0.3)]'
+                          : 'bg-[#161b22] text-[#e6edf3] rounded-2xl rounded-bl-md border border-[#30363d]/60 shadow-sm hover:border-[#484f58]/60 hover:border-[#238636]/20'
                       )}
                     >
                       {msg.text}
@@ -223,10 +223,10 @@ export default function ChatPanel({
                     {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing
                   </span>
                   <div className="bg-[#161b22] border border-[#30363d]/60 rounded-2xl rounded-bl-md px-4 py-2.5">
-                    <div className="flex items-center gap-1">
-                      <span className="typing-dot inline-block size-1.5 rounded-full bg-[#8b949e]" />
-                      <span className="typing-dot inline-block size-1.5 rounded-full bg-[#8b949e]" />
-                      <span className="typing-dot inline-block size-1.5 rounded-full bg-[#8b949e]" />
+                    <div className="typing-indicator">
+                      <span />
+                      <span />
+                      <span />
                     </div>
                   </div>
                 </div>
@@ -239,7 +239,7 @@ export default function ChatPanel({
         {showScrollBtn && (
           <button
             onClick={scrollToBottom}
-            className="absolute bottom-3 left-1/2 -translate-x-1/2 size-7 rounded-full bg-[#161b22] border border-[#30363d] flex items-center justify-center text-[#8b949e] hover:text-[#e6edf3] hover:border-[#484f58] shadow-lg transition-all"
+            className="absolute bottom-3 left-1/2 scroll-bounce size-7 rounded-full bg-[#161b22] border border-[#30363d] flex items-center justify-center text-[#8b949e] hover:text-[#e6edf3] hover:border-[#484f58] shadow-lg transition-all"
           >
             <ArrowDown className="size-3.5" />
           </button>
@@ -248,7 +248,7 @@ export default function ChatPanel({
 
       {/* Input */}
       <div className="p-3 border-t border-[#30363d] shrink-0">
-        <div className="flex items-end gap-2 bg-[#161b22] rounded-xl border border-[#30363d] p-2 focus-within:border-[#238636]/60 focus-within:shadow-[0_0_12px_rgba(35,134,54,0.2)] transition-all duration-300">
+        <div className="flex items-end gap-2 bg-[#161b22] rounded-xl border border-[#30363d] p-2 focus-within:border-[#238636]/60 focus-within:shadow-[0_0_12px_rgba(35,134,54,0.2),0_0_24px_rgba(35,134,54,0.08)] transition-all duration-300">
           <textarea
             ref={inputRef}
             value={input}

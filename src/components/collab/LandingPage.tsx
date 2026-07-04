@@ -334,7 +334,7 @@ export default function LandingPage() {
                 <Button
                   onClick={handleGetStarted}
                   size="lg"
-                  className="w-full sm:w-auto px-8 py-6 text-base font-semibold rounded-lg bg-[#238636] hover:bg-[#2ea043] text-white transition-shadow duration-300 hover:shadow-[0_0_24px_rgba(35,134,54,0.5),0_0_48px_rgba(35,134,54,0.2)]"
+                  className="w-full sm:w-auto px-8 py-6 text-base font-semibold rounded-lg bg-[#238636] hover:bg-[#2ea043] text-white transition-shadow duration-300 hover:shadow-[0_0_24px_rgba(35,134,54,0.5),0_0_48px_rgba(35,134,54,0.2)] glow-btn-green btn-press"
                 >
                   <span className="animated-underline">Get Started</span>
                   <ArrowRight className="ml-2 w-5 h-5" />
@@ -349,13 +349,13 @@ export default function LandingPage() {
               >
                 Create a Room
               </Button>
-              {/* View Demo button */}
+              {/* View Demo button - purple glow on hover */}
               <Button
                 onClick={handleViewDemo}
                 variant="ghost"
                 size="lg"
                 disabled={creatingDemo}
-                className="w-full sm:w-auto px-8 py-6 text-base font-medium rounded-lg text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] transition-all duration-300 hover:shadow-[0_0_16px_rgba(163,113,247,0.15)] border border-transparent hover:border-[#a371f7]/30"
+                className="w-full sm:w-auto px-8 py-6 text-base font-medium rounded-lg text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] transition-all duration-300 hover:shadow-[0_0_16px_rgba(163,113,247,0.15)] border border-transparent hover:border-[#a371f7]/30 hover:glow-purple btn-press"
               >
                 {creatingDemo ? (
                   <span className="flex items-center gap-2">
@@ -375,7 +375,7 @@ export default function LandingPage() {
               variants={itemVariants}
               className="max-w-2xl mx-auto"
             >
-              <TypingEffect />
+              <TypingEffect key="typing" />
             </motion.div>
           </motion.div>
         </header>
@@ -395,7 +395,7 @@ export default function LandingPage() {
                   transition={{ delay: 0.6 + i * 0.1, duration: 0.5 }}
                   className="text-center"
                 >
-                  <div className="text-2xl sm:text-3xl font-bold gradient-text">{stat.value}</div>
+                  <div className="text-2xl sm:text-3xl font-bold gradient-text-animated">{stat.value}</div>
                   <div className="text-xs sm:text-sm text-[#8b949e] mt-1">{stat.label}</div>
                 </motion.div>
               ))}
@@ -436,7 +436,7 @@ export default function LandingPage() {
                 <motion.div
                   key={feature.title}
                   variants={itemVariants}
-                  className="group relative rounded-xl border border-[#30363d] bg-[#161b22] p-5 sm:p-6 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:border-[#238636]/50 hover:shadow-[0_0_20px_rgba(35,134,54,0.15)]"
+                  className="group relative rounded-xl border border-[#30363d] bg-[#161b22] p-5 sm:p-6 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:border-[#238636]/50 hover:shadow-[0_0_20px_rgba(35,134,54,0.15)] hover-lift spotlight-glow"
                 >
                   {/* Inner glow effect on hover */}
                   <div
@@ -478,8 +478,15 @@ export default function LandingPage() {
         </section>
 
         {/* Footer */}
-        <footer className="border-t border-[#30363d] py-8 sm:py-10 px-4 sm:px-6 mt-auto">
-          <div className="max-w-6xl mx-auto">
+        <footer className="relative py-10 sm:py-12 px-4 sm:px-6 mt-auto">
+          {/* Subtle gradient top border */}
+          <div
+            className="absolute top-0 left-0 right-0 h-px"
+            style={{
+              background: 'linear-gradient(90deg, transparent 0%, rgba(35,134,54,0.3) 30%, rgba(88,166,255,0.2) 70%, transparent 100%)',
+            }}
+          />
+          <div className="max-w-6xl mx-auto pt-2">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8 mb-8">
               {/* Brand */}
               <div className="col-span-2 sm:col-span-1">

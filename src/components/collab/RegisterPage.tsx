@@ -109,7 +109,7 @@ export default function RegisterPage() {
       <div className="absolute inset-0 dot-grid opacity-20 pointer-events-none" />
 
       {/* Decorative background code snippet */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-[0.04]">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-[0.03]" style={{ filter: 'blur(0.3px)' }}>
         <div className="absolute top-[8%] left-[8%] right-[8%] font-mono text-xs leading-relaxed text-[#a371f7] select-none whitespace-pre">
           {bgCodeLines.map((line, i) => (
             <div key={i} className="flex">
@@ -120,7 +120,7 @@ export default function RegisterPage() {
         </div>
       </div>
 
-      <Card className={`w-full max-w-md glass relative z-10 overflow-hidden transition-shadow duration-500 ${formFocused ? 'glow-green-strong' : 'glow-green'}`}>
+      <Card className={`w-full max-w-md glass relative z-10 overflow-hidden transition-shadow duration-500 ${formFocused ? 'glow-green-strong' : 'glow-green'} shimmer-border`}>
         {/* Subtle top gradient accent */}
         <div
           className="absolute top-0 left-0 right-0 h-[2px]"
@@ -155,7 +155,7 @@ export default function RegisterPage() {
                 placeholder="Your name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="bg-[#0d1117]/80 border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#238636] focus:ring-1 focus:ring-[#238636]/30 transition-all"
+                className="bg-[#0d1117]/80 border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#238636] focus:ring-1 focus:ring-[#238636]/30 transition-all input-focus-line"
                 autoComplete="name"
               />
             </div>
@@ -169,7 +169,7 @@ export default function RegisterPage() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-[#0d1117]/80 border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#238636] focus:ring-1 focus:ring-[#238636]/30 transition-all"
+                className="bg-[#0d1117]/80 border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#238636] focus:ring-1 focus:ring-[#238636]/30 transition-all input-focus-line"
                 autoComplete="email"
               />
             </div>
@@ -184,7 +184,7 @@ export default function RegisterPage() {
                   placeholder="At least 6 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-[#0d1117]/80 border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#238636] focus:ring-1 focus:ring-[#238636]/30 transition-all pr-10"
+                  className="bg-[#0d1117]/80 border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#238636] focus:ring-1 focus:ring-[#238636]/30 transition-all pr-10 input-focus-line"
                   autoComplete="new-password"
                 />
                 <button
@@ -200,7 +200,7 @@ export default function RegisterPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full py-5 text-base font-semibold rounded-lg text-white transition-all duration-300 hover:shadow-[0_0_24px_rgba(35,134,54,0.5),0_0_48px_rgba(35,134,54,0.2)] hover:scale-[1.02] active:scale-[0.98]"
+              className="w-full py-5 text-base font-semibold rounded-lg text-white transition-all duration-300 hover:shadow-[0_0_24px_rgba(35,134,54,0.5),0_0_48px_rgba(35,134,54,0.2)] hover:scale-[1.02] active:scale-[0.98] btn-press"
               style={{
                 background: "linear-gradient(135deg, #238636 0%, #1a7f37 50%, #0d7a4e 100%)",
                 backgroundSize: "200% 200%",
@@ -231,7 +231,7 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={() => setCurrentPage("login")}
-              className="text-[#58a6ff] hover:underline font-medium"
+              className="text-[#58a6ff] hover:text-[#79c0ff] font-medium hover-underline-anim"
             >
               Sign in
             </button>

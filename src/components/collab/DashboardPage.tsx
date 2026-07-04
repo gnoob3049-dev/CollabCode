@@ -427,7 +427,7 @@ export default function DashboardPage() {
                         window.scrollTo({ top: 0, behavior: "smooth" });
                         setSearchQuery("");
                       }}
-                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#e6edf3] cursor-pointer hover:bg-[#30363d] focus:bg-[#30363d] focus:text-[#e6edf3] outline-none transition-colors duration-100"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#e6edf3] cursor-pointer hover:bg-[#30363d] focus:bg-[#30363d] focus:text-[#e6edf3] outline-none transition-all duration-150 hover:translate-x-0.5"
                     >
                       <Users className="w-4 h-4 text-[#8b949e]" />
                       <span>My Rooms</span>
@@ -485,7 +485,7 @@ export default function DashboardPage() {
                   <div className="p-1.5">
                     <DropdownMenuItem
                       onClick={handleLogout}
-                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#f85149] cursor-pointer hover:bg-[#f85149]/10 focus:bg-[#f85149]/10 focus:text-[#f85149] outline-none transition-colors duration-100"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#f85149] cursor-pointer hover:bg-[#f85149]/10 focus:bg-[#f85149]/10 focus:text-[#f85149] outline-none transition-all duration-150 hover:translate-x-0.5"
                     >
                       <LogOut className="w-4 h-4" />
                       <span>Sign Out</span>
@@ -510,7 +510,11 @@ export default function DashboardPage() {
               ].map((stat) => (
                 <div
                   key={stat.label}
-                  className="rounded-lg border border-[#30363d] bg-[#161b22] p-3 sm:p-4 flex items-center gap-3"
+                  className="rounded-lg border border-[#30363d] p-3 sm:p-4 flex items-center gap-3 transition-transform duration-200 hover:scale-[1.03] cursor-default"
+                  style={{
+                    background: `linear-gradient(135deg, ${stat.color}08, ${stat.color}03)`,
+                    backgroundColor: '#161b22',
+                  }}
                 >
                   <div
                     className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
@@ -544,7 +548,7 @@ export default function DashboardPage() {
                     placeholder="Search rooms..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full h-9 pl-8 bg-[#161b22] border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] text-sm focus:border-[#238636]/50 focus:ring-1 focus:ring-[#238636]/30"
+                    className="w-full h-9 pl-8 bg-[#161b22] border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] text-sm focus:border-[#238636]/50 focus:ring-1 focus:ring-[#238636]/30 focus:shadow-[0_0_8px_rgba(35,134,54,0.12)]"
                   />
                 </div>
                 <Button
@@ -583,11 +587,13 @@ export default function DashboardPage() {
               </div>
             ) : filteredRooms.length === 0 ? (
               <div className="text-center py-20">
-                <div className="flex items-center justify-center w-20 h-20 rounded-2xl bg-[#21262d] mx-auto mb-6 relative">
-                  <FolderOpen className="w-10 h-10 text-[#484f58]" />
+                <div className="flex items-center justify-center w-24 h-24 rounded-2xl bg-[#21262d] mx-auto mb-6 relative float-bob">
+                  <FolderOpen className="w-12 h-12 text-[#484f58]" />
                   <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#161b22] border-2 border-[#0d1117] flex items-center justify-center">
                     <Plus className="w-3.5 h-3.5 text-[#8b949e]" />
                   </div>
+                  {/* Pulsing glow ring */}
+                  <div className="absolute -inset-2 rounded-2xl border border-[#238636]/20 animate-[breathe-glow_3s_ease-in-out_infinite] pointer-events-none" />
                 </div>
                 <h2 className="text-xl font-semibold text-[#e6edf3] mb-2">
                   {searchQuery ? "No rooms match your search" : "No rooms yet"}
@@ -633,10 +639,17 @@ export default function DashboardPage() {
                       transition={{ duration: 0.2 }}
                     >
                     <Card
-                      className="cursor-pointer border-[#30363d] hover:border-[#238636]/40 transition-all duration-300 group hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] relative overflow-hidden"
+                      className="cursor-pointer border-[#30363d] hover:border-[#238636]/40 transition-all duration-300 group hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] relative overflow-hidden hover-lift"
                       style={{ background: "#161b22" }}
                       onClick={() => handleOpenRoom(room)}
                     >
+                      {/* Gradient overlay at bottom for depth */}
+                      <div
+                        className="absolute bottom-0 left-0 right-0 h-1/3 pointer-events-none"
+                        style={{
+                          background: 'linear-gradient(to top, rgba(13,17,23,0.4) 0%, transparent 100%)',
+                        }}
+                      />
                       {/* Left accent line */}
                       <div
                         className="absolute left-0 top-0 bottom-0 w-[3px] transition-all duration-300"
@@ -779,7 +792,7 @@ export default function DashboardPage() {
               <div className="space-y-2">
                 <Label className="text-[#e6edf3]">Template</Label>
                 <div className="max-h-[240px] overflow-y-auto rounded-md border border-[#30363d] bg-[#0d1117] p-2 custom-scrollbar">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 stagger-grid">
                     {ROOM_TEMPLATES.map((template) => {
                       const isSelected = selectedTemplate.id === template.id;
                       return (

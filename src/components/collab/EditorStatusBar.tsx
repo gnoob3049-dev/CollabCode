@@ -7,6 +7,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { Bell, BellOff } from 'lucide-react';
 
 const AVATAR_COLORS = [
   '#238636', '#58a6ff', '#a371f7', '#f85149', '#d29922',
@@ -19,6 +20,8 @@ interface EditorStatusBarProps {
   cursorPosition: { line: number; column: number };
   connected: boolean;
   tabSize: number;
+  audioEnabled?: boolean;
+  onToggleAudio?: () => void;
 }
 
 export default function EditorStatusBar({
@@ -27,6 +30,8 @@ export default function EditorStatusBar({
   cursorPosition,
   connected,
   tabSize,
+  audioEnabled = true,
+  onToggleAudio,
 }: EditorStatusBarProps) {
   const displayLanguage = language.charAt(0).toUpperCase() + language.slice(1);
   const [copied, setCopied] = useState(false);
@@ -68,7 +73,7 @@ export default function EditorStatusBar({
 
       {/* Left green accent line */}
       <div
-        className="absolute left-0 top-0 bottom-0 transition-colors duration-300"
+        className="absolute left-0 top-0 bottom-0 transition-colors duration-300 panel-glow"
         style={{ width: '2px', backgroundColor: connected ? '#238636' : '#f85149' }}
       />
 
@@ -88,7 +93,7 @@ export default function EditorStatusBar({
               )}
             </button>
           </TooltipTrigger>
-          <TooltipContent side="top" className="text-xs">
+          <TooltipContent side="top" className="text-xs bg-[#161b22]/95 backdrop-blur-sm border-[#30363d]">
             Click to copy file name
           </TooltipContent>
         </Tooltip>
@@ -116,7 +121,7 @@ export default function EditorStatusBar({
               <span>0 errors, 0 warnings</span>
             </span>
           </TooltipTrigger>
-          <TooltipContent side="top" className="text-xs">
+          <TooltipContent side="top" className="text-xs bg-[#161b22]/95 backdrop-blur-sm border-[#30363d]">
             No problems detected
           </TooltipContent>
         </Tooltip>
@@ -147,13 +152,32 @@ export default function EditorStatusBar({
                 )}
               </span>
             </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">
+            <TooltipContent side="top" className="text-xs bg-[#161b22]/95 backdrop-blur-sm border-[#30363d]">
               {collaboratorCount} collaborator{collaboratorCount !== 1 ? 's' : ''} online
             </TooltipContent>
           </Tooltip>
         )}
 
         <span className="text-[#30363d]">│</span>
+
+        {/* Audio notifications toggle */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={onToggleAudio}
+              className={cn(
+                'flex items-center justify-center transition-colors duration-200 hover:bg-[#21262d] cursor-pointer rounded-sm p-0.5',
+                audioEnabled ? 'text-[#8b949e] hover:text-[#e6edf3]' : 'text-[#484f58] hover:text-[#8b949e]'
+              )}
+              aria-label={audioEnabled ? 'Disable audio notifications' : 'Enable audio notifications'}
+            >
+              {audioEnabled ? <Bell className="size-3" /> : <BellOff className="size-3" />}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs bg-[#161b22]/95 backdrop-blur-sm border-[#30363d]">
+            Audio notifications {audioEnabled ? 'on' : 'off'}
+          </TooltipContent>
+        </Tooltip>
 
         <span
           className={cn(
@@ -164,7 +188,7 @@ export default function EditorStatusBar({
           <span
             className={cn(
               'inline-block rounded-full transition-colors duration-300',
-              connected && 'pulse-dot'
+              connected && 'status-breathe'
             )}
             style={{
               width: '6px',

@@ -28,7 +28,9 @@ import {
   Search,
   Replace,
   FileSearch,
+  History,
 } from 'lucide-react';
+import { playSound, isAudioEnabled as checkAudioEnabled, toggleAudio as doToggleAudio } from '@/lib/audio';
 import { useStore } from '@/store/useStore';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import EditorTopBar from './EditorTopBar';
@@ -43,7 +45,9 @@ import CommandPalette, { type CommandItem } from './CommandPalette';
 import HtmlPreview from './HtmlPreview';
 import MarkdownPreview from './MarkdownPreview';
 import EditorTabs from './EditorTabs';
-import type { ChatMessage, Room } from '@/store/useStore';
+import VersionHistoryPanel, { type VersionSnapshot } from './VersionHistoryPanel';
+import ActivityLogPanel from './ActivityLogPanel';
+import type { ChatMessage, Room, ActivityLogEntry } from '@/store/useStore';
 
 const LANGUAGE_MAP: Record<string, string> = {
   javascript: 'javascript',
@@ -114,6 +118,19 @@ export default function EditorPage() {
   const [minimapEnabled, setMinimapEnabled] = useState(false);
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
   const [htmlPreviewOpen, setHtmlPreviewOpen] = useState(false);
+  const [audioEnabled, setAudioEnabledState] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return checkAudioEnabled();
+  });
+  const audioEnabledRef = useRef(audioEnabled);
+  audioEnabledRef.current = audioEnabled;
+  const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+  const [versionSnapshots, setVersionSnapshots] = useState<VersionSnapshot[]>([]);
+  const [activityLogOpen, setActivityLogOpen] = useState(false);
+  const [activities, setActivities] = useState<ActivityLogEntry[]>([]);
+  const undoManagerRef = useRef<Y.UndoManager | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSnapshotContentRef = useRef<string>('');
 
   // Get language from file extension
   const getLanguageFromFilename = useCallback(
@@ -139,6 +156,40 @@ export default function EditorPage() {
       return map[ext] || language;
     },
     [language]
+  );
+
+  // Read-only mode computations
+  const isOwner = useMemo(() => currentRoom?.ownerId === user?.id, [currentRoom, user]);
+  const isLockedForUser = useMemo(() => (currentRoom?.isReadOnly ?? false) && !isOwner, [currentRoom, isOwner]);
+
+  // Activity logging helper
+  const logActivity = useCallback(
+    (type: ActivityLogEntry['type'], detail: string) => {
+      if (!user || !currentRoomId) return;
+      const entry: ActivityLogEntry = {
+        id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        type,
+        userId: user.id,
+        userName: user.name,
+        userColor: user.avatarColor,
+        detail,
+        timestamp: new Date().toISOString(),
+      };
+      setActivities((prev) => [...prev, entry]);
+
+      // Persist to room via PATCH
+      fetch(`/api/rooms/${currentRoomId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          activityLog: [...(currentRoom?.activityLog || []), entry],
+        }),
+      }).catch(() => {
+        // Silently fail — activity log persistence is non-critical
+      });
+    },
+    [user, currentRoomId, currentRoom]
   );
 
   // Initialize Y.js and Socket.io
@@ -168,6 +219,9 @@ export default function EditorPage() {
         if (data.room) {
           setCurrentRoom(data.room);
           setLanguage(data.room.language || 'javascript');
+          if (data.room.activityLog) {
+            setActivities(data.room.activityLog);
+          }
           const roomFiles: string[] = data.room.files?.map(
             (f: { name: string }) => f.name
           ) || ['index.js'];
@@ -210,6 +264,76 @@ export default function EditorPage() {
     fileList.observe(updateFiles);
     updateFiles();
 
+    // Set up UndoManager for version history tracking
+    const undoManager = new Y.UndoManager(ydoc.getText(currentFileName), {
+      trackedOrigins: new Set(['local']),
+    });
+    undoManagerRef.current = undoManager;
+
+    const createSnapshot = (type: 'edit' | 'add' | 'delete') => {
+      const ytext = ydoc.getText(currentFileName);
+      const content = ytext.toString();
+      // Skip if content hasn't changed since last snapshot
+      if (content === lastSnapshotContentRef.current) return;
+      lastSnapshotContentRef.current = content;
+
+      const lines = content.split('\n');
+      const snapshot: VersionSnapshot = {
+        id: `snap-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        timestamp: Date.now(),
+        content,
+        type,
+        lineCount: lines.length,
+        charCount: content.length,
+        fileName: currentFileName,
+        prevContent: undefined,
+      };
+
+      setVersionSnapshots((prev) => {
+        // Update prevContent on the new snapshot to point to the last one
+        const lastSnap = prev.length > 0 ? prev[prev.length - 1] : null;
+        if (lastSnap && lastSnap.fileName === currentFileName) {
+          snapshot.prevContent = lastSnap.content;
+        }
+        const updated = [...prev, snapshot];
+        // Limit to 50 snapshots
+        if (updated.length > 50) {
+          return updated.slice(updated.length - 50);
+        }
+        return updated;
+      });
+    };
+
+    // Debounced snapshot capture on undoable changes
+    const handleUndoManagerChange = () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      debounceTimerRef.current = setTimeout(() => {
+        createSnapshot('edit');
+      }, 3000);
+    };
+
+    undoManager.on('stack-item-added', handleUndoManagerChange);
+
+    // Initial snapshot
+    setTimeout(() => {
+      const ytext = ydoc.getText(currentFileName);
+      const content = ytext.toString();
+      if (content) {
+        lastSnapshotContentRef.current = content;
+        setVersionSnapshots([{
+          id: `snap-init-${Date.now()}`,
+          timestamp: Date.now(),
+          content,
+          type: 'add',
+          lineCount: content.split('\n').length,
+          charCount: content.length,
+          fileName: currentFileName,
+        }]);
+      }
+    }, 1000);
+
     // Connect Socket.io
     const socket = io('/?XTransformPort=3003', {
       transports: ['websocket', 'polling'],
@@ -240,10 +364,25 @@ export default function EditorPage() {
       // Only increment unread if panel is closed or on different tab
       if (!rightPanelOpen || rightPanelTab !== 'chat') {
         incrementUnreadChatCount();
+        // Play message sound and show toast when chat is not visible
+        playSound('message');
+        const preview = msg.text.length > 50 ? msg.text.slice(0, 50) + '…' : msg.text;
+        toast(`${msg.senderName}: ${preview}`, {
+          duration: 4000,
+          action: {
+            label: 'Open chat',
+            onClick: () => {
+              setRightPanelTab('chat');
+              setRightPanelOpen(true);
+              resetUnreadChatCount();
+            },
+          },
+        });
       }
     });
 
     socket.on('user_joined', ({ text }: { text: string }) => {
+      playSound('join');
       addChatMessage({
         id: `sys-${Date.now()}-joined`,
         roomId: currentRoomId,
@@ -256,6 +395,7 @@ export default function EditorPage() {
     });
 
     socket.on('user_left', ({ text }: { text: string }) => {
+      playSound('leave');
       addChatMessage({
         id: `sys-${Date.now()}-left`,
         roomId: currentRoomId,
@@ -268,6 +408,8 @@ export default function EditorPage() {
     });
 
     return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      undoManager.destroy();
       socket.emit('leave_room', {
         roomId: currentRoomId,
         user: { id: user.id, name: user.name, color: user.avatarColor },
@@ -358,6 +500,10 @@ export default function EditorPage() {
   // File operations
   const handleCreateFile = useCallback(
     (name: string) => {
+      if (isLockedForUser) {
+        toast.error('This room is in read-only mode');
+        return;
+      }
       if (!fileListRef.current || !ydocRef.current) return;
       const list = fileListRef.current;
       if (!list.toArray().includes(name)) {
@@ -368,9 +514,10 @@ export default function EditorPage() {
           ytext.insert(0, '');
         }
         setCurrentFileName(name);
+        logActivity('file_add', `added file ${name}`);
       }
     },
-    []
+    [isLockedForUser, logActivity]
   );
 
   const handleRenameFile = useCallback(
@@ -400,6 +547,10 @@ export default function EditorPage() {
 
   const handleDeleteFile = useCallback(
     (name: string) => {
+      if (isLockedForUser) {
+        toast.error('This room is in read-only mode');
+        return;
+      }
       if (!fileListRef.current || !ydocRef.current) return;
       const list = fileListRef.current;
       const idx = list.toArray().indexOf(name);
@@ -422,16 +573,22 @@ export default function EditorPage() {
           handleCreateFile('index.js');
         }
       }
+      logActivity('file_delete', `deleted file ${name}`);
     },
-    [currentFileName, setCurrentFileName, handleCreateFile]
+    [currentFileName, setCurrentFileName, handleCreateFile, isLockedForUser, logActivity]
   );
 
   // Run code
   const handleRun = useCallback(async () => {
+    if (isLockedForUser) {
+      toast.error('This room is in read-only mode');
+      return;
+    }
     if (!ydocRef.current) return;
     setIsRunning(true);
     setOutput('');
     setOutputPanelOpen(true);
+    playSound('run_start');
     try {
       const ytext = ydocRef.current.getText(currentFileName);
       const code = ytext?.toString() || '';
@@ -444,13 +601,24 @@ export default function EditorPage() {
         body: JSON.stringify({ code, language: fileLanguage }),
       });
       const data = await res.json();
+      const hasErrors = !!data.error;
       setOutput(data.output || data.error || 'No output');
+      playSound('run_complete', { hasErrors });
+      if (hasErrors) {
+        const firstLine = (data.error || 'Unknown error').split('\n')[0];
+        toast.error(firstLine.length > 80 ? firstLine.slice(0, 80) + '…' : firstLine);
+      } else {
+        toast.success('Code executed successfully');
+      }
+      logActivity('run', `ran code in ${currentFileName}`);
     } catch {
       setOutput('Error: Failed to execute code');
+      playSound('error');
+      toast.error('Failed to execute code');
     } finally {
       setIsRunning(false);
     }
-  }, [currentFileName, getLanguageFromFilename, setIsRunning, setOutput, setOutputPanelOpen]);
+  }, [currentFileName, getLanguageFromFilename, setIsRunning, setOutput, setOutputPanelOpen, isLockedForUser, logActivity]);
 
   // Save
   const handleSave = useCallback(async () => {
@@ -468,13 +636,16 @@ export default function EditorPage() {
         credentials: 'include',
         body: JSON.stringify({ files: fileEntries }),
       });
+      playSound('save');
       toast.success('Room saved');
+      logActivity('save', 'saved the document');
     } catch {
+      playSound('error');
       toast.error('Failed to save');
     } finally {
       setIsSaving(false);
     }
-  }, [currentRoomId, files]);
+  }, [currentRoomId, files, logActivity]);
 
   // Share
   const handleShare = useCallback(() => {
@@ -546,11 +717,40 @@ export default function EditorPage() {
     setHtmlPreviewOpen((v) => !v);
   }, []);
 
+  // Version history restore
+  const handleVersionRestore = useCallback((snapshot: VersionSnapshot) => {
+    if (!ydocRef.current || !editorRef.current) return;
+    const ytext = ydocRef.current.getText(currentFileName);
+    const currentContent = ytext.toString();
+    ytext.delete(0, currentContent.length);
+    ytext.insert(0, snapshot.content);
+    lastSnapshotContentRef.current = snapshot.content;
+    setCurrentCode(snapshot.content);
+  }, [currentFileName]);
+
+  // Version history toggle
+  const handleToggleVersionHistory = useCallback(() => {
+    setVersionHistoryOpen((v) => !v);
+  }, []);
+
+  // Audio toggle
+  const handleToggleAudio = useCallback(() => {
+    const newState = doToggleAudio();
+    setAudioEnabledState(newState);
+    if (newState) {
+      playSound('success');
+      toast.success('Audio notifications enabled');
+    } else {
+      toast.info('Audio notifications disabled');
+    }
+  }, []);
+
   const handleLanguageChange = useCallback(
     (lang: string) => {
       setLanguage(lang);
+      logActivity('language_change', `changed language to ${lang}`);
     },
-    [setLanguage]
+    [setLanguage, logActivity]
   );
 
   const handleRenameRoom = useCallback(
@@ -582,13 +782,14 @@ export default function EditorPage() {
     [setCurrentRoom, setLanguage]
   );
 
-  // Apply word wrap and minimap options to Monaco
+  // Apply word wrap, minimap, and read-only options to Monaco
   useEffect(() => {
     editorRef.current?.updateOptions({
       wordWrap,
       minimap: { enabled: minimapEnabled },
+      readOnly: isLockedForUser,
     });
-  }, [wordWrap, minimapEnabled]);
+  }, [wordWrap, minimapEnabled, isLockedForUser]);
 
   // Build command palette items
   const commandItems: CommandItem[] = useMemo(
@@ -748,6 +949,14 @@ export default function EditorPage() {
         category: 'View',
         action: handleTogglePreview,
       },
+      {
+        id: 'toggle-version-history',
+        label: 'Toggle Version History',
+        icon: History,
+        shortcut: ['Ctrl', 'Shift', 'H'],
+        category: 'View',
+        action: handleToggleVersionHistory,
+      },
     ],
     [
       handleCreateFile,
@@ -761,6 +970,7 @@ export default function EditorPage() {
       outputPanelOpen,
       rightPanelOpen,
       htmlPreviewOpen,
+      handleToggleVersionHistory,
     ]
   );
 
@@ -799,17 +1009,22 @@ export default function EditorPage() {
         e.preventDefault();
         e.stopPropagation();
         if (isHtmlFile || isMarkdownFile) handleTogglePreview();
+      } else if (isMod && e.shiftKey && (e.key === 'H' || e.key === 'h')) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleToggleVersionHistory();
       } else if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
         setRightPanelOpen(false);
         setOutputPanelOpen(false);
         setHtmlPreviewOpen(false);
+        setVersionHistoryOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [handleSave, handleRun, rightPanelOpen, commandPaletteOpen, isHtmlFile, isMarkdownFile, handleTogglePreview]);
+  }, [handleSave, handleRun, rightPanelOpen, commandPaletteOpen, isHtmlFile, isMarkdownFile, handleTogglePreview, handleToggleVersionHistory]);
 
   // Remote cursor decorations: CSS for y-monaco's built-in selection highlighting
   // + name labels for each remote user's cursor position
@@ -937,7 +1152,22 @@ export default function EditorPage() {
         isSaving={isSaving}
         onRenameRoom={handleRenameRoom}
         isConnected={connected}
+        audioEnabled={audioEnabled}
+        onToggleAudio={handleToggleAudio}
+        onToggleHistory={handleToggleVersionHistory}
+        historyOpen={versionHistoryOpen}
+        isReadOnly={currentRoom?.isReadOnly ?? false}
+        isOwner={isOwner}
       />
+
+      {/* Read-only mode banner */}
+      {isLockedForUser && (
+        <div className="flex items-center gap-2 px-4 py-1.5 bg-[#f0883e]/10 border-b border-[#f0883e]/30 shrink-0">
+          <span className="text-xs text-[#f0883e] font-medium">
+            🔒 This room is in read-only mode
+          </span>
+        </div>
+      )}
 
       {/* Main content area */}
       <div className="flex flex-1 min-h-0">
@@ -951,6 +1181,7 @@ export default function EditorPage() {
           onDeleteFile={handleDeleteFile}
           collapsed={fileTreeCollapsed}
           onToggleCollapse={() => setFileTreeCollapsed(!fileTreeCollapsed)}
+          isReadOnly={isLockedForUser}
         />
 
         {/* Editor + Output */}
@@ -1012,6 +1243,7 @@ export default function EditorPage() {
                   quickSuggestions: true,
                   parameterHints: { enabled: true },
                   overviewRulerBorder: false,
+                  readOnly: isLockedForUser,
                   scrollbar: {
                     verticalScrollbarSize: 8,
                     horizontalScrollbarSize: 8,
@@ -1147,6 +1379,15 @@ export default function EditorPage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Version History Panel */}
+        <VersionHistoryPanel
+          isOpen={versionHistoryOpen}
+          onClose={() => setVersionHistoryOpen(false)}
+          snapshots={versionSnapshots}
+          onRestore={handleVersionRestore}
+          currentFileName={currentFileName}
+        />
       </div>
 
       {/* Status Bar */}
@@ -1156,6 +1397,8 @@ export default function EditorPage() {
         cursorPosition={cursorPosition}
         connected={connected}
         tabSize={2}
+        audioEnabled={audioEnabled}
+        onToggleAudio={handleToggleAudio}
       />
 
       {/* Room Settings Modal */}
@@ -1179,6 +1422,13 @@ export default function EditorPage() {
         open={commandPaletteOpen}
         onClose={() => setCommandPaletteOpen(false)}
         commands={commandItems}
+      />
+
+      {/* Activity Log Panel */}
+      <ActivityLogPanel
+        isOpen={activityLogOpen}
+        onClose={() => setActivityLogOpen(false)}
+        activities={activities}
       />
     </div>
   );

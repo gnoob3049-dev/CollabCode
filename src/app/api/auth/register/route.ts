@@ -64,7 +64,14 @@ export async function POST(request: NextRequest) {
     });
 
     return response;
-  } catch (error) {
+  } catch (error: any) {
+    // Handle Prisma unique constraint violation (race condition)
+    if (error?.code === 'P2002') {
+      return NextResponse.json(
+        { error: 'Email already registered' },
+        { status: 409 }
+      );
+    }
     console.error('Register error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

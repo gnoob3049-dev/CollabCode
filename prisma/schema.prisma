@@ -27,9 +27,11 @@ model Room {
   owner       User     @relation("RoomOwner", fields: [ownerId], references: [id])
   inviteCode  String   @unique
   isPublic    Boolean  @default(true)
+  isReadOnly  Boolean  @default(false)
   language    String   @default("javascript")
   files       String   @default("[]")
   collaborators String  @default("[]")
+  activityLog String  @default("[]")
   createdAt   DateTime @default(now())
   lastActiveAt DateTime @default(now())
 

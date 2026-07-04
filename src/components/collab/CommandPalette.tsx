@@ -137,7 +137,7 @@ export default function CommandPalette({
           onClick={onClose}
         >
           {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
 
           {/* Modal */}
           <motion.div
@@ -194,7 +194,7 @@ export default function CommandPalette({
                       data-selected={isSelected}
                       onClick={() => executeCommand(cmd)}
                       onMouseEnter={() => setSelectedIndex(idx)}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors duration-75 ${
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-all duration-150 ${
                         isSelected
                           ? 'bg-[#0d1117] text-[#e6edf3]'
                           : 'text-[#8b949e] hover:bg-[#0d1117]/60 hover:text-[#e6edf3]'
@@ -236,7 +236,7 @@ export default function CommandPalette({
                               <kbd
                                 className="inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 text-[10px] font-medium text-[#8b949e] rounded"
                                 style={{
-                                  background: '#0d1117',
+                                  background: 'linear-gradient(135deg, #161b22, #21262d)',
                                   border: '1px solid #30363d',
                                   boxShadow:
                                     '0 1px 1px rgba(0,0,0,0.4), inset 0 0.5px 0 rgba(230,237,243,0.05)',
