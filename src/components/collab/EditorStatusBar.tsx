@@ -14,6 +14,19 @@ const AVATAR_COLORS = [
   '#3fb950', '#79c0ff', '#d2a8ff', '#ffa657', '#ff7b72',
 ];
 
+const LANG_COLORS: Record<string, string> = {
+  javascript: '#f7df1e',
+  typescript: '#3178c6',
+  python: '#3572a5',
+  java: '#b07219',
+  cpp: '#f34b7d',
+  go: '#00add8',
+  html: '#e34c26',
+  css: '#563d7c',
+  sql: '#e38c00',
+  rust: '#dea584',
+};
+
 interface EditorStatusBarProps {
   fileName: string;
   language: string;
@@ -61,6 +74,14 @@ export default function EditorStatusBar({
         color: '#8b949e',
       }}
     >
+      {/* Subtle top gradient border - green tinted */}
+      <div
+        className="absolute top-0 left-0 right-0 h-px pointer-events-none z-10"
+        style={{
+          background: 'linear-gradient(90deg, transparent 0%, rgba(35,134,54,0.3) 50%, transparent 100%)',
+        }}
+      />
+
       {/* Animated gradient shimmer overlay */}
       <div
         className="absolute inset-0 pointer-events-none status-shimmer"
@@ -98,7 +119,13 @@ export default function EditorStatusBar({
           </TooltipContent>
         </Tooltip>
         <span className="text-[#30363d]">│</span>
-        <span className="transition-colors duration-200 hover:text-[#e6edf3] cursor-default">{displayLanguage}</span>
+        <span className="transition-colors duration-200 hover:text-[#e6edf3] cursor-default flex items-center gap-1">
+              <span
+                className="inline-block w-2 h-2 rounded-full"
+                style={{ backgroundColor: LANG_COLORS[language] || '#8b949e', boxShadow: `0 0 4px ${LANG_COLORS[language] || '#8b949e'}60` }}
+              />
+              {displayLanguage}
+            </span>
         <span className="text-[#30363d]">│</span>
         <span className="tabular-nums">
           Ln <span className="text-[#e6edf3]">{cursorPosition.line}</span>, Col <span className="text-[#e6edf3]">{cursorPosition.column}</span>
@@ -116,7 +143,7 @@ export default function EditorStatusBar({
         {/* Problems indicator */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-sm transition-colors duration-200 hover:text-[#e6edf3] hover:bg-[#21262d] cursor-default">
+            <span className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-sm transition-colors duration-200 hover:text-[#e6edf3] hover:bg-[#21262d] cursor-default scale-in-soft">
               <span style={{ color: '#238636' }}>✓</span>
               <span>0 errors, 0 warnings</span>
             </span>

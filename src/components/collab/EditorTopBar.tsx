@@ -24,6 +24,9 @@ import {
   Lock,
   Download,
   Inbox,
+  Paintbrush,
+  MoreHorizontal,
+  FolderTree,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -39,6 +42,13 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import type { Room, User, PresenceUser } from '@/store/useStore';
 
@@ -63,6 +73,7 @@ interface EditorTopBarProps {
   onLanguageChange: (lang: string) => void;
   onRun: () => void;
   onSave: () => void;
+  onFormat: () => void;
   onShare: () => void;
   onToggleChat: () => void;
   onToggleAI: () => void;
@@ -90,6 +101,7 @@ interface EditorTopBarProps {
   isReadOnly?: boolean;
   isOwner?: boolean;
   onExport?: () => void;
+  onToggleMobileFileTree?: () => void;
 }
 
 export default function EditorTopBar({
@@ -100,6 +112,7 @@ export default function EditorTopBar({
   onLanguageChange,
   onRun,
   onSave,
+  onFormat,
   onShare,
   onToggleChat,
   onToggleAI,
@@ -127,6 +140,7 @@ export default function EditorTopBar({
   isReadOnly = false,
   isOwner = false,
   onExport,
+  onToggleMobileFileTree,
 }: EditorTopBarProps) {
   const isLockedForUser = isReadOnly && !isOwner;
   const [isEditingName, setIsEditingName] = useState(false);
@@ -158,11 +172,20 @@ export default function EditorTopBar({
 
   const currentLang = LANGUAGES[language];
 
+  // Buttons to show in the "More" dropdown on very small screens
+  const moreButtons = [
+    { label: 'Audio', icon: audioEnabled ? Bell : BellOff, action: onToggleAudio || (() => {}) },
+    { label: 'History', icon: History, action: onToggleHistory, active: historyOpen },
+    { label: 'Settings', icon: Settings, action: onOpenSettings },
+    { label: 'Shortcuts', icon: HelpCircle, action: onOpenShortcuts },
+    ...(onExport ? [{ label: 'Export', icon: Download, action: onExport }] : []),
+  ];
+
   return (
     <div className="relative flex flex-col shrink-0">
       {/* Gradient background top bar */}
       <div
-        className="flex items-center justify-between h-12 px-3 shrink-0 gap-2"
+        className="flex items-center justify-between h-11 md:h-12 px-2 md:px-3 shrink-0 gap-1 md:gap-2"
         style={{
           background: 'linear-gradient(180deg, #161b22 0%, #13171e 100%)',
         }}
@@ -174,7 +197,7 @@ export default function EditorTopBar({
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d] shrink-0"
+                className="size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d] shrink-0 press-effect"
                 onClick={onBack}
                 aria-label="Back to Dashboard"
               >
@@ -238,7 +261,7 @@ export default function EditorTopBar({
                 <SelectItem
                   key={lang.value}
                   value={lang.value}
-                  className="text-[#e6edf3] focus:bg-[#30363d] focus:text-[#e6edf3] text-xs"
+                  className="text-[#e6edf3] focus:bg-[#30363d] focus:text-[#e6edf3] text-xs hover:scale-[1.02] transition-transform duration-150"
                 >
                   <span className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full" style={{ backgroundColor: lang.color }} />
@@ -251,7 +274,7 @@ export default function EditorTopBar({
         </div>
 
         {/* Right section */}
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-0.5 md:gap-1 shrink-0">
           {/* Connection status indicator */}
           <div className="hidden sm:flex items-center mr-1">
             {isConnected ? (
@@ -260,7 +283,7 @@ export default function EditorTopBar({
                   <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#238636]/10">
                     <Wifi className="size-3 text-[#238636]" />
                     <span className="text-[10px] text-[#238636] font-medium">Live</span>
-                    <span className="size-1.5 rounded-full bg-[#238636] pulse-dot" />
+                    <span className="size-1.5 rounded-full bg-[#238636] pulse-dot float-subtle" />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">Connected to room</TooltipContent>
@@ -314,20 +337,38 @@ export default function EditorTopBar({
 
           <div className="w-px h-5 bg-[#30363d] mx-1 hidden sm:block" />
 
+          {/* Mobile file tree toggle */}
+          {onToggleMobileFileTree && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="md:hidden size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d] press-effect"
+                  onClick={onToggleMobileFileTree}
+                  aria-label="Toggle file tree"
+                >
+                  <FolderTree className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">File Tree</TooltipContent>
+            </Tooltip>
+          )}
+
           {/* Share */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d]"
+                className="size-7 md:size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d] press-effect"
                 onClick={onShare}
                 aria-label="Share invite link"
               >
-                <Share2 className="size-4" />
+                <Share2 className="size-3.5 md:size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">Copy invite link to clipboard</TooltipContent>
+            <TooltipContent side="bottom">Copy invite link</TooltipContent>
           </Tooltip>
 
           {/* Run */}
@@ -336,19 +377,19 @@ export default function EditorTopBar({
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-8 text-[#238636] hover:text-[#3fb950] hover:bg-[#238636]/10 hover:shadow-[0_0_12px_rgba(35,134,54,0.2)]"
+                className="size-7 md:size-8 text-[#238636] hover:text-[#3fb950] hover:bg-[#238636]/10 hover:shadow-[0_0_12px_rgba(35,134,54,0.2)] press-effect"
                 onClick={onRun}
                 disabled={isRunning || isLockedForUser}
                 aria-label="Run code"
               >
                 {isRunning ? (
-                  <Loader2 className="size-4 animate-spin" />
+                  <Loader2 className="size-3.5 md:size-4 animate-spin" />
                 ) : (
-                  <Play className="size-4" />
+                  <Play className="size-3.5 md:size-4" />
                 )}
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">Run code (Ctrl+Enter)</TooltipContent>
+            <TooltipContent side="bottom">Run (Ctrl+Enter)</TooltipContent>
           </Tooltip>
 
           {/* Save */}
@@ -357,24 +398,24 @@ export default function EditorTopBar({
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d]"
+                className="size-7 md:size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d] press-effect"
                 onClick={onSave}
                 disabled={isSaving || isLockedForUser}
                 aria-label="Save room"
               >
                 {isSaving ? (
-                  <Loader2 className="size-4 animate-spin" />
+                  <Loader2 className="size-3.5 md:size-4 animate-spin" />
                 ) : (
-                  <Save className="size-4" />
+                  <Save className="size-3.5 md:size-4" />
                 )}
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">Save (Ctrl+S)</TooltipContent>
           </Tooltip>
 
-          <div className="w-px h-5 bg-[#30363d] mx-1" />
+          <div className="w-px h-4 md:h-5 bg-[#30363d] mx-0.5 md:mx-1" />
 
-          {/* HTML Preview toggle */}
+          {/* HTML Preview toggle — desktop only */}
           {showPreview && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -382,7 +423,7 @@ export default function EditorTopBar({
                   variant="ghost"
                   size="icon"
                   className={cn(
-                    'size-8 hover:bg-[#30363d]',
+                    'hidden md:flex size-8 hover:bg-[#30363d]',
                     previewOpen
                       ? 'text-[#e6edf3] bg-[#30363d]'
                       : 'text-[#8b949e] hover:text-[#e6edf3]'
@@ -393,7 +434,7 @@ export default function EditorTopBar({
                   <Eye className="size-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">Toggle Preview (Ctrl+Shift+V)</TooltipContent>
+              <TooltipContent side="bottom">Preview</TooltipContent>
             </Tooltip>
           )}
 
@@ -404,7 +445,7 @@ export default function EditorTopBar({
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  'size-8 hover:bg-[#30363d]',
+                  'size-7 md:size-8 hover:bg-[#30363d]',
                   outputPanelOpen
                     ? 'text-[#e6edf3] bg-[#30363d]'
                     : 'text-[#8b949e] hover:text-[#e6edf3]'
@@ -412,10 +453,10 @@ export default function EditorTopBar({
                 onClick={onToggleOutput}
                 aria-label="Toggle output panel"
               >
-                <Terminal className="size-4" />
+                <Terminal className="size-3.5 md:size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">Toggle output panel</TooltipContent>
+            <TooltipContent side="bottom">Terminal</TooltipContent>
           </Tooltip>
 
           {/* AI Assist */}
@@ -425,7 +466,7 @@ export default function EditorTopBar({
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  'size-8 hover:bg-[#30363d]',
+                  'size-7 md:size-8 hover:bg-[#30363d]',
                   rightPanelOpen
                     ? 'text-purple-400 bg-purple-500/10'
                     : 'text-[#8b949e] hover:text-purple-400'
@@ -433,10 +474,10 @@ export default function EditorTopBar({
                 onClick={onToggleAI}
                 aria-label="Toggle AI assistant"
               >
-                <Sparkles className="size-4" />
+                <Sparkles className="size-3.5 md:size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">Toggle AI assistant panel</TooltipContent>
+            <TooltipContent side="bottom">AI</TooltipContent>
           </Tooltip>
 
           {/* Chat */}
@@ -445,9 +486,9 @@ export default function EditorTopBar({
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative size-8 hover:bg-[#30363d]"
+                className="relative size-7 md:size-8 hover:bg-[#30363d]"
                 onClick={onToggleChat}
-                aria-label={unreadChatCount > 0 ? `Toggle chat (${unreadChatCount} unread)` : 'Toggle chat'}
+                aria-label={unreadChatCount > 0 ? `Chat (${unreadChatCount})` : 'Chat'}
               >
                 {unreadChatCount > 0 && (
                   <Badge className="absolute -top-1 -right-1 size-4 p-0 flex items-center justify-center text-[10px] bg-[#238636] border-none glow-green animate-pulse">
@@ -456,48 +497,48 @@ export default function EditorTopBar({
                 )}
                 <MessageSquare
                   className={cn(
-                    'size-4',
+                    'size-3.5 md:size-4',
                     rightPanelOpen
                       ? 'text-[#e6edf3]'
-                      : 'text-[#8b949e] group-hover:text-[#e6edf3]'
+                      : 'text-[#8b949e]'
                   )}
                 />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">Toggle team chat ({unreadChatCount > 0 ? `${unreadChatCount} unread` : 'no new messages'})</TooltipContent>
+            <TooltipContent side="bottom">Chat</TooltipContent>
           </Tooltip>
 
-          {/* Audio notifications toggle */}
+          {/* Audio — desktop only */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  'size-8 hover:bg-[#30363d]',
+                  'hidden sm:flex size-8 hover:bg-[#30363d]',
                   audioEnabled
                     ? 'text-[#e6edf3]'
                     : 'text-[#484f58] hover:text-[#8b949e]'
                 )}
                 onClick={onToggleAudio}
-                aria-label={audioEnabled ? 'Disable audio notifications' : 'Enable audio notifications'}
+                aria-label={audioEnabled ? 'Disable audio' : 'Enable audio'}
               >
                 {audioEnabled ? <Bell className="size-4" /> : <BellOff className="size-4" />}
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
-              Audio notifications {audioEnabled ? 'on' : 'off'}
+              Audio {audioEnabled ? 'on' : 'off'}
             </TooltipContent>
           </Tooltip>
 
-          {/* History */}
+          {/* History — desktop only */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  'size-8 hover:bg-[#30363d]',
+                  'hidden sm:flex size-8 hover:bg-[#30363d]',
                   historyOpen
                     ? 'text-[#58a6ff] bg-[#58a6ff]/10'
                     : 'text-[#8b949e] hover:text-[#e6edf3]'
@@ -508,41 +549,41 @@ export default function EditorTopBar({
                 <History className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">Version History (Ctrl+Shift+H)</TooltipContent>
+            <TooltipContent side="bottom">History</TooltipContent>
           </Tooltip>
 
-          {/* Download / Export */}
+          {/* Export — desktop only */}
           {onExport && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d]"
+                  className="hidden sm:flex size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d] press-effect"
                   onClick={onExport}
-                  aria-label="Download room as ZIP"
+                  aria-label="Download as ZIP"
                 >
                   <Download className="size-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">Download as ZIP</TooltipContent>
+              <TooltipContent side="bottom">Download ZIP</TooltipContent>
             </Tooltip>
           )}
 
-          {/* Notifications */}
+          {/* Notifications — desktop only */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  'relative size-8 hover:bg-[#30363d]',
+                  'hidden sm:flex relative size-8 hover:bg-[#30363d]',
                   notificationsOpen
                     ? 'text-[#e6edf3] bg-[#30363d]'
                     : 'text-[#8b949e] hover:text-[#e6edf3]'
                 )}
                 onClick={onToggleNotifications}
-                aria-label={unreadNotificationCount > 0 ? `Notifications (${unreadNotificationCount} unread)` : 'Notifications'}
+                aria-label={unreadNotificationCount > 0 ? `Notifications (${unreadNotificationCount})` : 'Notifications'}
               >
                 {unreadNotificationCount > 0 && (
                   <Badge className="absolute -top-1 -right-1 size-4 p-0 flex items-center justify-center text-[10px] bg-[#58a6ff] border-none badge-pop">
@@ -552,40 +593,85 @@ export default function EditorTopBar({
                 <Inbox className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">Notifications (Ctrl+Shift+N)</TooltipContent>
+            <TooltipContent side="bottom">Notifications</TooltipContent>
           </Tooltip>
 
-          {/* Settings */}
+          {/* Settings — desktop only */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d]"
+                className="hidden sm:flex size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d] press-effect"
                 onClick={onOpenSettings}
-                aria-label="Room settings"
+                aria-label="Settings"
               >
                 <Settings className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">Room Settings</TooltipContent>
+            <TooltipContent side="bottom">Settings</TooltipContent>
           </Tooltip>
 
-          {/* Shortcuts help */}
+          {/* Shortcuts — desktop only */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d]"
+                className="hidden sm:flex size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d] press-effect"
                 onClick={onOpenShortcuts}
                 aria-label="Keyboard shortcuts"
               >
                 <HelpCircle className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">Keyboard Shortcuts (Ctrl+/)</TooltipContent>
+            <TooltipContent side="bottom">Shortcuts (Ctrl+/)</TooltipContent>
           </Tooltip>
+
+          {/* Mobile "More" dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="sm:hidden size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d]"
+                aria-label="More actions"
+              >
+                <MoreHorizontal className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="w-44 bg-[#161b22] border-[#30363d] text-[#e6edf3]"
+            >
+              {moreButtons.map((item) => (
+                <DropdownMenuItem
+                  key={item.label}
+                  className={cn(
+                    'text-[#e6edf3] focus:bg-[#30363d] focus:text-[#e6edf3] gap-2',
+                    'active' in item && item.active && 'text-[#58a6ff]'
+                  )}
+                  onClick={item.action}
+                >
+                  <item.icon className="size-4" />
+                  {item.label}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator className="bg-[#30363d]" />
+              <DropdownMenuItem
+                className="text-[#e6edf3] focus:bg-[#30363d] focus:text-[#e6edf3] gap-2"
+                onClick={onToggleNotifications}
+              >
+                <Inbox className="size-4" />
+                Notifications
+                {unreadNotificationCount > 0 && (
+                  <Badge className="ml-auto size-4 p-0 flex items-center justify-center text-[10px] bg-[#58a6ff] border-none">
+                    {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
+                  </Badge>
+                )}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Panel toggle */}
           <Tooltip>

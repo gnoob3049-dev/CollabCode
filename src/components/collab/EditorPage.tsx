@@ -43,6 +43,7 @@ import OutputPanel from './OutputPanel';
 import RoomSettingsModal from './RoomSettingsModal';
 import KeyboardShortcutsDialog from './KeyboardShortcutsDialog';
 import EditorStatusBar from './EditorStatusBar';
+import EditorBreadcrumb from './EditorBreadcrumb';
 import CommandPalette, { type CommandItem, type FileItem } from './CommandPalette';
 import HtmlPreview from './HtmlPreview';
 import MarkdownPreview from './MarkdownPreview';
@@ -51,6 +52,7 @@ import VersionHistoryPanel, { type VersionSnapshot } from './VersionHistoryPanel
 import ActivityLogPanel from './ActivityLogPanel';
 import NotificationsPanel from './NotificationsPanel';
 import type { ChatMessage, Room, ActivityLogEntry } from '@/store/useStore';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const LANGUAGE_MAP: Record<string, string> = {
   javascript: 'javascript',
@@ -115,6 +117,7 @@ export default function EditorPage() {
 
   const [files, setFiles] = useState<string[]>(['index.js']);
   const [fileTreeCollapsed, setFileTreeCollapsed] = useState(false);
+  const isMobile = useIsMobile();
   const [isSaving, setIsSaving] = useState(false);
   const [currentCode, setCurrentCode] = useState('');
   const [connected, setConnected] = useState(false);
@@ -560,6 +563,23 @@ export default function EditorPage() {
     [currentFileName, setCurrentFileName]
   );
 
+  // Reorder files in Y.js
+  const handleReorderFiles = useCallback(
+    (newOrder: string[]) => {
+      if (!fileListRef.current || !ydocRef.current) return;
+      const list = fileListRef.current;
+      const current = list.toArray();
+      // Only update if order actually changed
+      if (JSON.stringify(current) === JSON.stringify(newOrder)) return;
+      ydocRef.current.transact(() => {
+        list.delete(0, list.length);
+        list.insert(0, newOrder);
+      });
+      logActivity('file_reorder', 'reordered files in the file tree');
+    },
+    [logActivity]
+  );
+
   const handleDeleteFile = useCallback(
     (name: string) => {
       if (isLockedForUser) {
@@ -675,6 +695,37 @@ export default function EditorPage() {
       setIsSaving(false);
     }
   }, [currentRoomId, files, logActivity]);
+
+  // Format Document
+  const handleFormat = useCallback(() => {
+    const editorInstance = editorRef.current;
+    if (!editorInstance) return;
+    const action = editorInstance.getAction('editor.action.formatDocument');
+    if (action) {
+      action.run();
+      toast.success('Document formatted');
+    } else {
+      // Fallback: simple indentation cleanup
+      const model = editorInstance.getModel();
+      if (!model) return;
+      const lines = model.getValue().split('\n');
+      let indent = 0;
+      const formatted = lines
+        .map((line) => {
+          const trimmed = line.trim();
+          if (!trimmed) return '';
+          // Decrease indent for closing braces/brackets
+          if (/^[}\])]/.test(trimmed)) indent = Math.max(0, indent - 1);
+          const result = '  '.repeat(indent) + trimmed;
+          // Increase indent for opening braces/brackets
+          if (/[{(\[]\s*$/.test(trimmed)) indent++;
+          return result;
+        })
+        .join('\n');
+      editorInstance.setValue(formatted);
+      toast.success('Document formatted');
+    }
+  }, []);
 
   // Share
   const handleShare = useCallback(() => {
@@ -930,12 +981,9 @@ export default function EditorPage() {
         id: 'format-document',
         label: 'Format Document',
         icon: Paintbrush,
+        shortcut: ['Shift', 'Alt', 'F'],
         category: 'Editor Actions',
-        action: () => {
-          editorRef.current
-            ?.getAction('editor.action.formatDocument')
-            ?.run();
-        },
+        action: handleFormat,
       },
       {
         id: 'go-to-dashboard',
@@ -1039,6 +1087,7 @@ export default function EditorPage() {
       handleDeleteFile,
       handleSave,
       handleRun,
+      handleFormat,
       handleExportRoom,
       handleBack,
       currentFileName,
@@ -1103,6 +1152,10 @@ export default function EditorPage() {
         e.preventDefault();
         e.stopPropagation();
         setNotificationsOpen((v) => !v);
+      } else if (e.shiftKey && e.altKey && (e.key === 'f' || e.key === 'F')) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleFormat();
       } else if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
@@ -1115,7 +1168,7 @@ export default function EditorPage() {
     };
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [handleSave, handleRun, rightPanelOpen, commandPaletteOpen, isHtmlFile, isMarkdownFile, handleTogglePreview, handleToggleVersionHistory, files, setCurrentFileName]);
+  }, [handleSave, handleRun, handleFormat, rightPanelOpen, commandPaletteOpen, isHtmlFile, isMarkdownFile, handleTogglePreview, handleToggleVersionHistory, files, setCurrentFileName]);
 
   // Remote cursor decorations: CSS for y-monaco's built-in selection highlighting
   // + name labels for each remote user's cursor position
@@ -1226,6 +1279,7 @@ export default function EditorPage() {
         onLanguageChange={handleLanguageChange}
         onRun={handleRun}
         onSave={handleSave}
+        onFormat={handleFormat}
         onShare={handleShare}
         onToggleChat={handleToggleChat}
         onToggleAI={handleToggleAI}
@@ -1250,6 +1304,7 @@ export default function EditorPage() {
         isReadOnly={currentRoom?.isReadOnly ?? false}
         isOwner={isOwner}
         onExport={handleExportRoom}
+        onToggleMobileFileTree={() => setMobileFileTreeOpen((v) => !v)}
         onToggleNotifications={() => setNotificationsOpen((v) => !v)}
         notificationsOpen={notificationsOpen}
         unreadNotificationCount={notifications.filter((n) => !n.read).length}
@@ -1266,20 +1321,69 @@ export default function EditorPage() {
 
       {/* Main content area */}
       <div className="flex flex-1 min-h-0">
-        {/* File Tree */}
-        <FileTree
-          files={files}
-          currentFile={currentFileName}
-          onSelectFile={setCurrentFileName}
-          onCreateFile={handleCreateFile}
-          onRenameFile={handleRenameFile}
-          onDeleteFile={handleDeleteFile}
-          collapsed={fileTreeCollapsed}
-          onToggleCollapse={() => setFileTreeCollapsed(!fileTreeCollapsed)}
-          isReadOnly={isLockedForUser}
-        />
+        {/* File Tree - desktop */}
+        {!isMobile && (
+          <FileTree
+            files={files}
+            currentFile={currentFileName}
+            onSelectFile={setCurrentFileName}
+            onCreateFile={handleCreateFile}
+            onRenameFile={handleRenameFile}
+            onDeleteFile={handleDeleteFile}
+            collapsed={fileTreeCollapsed}
+            onToggleCollapse={() => setFileTreeCollapsed(!fileTreeCollapsed)}
+            isReadOnly={isLockedForUser}
+            onReorderFiles={handleReorderFiles}
+          />
+        )}
+        {/* Mobile File Tree overlay */}
+        {isMobile && mobileFileTreeOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              onClick={() => setMobileFileTreeOpen(false)}
+            />
+            <motion.div
+              className="fixed top-12 left-0 right-0 z-50 max-h-[50vh] overflow-hidden rounded-b-2xl bg-[#0d1117] border-b border-x border-[#30363d] shadow-2xl"
+              initial={{ y: '-100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '-100%', opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            >
+              {/* Drag handle */}
+              <div className="flex justify-center pt-2 pb-1">
+                <div className="w-10 h-1 rounded-full bg-[#30363d]" />
+              </div>
+              <FileTree
+                files={files}
+                currentFile={currentFileName}
+                onSelectFile={(name) => {
+                  setCurrentFileName(name);
+                  setMobileFileTreeOpen(false);
+                }}
+                onCreateFile={(name) => {
+                  handleCreateFile(name);
+                  setMobileFileTreeOpen(false);
+                }}
+                onRenameFile={handleRenameFile}
+                onDeleteFile={(name) => {
+                  handleDeleteFile(name);
+                }}
+                collapsed={false}
+                onToggleCollapse={() => setMobileFileTreeOpen(false)}
+                isReadOnly={isLockedForUser}
+                onReorderFiles={handleReorderFiles}
+              />
+            </motion.div>
+          </>
+        )}
 
-        {/* Editor + Output */}
+
         <div className="flex flex-col flex-1 min-w-0">
           {/* Editor Tabs */}
           <EditorTabs
@@ -1300,6 +1404,13 @@ export default function EditorPage() {
               }
               handleDeleteFile(name);
             }}
+          />
+          {/* Editor Breadcrumb */}
+          <EditorBreadcrumb
+            roomName={currentRoom?.name || 'Untitled'}
+            fileName={currentFileName}
+            language={language}
+            onBack={handleBack}
           />
           {/* Editor + Preview horizontal split */}
           <div className="flex flex-1 min-h-0">
@@ -1415,68 +1526,151 @@ export default function EditorPage() {
           </AnimatePresence>
         </div>
 
-        {/* Right Panel (Chat / AI) */}
-        <AnimatePresence initial={false}>
-          {rightPanelOpen && (
-            <motion.div
-              key="right-panel"
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 320, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ type: 'tween', duration: 0.2 }}
-              className="border-l border-[#30363d] overflow-hidden shrink-0"
-            >
-              <div className="w-80 h-full" style={{ width: '320px' }}>
-                <Tabs
-                  value={rightPanelTab}
-                  onValueChange={(v) => {
-                    setRightPanelTab(v as 'chat' | 'ai');
-                    if (v === 'chat') resetUnreadChatCount();
-                  }}
-                  className="h-full flex flex-col"
+        {/* Right Panel — Desktop sidebar */}
+        {!isMobile && (
+          <AnimatePresence initial={false}>
+            {rightPanelOpen && (
+              <motion.div
+                key="right-panel"
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: 320, opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ type: 'tween', duration: 0.2 }}
+                className="border-l border-[#30363d] overflow-hidden shrink-0"
+              >
+                <div className="w-80 h-full" style={{ width: '320px' }}>
+                  <Tabs
+                    value={rightPanelTab}
+                    onValueChange={(v) => {
+                      setRightPanelTab(v as 'chat' | 'ai');
+                      if (v === 'chat') resetUnreadChatCount();
+                    }}
+                    className="h-full flex flex-col"
+                  >
+                    <div className="px-2 pt-2 shrink-0">
+                      <TabsList className="w-full bg-[#161b22] border border-[#30363d] h-8">
+                        <TabsTrigger
+                          value="chat"
+                          className="text-xs data-[state=active]:bg-[#0d1117] data-[state=active]:text-[#e6edf3] h-6 flex-1 gap-1.5"
+                        >
+                          <MessageSquare className="size-3" />
+                          Chat
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="ai"
+                          className="text-xs data-[state=active]:bg-[#0d1117] data-[state=active]:text-purple-400 h-6 flex-1 gap-1.5"
+                        >
+                          <Sparkles className="size-3" />
+                          AI Assist
+                        </TabsTrigger>
+                      </TabsList>
+                    </div>
+
+                    <TabsContent value="chat" className="flex-1 mt-0 min-h-0">
+                      <ChatPanel
+                        roomId={currentRoomId}
+                        socket={socketRef.current}
+                        user={user}
+                        messages={chatMessages}
+                        onSendMessage={handleSendMessage}
+                        onlineUsers={onlineUsers}
+                      />
+                    </TabsContent>
+
+                    <TabsContent value="ai" className="flex-1 mt-0 min-h-0">
+                      <AIPanel
+                        currentCode={currentCode}
+                        language={language}
+                        currentFileName={currentFileName}
+                      />
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        )}
+
+        {/* Right Panel — Mobile bottom sheet */}
+        {isMobile && (
+          <AnimatePresence>
+            {rightPanelOpen && (
+              <>
+                {/* Backdrop overlay */}
+                <motion.div
+                  className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                  onClick={() => setRightPanelOpen(false)}
+                />
+                <motion.div
+                  className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-[#161b22] border-t border-[#30363d] shadow-2xl"
+                  initial={{ y: '100%' }}
+                  animate={{ y: 0 }}
+                  exit={{ y: '100%' }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                  style={{ height: '70vh', maxHeight: '70vh' }}
                 >
-                  <div className="px-2 pt-2 shrink-0">
-                    <TabsList className="w-full bg-[#161b22] border border-[#30363d] h-8">
-                      <TabsTrigger
-                        value="chat"
-                        className="text-xs data-[state=active]:bg-[#0d1117] data-[state=active]:text-[#e6edf3] h-6 flex-1 gap-1.5"
-                      >
-                        <MessageSquare className="size-3" />
-                        Chat
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="ai"
-                        className="text-xs data-[state=active]:bg-[#0d1117] data-[state=active]:text-purple-400 h-6 flex-1 gap-1.5"
-                      >
-                        <Sparkles className="size-3" />
-                        AI Assist
-                      </TabsTrigger>
-                    </TabsList>
+                  {/* Drag handle bar */}
+                  <div className="flex justify-center pt-2 pb-1">
+                    <div className="w-10 h-1 rounded-full bg-[#30363d]" />
                   </div>
+                  {/* Panel content */}
+                  <div className="flex-1 overflow-hidden h-[calc(70vh-20px)]">
+                    <Tabs
+                      value={rightPanelTab}
+                      onValueChange={(v) => {
+                        setRightPanelTab(v as 'chat' | 'ai');
+                        if (v === 'chat') resetUnreadChatCount();
+                      }}
+                      className="h-full flex flex-col"
+                    >
+                      <div className="px-2 pt-1 shrink-0">
+                        <TabsList className="w-full bg-[#0d1117] border border-[#30363d] h-8">
+                          <TabsTrigger
+                            value="chat"
+                            className="text-xs data-[state=active]:bg-[#161b22] data-[state=active]:text-[#e6edf3] h-6 flex-1 gap-1.5"
+                          >
+                            <MessageSquare className="size-3" />
+                            Chat
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="ai"
+                            className="text-xs data-[state=active]:bg-[#161b22] data-[state=active]:text-purple-400 h-6 flex-1 gap-1.5"
+                          >
+                            <Sparkles className="size-3" />
+                            AI Assist
+                          </TabsTrigger>
+                        </TabsList>
+                      </div>
 
-                  <TabsContent value="chat" className="flex-1 mt-0 min-h-0">
-                    <ChatPanel
-                      roomId={currentRoomId}
-                      socket={socketRef.current}
-                      user={user}
-                      messages={chatMessages}
-                      onSendMessage={handleSendMessage}
-                      onlineUsers={onlineUsers}
-                    />
-                  </TabsContent>
+                      <TabsContent value="chat" className="flex-1 mt-0 min-h-0">
+                        <ChatPanel
+                          roomId={currentRoomId}
+                          socket={socketRef.current}
+                          user={user}
+                          messages={chatMessages}
+                          onSendMessage={handleSendMessage}
+                          onlineUsers={onlineUsers}
+                        />
+                      </TabsContent>
 
-                  <TabsContent value="ai" className="flex-1 mt-0 min-h-0">
-                    <AIPanel
-                      currentCode={currentCode}
-                      language={language}
-                      currentFileName={currentFileName}
-                    />
-                  </TabsContent>
-                </Tabs>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                      <TabsContent value="ai" className="flex-1 mt-0 min-h-0">
+                        <AIPanel
+                          currentCode={currentCode}
+                          language={language}
+                          currentFileName={currentFileName}
+                        />
+                      </TabsContent>
+                    </Tabs>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        )}
 
         {/* Version History Panel */}
         <VersionHistoryPanel

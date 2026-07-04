@@ -306,7 +306,7 @@ export default function ChatPanel({
                           {msg.senderName}
                         </span>
                       )}
-                      <span className="text-[10px] text-[#30363d] fade-in-up">
+                      <span className="text-[10px] text-[#30363d] fade-in-up slide-in-right-soft">
                         {formatTime(msg.createdAt)}
                       </span>
                     </div>
@@ -317,6 +317,7 @@ export default function ChatPanel({
                           ? 'bg-[#238636] text-white rounded-2xl rounded-br-md shadow-[0_2px_8px_rgba(35,134,54,0.2)] hover:bg-[#2ea043] hover:shadow-[0_2px_12px_rgba(35,134,54,0.3)]'
                           : 'bg-[#161b22] text-[#e6edf3] rounded-2xl rounded-bl-md border border-[#30363d]/60 shadow-sm hover:border-[#484f58]/60 hover:border-[#238636]/20'
                       )}
+                      style={isOwn ? { background: 'linear-gradient(180deg, rgba(35,134,54,0.15) 0%, #238636 30%)' } : undefined}
                     >
                       {msg.text}
                     </div>
@@ -451,12 +452,12 @@ export default function ChatPanel({
             onKeyDown={handleKeyDown}
             placeholder="Type a message... (use @ to mention)"
             rows={1}
-            className="flex-1 bg-transparent text-sm text-[#e6edf3] outline-none placeholder-[#484f58] resize-none min-h-[28px] max-h-24 py-0.5"
+            className="flex-1 bg-transparent text-sm text-[#e6edf3] outline-none placeholder-[#484f58] resize-none min-h-[28px] max-h-24 py-0.5 input-glow-focus"
             style={{ lineHeight: '1.5' }}
           />
           <Button
             size="icon"
-            className="size-8 shrink-0 bg-[#238636] hover:bg-[#2ea043] text-white hover:shadow-[0_0_12px_rgba(35,134,54,0.3)]"
+            className="size-8 shrink-0 bg-[#238636] hover:bg-[#2ea043] text-white hover:shadow-[0_0_12px_rgba(35,134,54,0.3)] hover-glow-green press-effect"
             onClick={handleSend}
             disabled={!input.trim()}
           >

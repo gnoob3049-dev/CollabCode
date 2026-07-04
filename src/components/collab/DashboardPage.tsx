@@ -18,6 +18,8 @@ import {
   ChevronDown,
   Settings,
   Palette,
+  Star,
+  ArrowUpDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -152,15 +154,98 @@ export default function DashboardPage() {
   const [deleteRoomId, setDeleteRoomId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Language filter
+  const [languageFilter, setLanguageFilter] = useState<string | null>(null);
+
+  // Sort
+  const [sortBy, setSortBy] = useState<string>('last-active');
+
+  // Favorites
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const stored = localStorage.getItem('collabcode-favorites');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const toggleFavorite = useCallback((roomId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setFavorites((prev) => {
+      const next = prev.includes(roomId)
+        ? prev.filter((id) => id !== roomId)
+        : [...prev, roomId];
+      try {
+        localStorage.setItem('collabcode-favorites', JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }, []);
+
+  // Unique languages from user's rooms
+  const uniqueLanguages = useMemo(() => {
+    const langs = [...new Set(rooms.map((r) => r.language))];
+    return langs.sort();
+  }, [rooms]);
+
   const filteredRooms = useMemo(() => {
-    if (!searchQuery.trim()) return rooms;
-    const q = searchQuery.toLowerCase();
-    return rooms.filter(
-      (r) =>
-        r.name.toLowerCase().includes(q) ||
-        r.language.toLowerCase().includes(q)
-    );
-  }, [rooms, searchQuery]);
+    let result = rooms;
+    // Apply search
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (r) =>
+          r.name.toLowerCase().includes(q) ||
+          r.language.toLowerCase().includes(q)
+      );
+    }
+    // Apply language filter
+    if (languageFilter) {
+      result = result.filter((r) => r.language === languageFilter);
+    }
+    // Apply sort
+    switch (sortBy) {
+      case 'name-asc':
+        result = [...result].sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case 'name-desc':
+        result = [...result].sort((a, b) => b.name.localeCompare(a.name));
+        break;
+      case 'newest':
+        result = [...result].sort((a, b) => {
+          const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return db - da;
+        });
+        break;
+      case 'oldest':
+        result = [...result].sort((a, b) => {
+          const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return da - db;
+        });
+        break;
+      case 'last-active':
+      default:
+        result = [...result].sort((a, b) => {
+          const da = a.lastActiveAt ? new Date(a.lastActiveAt).getTime() : 0;
+          const db = b.lastActiveAt ? new Date(b.lastActiveAt).getTime() : 0;
+          return db - da;
+        });
+        break;
+    }
+    // Favorites first within same sort
+    result = [...result].sort((a, b) => {
+      const aFav = favorites.includes(a.id) ? 0 : 1;
+      const bFav = favorites.includes(b.id) ? 0 : 1;
+      return aFav - bFav;
+    });
+    return result;
+  }, [rooms, searchQuery, languageFilter, sortBy, favorites]);
 
   const totalCollaborators = useMemo(() => {
     return rooms.reduce((acc, r) => {
@@ -503,14 +588,14 @@ export default function DashboardPage() {
             {/* Stats bar */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
               {[
-                { icon: Hash, label: "Total Rooms", value: rooms.length, color: "#238636" },
-                { icon: Users, label: "Collaborators", value: totalCollaborators, color: "#58a6ff" },
-                { icon: FileCode2, label: "Languages", value: [...new Set(rooms.map(r => r.language))].length, color: "#d29922" },
-                { icon: Clock, label: "Active Now", value: rooms.filter(r => isRecent(r.lastActiveAt)).length, color: "#3fb950" },
+                { icon: Hash, label: "Total Rooms", value: rooms.length, color: "#238636", glowClass: "hover-glow-green" },
+                { icon: Users, label: "Collaborators", value: totalCollaborators, color: "#58a6ff", glowClass: "hover-glow-blue" },
+                { icon: FileCode2, label: "Languages", value: [...new Set(rooms.map(r => r.language))].length, color: "#d29922", glowClass: "hover-glow-purple" },
+                { icon: Clock, label: "Active Now", value: rooms.filter(r => isRecent(r.lastActiveAt)).length, color: "#3fb950", glowClass: "hover-glow-green" },
               ].map((stat) => (
                 <div
                   key={stat.label}
-                  className="rounded-lg border border-[#30363d] p-3 sm:p-4 flex items-center gap-3 transition-transform duration-200 hover:scale-[1.03] cursor-default"
+                  className={`rounded-lg border border-[#30363d] p-3 sm:p-4 flex items-center gap-3 transition-transform duration-200 hover:scale-[1.03] cursor-default glass-card scale-in-soft ${stat.glowClass}`}
                   style={{
                     background: `linear-gradient(135deg, ${stat.color}08, ${stat.color}03)`,
                     backgroundColor: '#161b22',
@@ -523,7 +608,7 @@ export default function DashboardPage() {
                     <stat.icon className="w-4 h-4" style={{ color: stat.color }} />
                   </div>
                   <div>
-                    <div className="text-lg sm:text-xl font-bold text-[#e6edf3]">{stat.value}</div>
+                    <div className="text-lg sm:text-xl font-bold text-[#e6edf3] tabular-nums">{stat.value}</div>
                     <div className="text-xs text-[#8b949e]">{stat.label}</div>
                   </div>
                 </div>
@@ -531,7 +616,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Actions */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-[#e6edf3]">
                   Your Rooms
@@ -550,9 +635,26 @@ export default function DashboardPage() {
                     placeholder="Search rooms..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full h-9 pl-8 bg-[#161b22] border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] text-sm focus:border-[#238636]/50 focus:ring-1 focus:ring-[#238636]/30 focus:shadow-[0_0_8px_rgba(35,134,54,0.12)]"
+                    className="w-full h-9 pl-8 bg-[#161b22] border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] text-sm input-glow-focus"
                   />
                 </div>
+                {/* Sort dropdown */}
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger
+                    className="w-auto h-9 px-2 bg-[#161b22] border-[#30363d] text-[#e6edf3] text-xs shrink-0"
+                    aria-label="Sort rooms"
+                  >
+                    <ArrowUpDown className="w-3.5 h-3.5 mr-1 text-[#8b949e]" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#161b22] border-[#30363d] text-[#e6edf3]">
+                    <SelectItem value="last-active" className="text-[#e6edf3] focus:bg-[#30363d] focus:text-[#e6edf3]">Last Active</SelectItem>
+                    <SelectItem value="name-asc" className="text-[#e6edf3] focus:bg-[#30363d] focus:text-[#e6edf3]">Name A-Z</SelectItem>
+                    <SelectItem value="name-desc" className="text-[#e6edf3] focus:bg-[#30363d] focus:text-[#e6edf3]">Name Z-A</SelectItem>
+                    <SelectItem value="newest" className="text-[#e6edf3] focus:bg-[#30363d] focus:text-[#e6edf3]">Newest</SelectItem>
+                    <SelectItem value="oldest" className="text-[#e6edf3] focus:bg-[#30363d] focus:text-[#e6edf3]">Oldest</SelectItem>
+                  </SelectContent>
+                </Select>
                 <Button
                   variant="outline"
                   onClick={() => setJoinOpen(true)}
@@ -581,6 +683,40 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+
+            {/* Language filter pills */}
+            {uniqueLanguages.length > 1 && (
+              <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                <button
+                  onClick={() => setLanguageFilter(null)}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border whitespace-nowrap transition-all duration-200 ${
+                    languageFilter === null
+                      ? 'bg-[#238636]/20 text-[#3fb950] border-[#238636]/30'
+                      : 'bg-transparent text-[#8b949e] border-[#30363d] hover:bg-[#21262d]'
+                  }`}
+                >
+                  All
+                </button>
+                {uniqueLanguages.map((lang) => {
+                  const color = LANG_COLORS[lang] || '#8b949e';
+                  const isActive = languageFilter === lang;
+                  return (
+                    <button
+                      key={lang}
+                      onClick={() => setLanguageFilter(isActive ? null : lang)}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border whitespace-nowrap transition-all duration-200 ${
+                        isActive
+                          ? 'bg-[#238636]/20 text-[#3fb950] border-[#238636]/30'
+                          : 'bg-transparent text-[#8b949e] border-[#30363d] hover:bg-[#21262d]'
+                      }`}
+                    >
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                      {lang.charAt(0).toUpperCase() + lang.slice(1)}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Room List */}
             {loading ? (
@@ -631,6 +767,8 @@ export default function DashboardPage() {
                 {filteredRooms.map((room) => {
                   const langColor = LANG_COLORS[room.language] || "#8b949e";
                   const recent = isRecent(room.lastActiveAt);
+                  const isStarred = favorites.includes(room.id);
+                  const collabCount = room.collaboratorCount ?? room.collaborators?.length ?? 1;
                   return (
                     <motion.div
                       layout
@@ -641,7 +779,7 @@ export default function DashboardPage() {
                       transition={{ duration: 0.2 }}
                     >
                     <Card
-                      className="cursor-pointer border-[#30363d] hover:border-[#238636]/40 transition-all duration-300 group hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] relative overflow-hidden hover-lift"
+                      className="cursor-pointer border-[#30363d] hover:border-[#238636]/40 transition-all duration-300 group hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] relative overflow-hidden hover-lift press-effect"
                       style={{ background: "#161b22" }}
                       onClick={() => handleOpenRoom(room)}
                     >
@@ -666,10 +804,13 @@ export default function DashboardPage() {
                           background: 'linear-gradient(to top, rgba(13,17,23,0.4) 0%, transparent 100%)',
                         }}
                       />
-                      {/* Left accent line */}
+                      {/* Left accent line — golden when starred */}
                       <div
                         className="absolute left-0 top-0 bottom-0 w-[3px] transition-all duration-300"
-                        style={{ backgroundColor: langColor, opacity: 0.6 }}
+                        style={{
+                          backgroundColor: isStarred ? '#d29922' : langColor,
+                          opacity: isStarred ? 1 : 0.6,
+                        }}
                       />
                       {/* Delete button - top right, visible on hover, owner only */}
                       {user?.id === room.ownerId && (
@@ -678,12 +819,25 @@ export default function DashboardPage() {
                             e.stopPropagation();
                             setDeleteRoomId(room.id);
                           }}
-                          className="absolute top-2.5 right-2.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-md text-red-400 hover:bg-red-500/10"
+                          className="absolute top-2.5 right-2.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-md text-red-400 hover:bg-red-500/10 hover:shadow-[0_0_12px_rgba(248,81,73,0.3)]"
                           aria-label="Delete room"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       )}
+                      {/* Star button - visible on hover */}
+                      <button
+                        onClick={(e) => toggleFavorite(room.id, e)}
+                        className="absolute top-2.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-md hover:bg-[#21262d]"
+                        style={{ right: user?.id === room.ownerId ? '2.5rem' : '0.625rem' }}
+                        aria-label={isStarred ? 'Unfavorite room' : 'Favorite room'}
+                      >
+                        <Star
+                          className={`w-4 h-4 transition-colors duration-200 ${
+                            isStarred ? 'text-[#d29922] fill-[#d29922]' : 'text-[#8b949e] hover:text-[#d29922]'
+                          }`}
+                        />
+                      </button>
                       <CardHeader className="pb-3 pl-5">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
@@ -711,7 +865,7 @@ export default function DashboardPage() {
                         <CardDescription className="text-[#8b949e] text-sm mb-4">
                           Code:{" "}
                           <span
-                            className="font-mono text-[#58a6ff] cursor-pointer hover:underline"
+                            className="font-mono text-[#58a6ff] cursor-pointer hover:underline hover:shadow-[0_0_8px_rgba(88,166,255,0.2)] transition-shadow duration-300"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleCopyCode(room.inviteCode);
@@ -722,26 +876,30 @@ export default function DashboardPage() {
                           <Copy className="inline w-3 h-3 ml-1 text-[#484f58] group-hover:text-[#8b949e] transition-colors" />
                         </CardDescription>
                         <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-1 text-[#8b949e]">
-                            <Users className="w-3.5 h-3.5" />
-                            <span>
-                              {room.collaboratorCount ?? room.collaborators?.length ?? 1} collaborator
-                              {(room.collaboratorCount ?? room.collaborators?.length ?? 1) !== 1 ? "s" : ""}
+                          <div className="flex items-center gap-2">
+                            {/* Mini avatar stack */}
+                            <div className="flex -space-x-1.5">
+                              <div
+                                className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white ring-1 ring-[#30363d]"
+                                style={{ backgroundColor: user?.avatarColor || '#238636' }}
+                                title={room.ownerName === user?.name ? 'You' : (room.ownerName || 'You')}
+                              >
+                                {(room.ownerName === user?.name ? user?.name : (room.ownerName || 'U')).charAt(0).toUpperCase()}
+                              </div>
+                              {collabCount > 1 && (
+                                <div className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-medium text-[#8b949e] ring-1 ring-[#30363d] bg-[#30363d]">
+                                  +{collabCount - 1}
+                                </div>
+                              )}
+                            </div>
+                            <span className="text-[#8b949e]">
+                              {collabCount} collaborator{collabCount !== 1 ? "s" : ""}
                             </span>
                           </div>
                           <div
-                            className={`flex items-center gap-1 ${recent ? "text-[#3fb950]" : "text-[#8b949e]"} group/tooltip relative`}
+                            className={`flex items-center gap-1 ${recent ? "text-[#3fb950]" : "text-[#8b949e]"}`}
                             title={room.lastActiveAt ? `Last edited: ${new Date(room.lastActiveAt).toLocaleString()}` : undefined}
                           >
-                            {/* Last edited by indicator */}
-                            <div className="flex items-center gap-1 mr-1.5">
-                              <div
-                                className="w-3.5 h-3.5 rounded-full ring-1 ring-[#30363d]"
-                                style={{ backgroundColor: user?.avatarColor || '#238636' }}
-                                title={user?.name || 'You'}
-                              />
-                              <span className="text-[10px] text-[#484f58]">{room.ownerName === user?.name ? 'You' : (room.ownerName || 'You')}</span>
-                            </div>
                             <Clock className="w-3.5 h-3.5" />
                             <span>{timeAgo(room.lastActiveAt)}</span>
                           </div>
@@ -761,6 +919,7 @@ export default function DashboardPage() {
       {/* Create Room Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent
+          className="glass-card"
           style={{ background: "#161b22", border: "1px solid #30363d" }}
         >
           <DialogHeader>
@@ -827,7 +986,7 @@ export default function DashboardPage() {
                           type="button"
                           onClick={() => handleTemplateSelect(template)}
                           className={`
-                            flex flex-col items-center gap-2 rounded-lg p-3 text-center transition-all duration-200 cursor-pointer
+                            flex flex-col items-center gap-2 rounded-lg p-3 text-center transition-all duration-200 cursor-pointer scale-in-soft
                             ${isSelected
                               ? 'border-2 border-[#238636] shadow-[0_0_12px_rgba(35,134,54,0.3)]'
                               : 'border border-[#30363d] hover:border-[#484f58] hover:scale-[1.02]'
@@ -857,7 +1016,7 @@ export default function DashboardPage() {
               <Button
                 type="submit"
                 disabled={creating}
-                className="bg-[#238636] hover:bg-[#2ea043] text-white"
+                className="bg-[#238636] hover:bg-[#2ea043] text-white hover-glow-green"
               >
                 {creating ? (
                   <>

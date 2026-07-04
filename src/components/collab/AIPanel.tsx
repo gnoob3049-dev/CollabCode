@@ -276,6 +276,10 @@ export default function AIPanel({
               className={cn(
                 'justify-start gap-1.5 h-7 text-xs text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#161b22] px-2 group transition-all duration-200',
                 'hover:shadow-sm hover:-translate-y-0.5 hover-lift btn-press',
+                action.id === 'explain' && 'hover-glow-blue',
+                action.id === 'fix' && 'hover-glow-green',
+                action.id === 'optimize' && 'hover-glow-purple',
+                action.id === 'tests' && 'hover-glow-green',
               )}
               onClick={() => handleQuickAction(action)}
               disabled={loading || isStreaming || !currentCode.trim()}
@@ -327,9 +331,10 @@ export default function AIPanel({
           )}
 
           {response && (
-            <div className="prose prose-invert prose-sm max-w-none text-[#e6edf3] [&_code]:bg-[#161b22] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_code]:text-purple-300 [&_code]:border [&_code]:border-[#30363d]/50 [&_pre]:bg-[#0d1117] [&_pre]:border [&_pre]:border-[#30363d] [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:my-2 [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-xs [&_p]:text-sm [&_p]:leading-relaxed [&_ul]:text-sm [&_ol]:text-sm [&_li]:text-sm [&_strong]:text-[#e6edf3] [&_a]:text-[#58a6ff] [&_a]:no-underline border-l-2 border-transparent pl-3"
+            <div className="prose prose-invert prose-sm max-w-none text-[#e6edf3] [&_code]:bg-[#161b22] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_code]:text-purple-300 [&_code]:border [&_code]:border-[#30363d]/50 [&_pre]:bg-[#0d1117] [&_pre]:border [&_pre]:border-[#30363d] [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:my-2 [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-xs [&_p]:text-sm [&_p]:leading-relaxed [&_ul]:text-sm [&_ol]:text-sm [&_li]:text-sm [&_strong]:text-[#e6edf3] [&_a]:text-[#58a6ff] [&_a]:no-underline pl-3"
               style={{
-                borderImage: 'linear-gradient(to bottom, #238636, #58a6ff, #a371f7) 1',
+                borderLeft: '2px solid #238636',
+                borderImage: 'linear-gradient(to bottom, #238636, transparent) 1',
               }}
             >
               <ReactMarkdown>{response}</ReactMarkdown>
@@ -366,7 +371,7 @@ export default function AIPanel({
             rows={1}
             disabled={loading || isStreaming}
             maxLength={maxChars}
-            className="flex-1 bg-transparent text-sm text-[#e6edf3] outline-none placeholder-[#484f58] resize-none min-h-[28px] max-h-24 py-0.5 disabled:opacity-50"
+            className="flex-1 bg-transparent text-sm text-[#e6edf3] outline-none placeholder-[#484f58] resize-none min-h-[28px] max-h-24 py-0.5 disabled:opacity-50 input-glow-focus"
             style={{ lineHeight: '1.5' }}
           />
           <div className="flex items-center gap-1.5 shrink-0">

@@ -1,0 +1,1163 @@
+     1→     1→@import "tailwindcss";
+     2→     2→@import "tw-animate-css";
+     3→     3→
+     4→     4→@custom-variant dark (&:is(.dark *));
+     5→     5→
+     6→     6→@theme inline {
+     7→     7→  --color-background: var(--background);
+     8→     8→  --color-foreground: var(--foreground);
+     9→     9→  --font-sans: var(--font-geist-sans);
+    10→    10→  --font-mono: var(--font-geist-mono);
+    11→    11→  --color-sidebar-ring: var(--sidebar-ring);
+    12→    12→  --color-sidebar-border: var(--sidebar-border);
+    13→    13→  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    14→    14→  --color-sidebar-accent: var(--sidebar-accent);
+    15→    15→  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    16→    16→  --color-sidebar-primary: var(--sidebar-primary);
+    17→    17→  --color-sidebar-foreground: var(--sidebar-foreground);
+    18→    18→  --color-sidebar: var(--sidebar);
+    19→    19→  --color-chart-5: var(--chart-5);
+    20→    20→  --color-chart-4: var(--chart-4);
+    21→    21→  --color-chart-3: var(--chart-3);
+    22→    22→  --color-chart-2: var(--chart-2);
+    23→    23→  --color-chart-1: var(--chart-1);
+    24→    24→  --color-ring: var(--ring);
+    25→    25→  --color-input: var(--input);
+    26→    26→  --color-border: var(--border);
+    27→    27→  --color-destructive: var(--destructive);
+    28→    28→  --color-accent-foreground: var(--accent-foreground);
+    29→    29→  --color-accent: var(--accent);
+    30→    30→  --color-muted-foreground: var(--muted-foreground);
+    31→    31→  --color-muted: var(--muted);
+    32→    32→  --color-secondary-foreground: var(--secondary-foreground);
+    33→    33→  --color-secondary: var(--secondary);
+    34→    34→  --color-primary-foreground: var(--primary-foreground);
+    35→    35→  --color-primary: var(--primary);
+    36→    36→  --color-popover-foreground: var(--popover-foreground);
+    37→    37→  --color-popover: var(--popover);
+    38→    38→  --color-card-foreground: var(--card-foreground);
+    39→    39→  --color-card: var(--card);
+    40→    40→  --radius-sm: calc(var(--radius) - 4px);
+    41→    41→  --radius-md: calc(var(--radius) - 2px);
+    42→    42→  --radius-lg: var(--radius);
+    43→    43→  --radius-xl: calc(var(--radius) + 4px);
+    44→    44→}
+    45→    45→
+    46→    46→:root {
+    47→    47→  --radius: 0.625rem;
+    48→    48→  --background: #0d1117;
+    49→    49→  --foreground: #e6edf3;
+    50→    50→  --card: #161b22;
+    51→    51→  --card-foreground: #e6edf3;
+    52→    52→  --popover: #161b22;
+    53→    53→  --popover-foreground: #e6edf3;
+    54→    54→  --primary: #238636;
+    55→    55→  --primary-foreground: #ffffff;
+    56→    56→  --secondary: #21262d;
+    57→    57→  --secondary-foreground: #e6edf3;
+    58→    58→  --muted: #21262d;
+    59→    59→  --muted-foreground: #8b949e;
+    60→    60→  --accent: #21262d;
+    61→    61→  --accent-foreground: #e6edf3;
+    62→    62→  --destructive: #f85149;
+    63→    63→  --border: #30363d;
+    64→    64→  --input: #30363d;
+    65→    65→  --ring: #58a6ff;
+    66→    66→  --chart-1: #58a6ff;
+    67→    67→  --chart-2: #3fb950;
+    68→    68→  --chart-3: #d29922;
+    69→    69→  --chart-4: #f78166;
+    70→    70→  --chart-5: #bc8cff;
+    71→    71→  --sidebar: #0d1117;
+    72→    72→  --sidebar-foreground: #e6edf3;
+    73→    73→  --sidebar-primary: #238636;
+    74→    74→  --sidebar-primary-foreground: #ffffff;
+    75→    75→  --sidebar-accent: #161b22;
+    76→    76→  --sidebar-accent-foreground: #e6edf3;
+    77→    77→  --sidebar-border: #30363d;
+    78→    78→  --sidebar-ring: #58a6ff;
+    79→    79→}
+    80→    80→
+    81→    81→@layer base {
+    82→    82→  * {
+    83→    83→    @apply border-border outline-ring/50;
+    84→    84→  }
+    85→    85→  body {
+    86→    86→    @apply bg-background text-foreground;
+    87→    87→    background: radial-gradient(ellipse at 50% 0%, #0d1117 0%, #010409 100%);
+    88→    88→    background-attachment: fixed;
+    89→    89→  }
+    90→    90→}
+    91→    91→
+    92→    92→/* Smooth transitions for all interactive elements */
+    93→    93→button, a, [role="button"] {
+    94→    94→  transition: all 0.15s ease;
+    95→    95→}
+    96→    96→
+    97→    97→/* Focus ring styles for keyboard navigation */
+    98→    98→*:focus-visible {
+    99→    99→  outline: 2px solid #238636;
+   100→   100→  outline-offset: 2px;
+   101→   101→}
+   102→   102→
+   103→   103→/* Glow effects */
+   104→   104→.glow-green {
+   105→   105→  box-shadow: 0 0 20px rgba(35, 134, 54, 0.3);
+   106→   106→}
+   107→   107→
+   108→   108→.glow-green-strong {
+   109→   109→  box-shadow: 0 0 30px rgba(35, 134, 54, 0.4), 0 0 60px rgba(35, 134, 54, 0.15);
+   110→   110→}
+   111→   111→
+   112→   112→.glow-blue {
+   113→   113→  box-shadow: 0 0 20px rgba(88, 166, 255, 0.3);
+   114→   114→}
+   115→   115→
+   116→   116→/* Pulse animation for connected status dot */
+   117→   117→@keyframes pulse-dot {
+   118→   118→  0%, 100% {
+   119→   119→    box-shadow: 0 0 0 0 rgba(35, 134, 54, 0.5);
+   120→   120→  }
+   121→   121→  50% {
+   122→   122→    box-shadow: 0 0 0 6px rgba(35, 134, 54, 0);
+   123→   123→  }
+   124→   124→}
+   125→   125→
+   126→   126→.pulse-dot {
+   127→   127→  animation: pulse-dot 2s ease-in-out infinite;
+   128→   128→}
+   129→   129→
+   130→   130→/* Glass morphism class */
+   131→   131→.glass {
+   132→   132→  backdrop-filter: blur(12px);
+   133→   133→  -webkit-backdrop-filter: blur(12px);
+   134→   134→  background: rgba(22, 27, 34, 0.8);
+   135→   135→  border: 1px solid rgba(48, 54, 61, 0.5);
+   136→   136→}
+   137→   137→
+   138→   138→.glass-strong {
+   139→   139→  backdrop-filter: blur(20px);
+   140→   140→  -webkit-backdrop-filter: blur(20px);
+   141→   141→  background: rgba(22, 27, 34, 0.9);
+   142→   142→  border: 1px solid rgba(48, 54, 61, 0.6);
+   143→   143→}
+   144→   144→
+   145→   145→/* Gradient text class */
+   146→   146→.gradient-text {
+   147→   147→  background: linear-gradient(135deg, #238636, #58a6ff);
+   148→   148→  -webkit-background-clip: text;
+   149→   149→  -webkit-text-fill-color: transparent;
+   150→   150→  background-clip: text;
+   151→   151→}
+   152→   152→
+   153→   153→/* Noise texture overlay */
+   154→   154→.noise-bg {
+   155→   155→  position: relative;
+   156→   156→}
+   157→   157→
+   158→   158→.noise-bg::before {
+   159→   159→  content: "";
+   160→   160→  position: absolute;
+   161→   161→  inset: 0;
+   162→   162→  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+   163→   163→  background-repeat: repeat;
+   164→   164→  pointer-events: none;
+   165→   165→  z-index: 0;
+   166→   166→  opacity: 0.5;
+   167→   167→}
+   168→   168→
+   169→   169→/* Animated gradient orb */
+   170→   170→@keyframes float-orb {
+   171→   171→  0%, 100% {
+   172→   172→    transform: translate(-50%, -50%) scale(1);
+   173→   173→  }
+   174→   174→  33% {
+   175→   175→    transform: translate(-45%, -55%) scale(1.1);
+   176→   176→  }
+   177→   177→  66% {
+   178→   178→    transform: translate(-55%, -45%) scale(0.9);
+   179→   179→  }
+   180→   180→}
+   181→   181→
+   182→   182→.animate-orb {
+   183→   183→  animation: float-orb 8s ease-in-out infinite;
+   184→   184→}
+   185→   185→
+   186→   186→/* Dot grid pattern */
+   187→   187→.dot-grid {
+   188→   188→  background-image: radial-gradient(circle, rgba(48, 54, 61, 0.4) 1px, transparent 1px);
+   189→   189→  background-size: 24px 24px;
+   190→   190→}
+   191→   191→
+   192→   192→/* Shimmer animation for AI loading */
+   193→   193→@keyframes shimmer {
+   194→   194→  0% {
+   195→   195→    background-position: -200% 0;
+   196→   196→  }
+   197→   197→  100% {
+   198→   198→    background-position: 200% 0;
+   199→   199→  }
+   200→   200→}
+   201→   201→
+   202→   202→.shimmer {
+   203→   203→  background: linear-gradient(
+   204→   204→    90deg,
+   205→   205→    rgba(48, 54, 61, 0.3) 0%,
+   206→   206→    rgba(48, 54, 61, 0.6) 20%,
+   207→   207→    rgba(88, 166, 255, 0.1) 50%,
+   208→   208→    rgba(48, 54, 61, 0.6) 80%,
+   209→   209→    rgba(48, 54, 61, 0.3) 100%
+   210→   210→  );
+   211→   211→  background-size: 200% 100%;
+   212→   212→  animation: shimmer 2s ease-in-out infinite;
+   213→   213→}
+   214→   214→
+   215→   215→/* Typing indicator bounce */
+   216→   216→@keyframes typing-bounce {
+   217→   217→  0%, 60%, 100% {
+   218→   218→    transform: translateY(0);
+   219→   219→  }
+   220→   220→  30% {
+   221→   221→    transform: translateY(-4px);
+   222→   222→  }
+   223→   223→}
+   224→   224→
+   225→   225→.typing-dot {
+   226→   226→  animation: typing-bounce 1.4s ease-in-out infinite;
+   227→   227→}
+   228→   228→
+   229→   229→.typing-dot:nth-child(2) {
+   230→   230→  animation-delay: 0.2s;
+   231→   231→}
+   232→   232→
+   233→   233→.typing-dot:nth-child(3) {
+   234→   234→  animation-delay: 0.4s;
+   235→   235→}
+   236→   236→
+   237→   237→/* Gradient border animation */
+   238→   238→@keyframes gradient-rotate {
+   239→   239→  0% {
+   240→   240→    --angle: 0deg;
+   241→   241→  }
+   242→   242→  100% {
+   243→   243→    --angle: 360deg;
+   244→   244→  }
+   245→   245→}
+   246→   246→
+   247→   247→/* Pulse border glow for typing container */
+   248→   248→@keyframes pulse-border-glow {
+   249→   249→  0%, 100% {
+   250→   250→    border-color: rgba(35, 134, 54, 0.3);
+   251→   251→    box-shadow: 0 0 15px rgba(35, 134, 54, 0.05), inset 0 0 15px rgba(35, 134, 54, 0.02);
+   252→   252→  }
+   253→   253→  50% {
+   254→   254→    border-color: rgba(35, 134, 54, 0.55);
+   255→   255→    box-shadow: 0 0 25px rgba(35, 134, 54, 0.12), inset 0 0 20px rgba(35, 134, 54, 0.04);
+   256→   256→  }
+   257→   257→}
+   258→   258→
+   259→   259→.pulse-border-glow {
+   260→   260→  animation: pulse-border-glow 3s ease-in-out infinite;
+   261→   261→}
+   262→   262→
+   263→   263→/* Floating bob animation for logos */
+   264→   264→@keyframes float-bob {
+   265→   265→  0%, 100% {
+   266→   266→    transform: translateY(0);
+   267→   267→  }
+   268→   268→  50% {
+   269→   269→    transform: translateY(-5px);
+   270→   270→  }
+   271→   271→}
+   272→   272→
+   273→   273→.float-bob {
+   274→   274→  animation: float-bob 3s ease-in-out infinite;
+   275→   275→}
+   276→   276→
+   277→   277→/* Animated underline for buttons */
+   278→   278→@keyframes underline-slide {
+   279→   279→  0% {
+   280→   280→    transform: translateX(-100%);
+   281→   281→  }
+   282→   282→  100% {
+   283→   283→    transform: translateX(100%);
+   284→   284→  }
+   285→   285→}
+   286→   286→
+   287→   287→.animated-underline {
+   288→   288→  position: relative;
+   289→   289→  overflow: hidden;
+   290→   290→}
+   291→   291→
+   292→   292→.animated-underline::after {
+   293→   293→  content: "";
+   294→   294→  position: absolute;
+   295→   295→  bottom: 2px;
+   296→   296→  left: 0;
+   297→   297→  width: 100%;
+   298→   298→  height: 1.5px;
+   299→   299→  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.7), transparent);
+   300→   300→  animation: underline-slide 2.5s ease-in-out infinite;
+   301→   301→}
+   302→   302→
+   303→   303→/* Pulse ring for avatar with active rooms */
+   304→   304→@keyframes pulse-ring {
+   305→   305→  0% {
+   306→   306→    box-shadow: 0 0 0 0 rgba(35, 134, 54, 0.5);
+   307→   307→  }
+   308→   308→  70% {
+   309→   309→    box-shadow: 0 0 0 4px rgba(35, 134, 54, 0);
+   310→   310→  }
+   311→   311→  100% {
+   312→   312→    box-shadow: 0 0 0 0 rgba(35, 134, 54, 0);
+   313→   313→  }
+   314→   314→}
+   315→   315→
+   316→   316→.pulse-ring-green {
+   317→   317→  animation: pulse-ring 2s ease-in-out infinite;
+   318→   318→}
+   319→   319→
+   320→   320→/* Page transition fade-in */
+   321→   321→@keyframes page-enter {
+   322→   322→  from {
+   323→   323→    opacity: 0;
+   324→   324→    transform: translateY(6px);
+   325→   325→  }
+   326→   326→  to {
+   327→   327→    opacity: 1;
+   328→   328→    transform: translateY(0);
+   329→   329→  }
+   330→   330→}
+   331→   331→
+   332→   332→.page-enter {
+   333→   333→  animation: page-enter 0.35s ease-out both;
+   334→   334→}
+   335→   335→
+   336→   336→/* Custom selection color (green-tinted) */
+   337→   337→::selection {
+   338→   338→  background: rgba(35, 134, 54, 0.35);
+   339→   339→  color: #e6edf3;
+   340→   340→}
+   341→   341→
+   342→   342→/* Subtle glow on focused input fields */
+   343→   343→input:focus,
+   344→   344→textarea:focus,
+   345→   345→[contenteditable]:focus {
+   346→   346→  box-shadow: 0 0 0 3px rgba(35, 134, 54, 0.12), 0 0 12px rgba(35, 134, 54, 0.08);
+   347→   347→}
+   348→   348→
+   349→   349→/* Polished scrollbar - ultra-thin (4px) with rounded caps */
+   350→   350→::-webkit-scrollbar {
+   351→   351→  width: 4px;
+   352→   352→  height: 4px;
+   353→   353→}
+   354→   354→::-webkit-scrollbar-track {
+   355→   355→  background: transparent;
+   356→   356→}
+   357→   357→::-webkit-scrollbar-thumb {
+   358→   358→  background: rgba(48, 54, 61, 0.5);
+   359→   359→  border-radius: 999px;
+   360→   360→}
+   361→   361→::-webkit-scrollbar-thumb:hover {
+   362→   362→  background: rgba(72, 79, 88, 0.8);
+   363→   363→}
+   364→   364→::-webkit-scrollbar-corner {
+   365→   365→  background: transparent;
+   366→   366→}
+   367→   367→/* Firefox scrollbar */
+   368→   368→* {
+   369→   369→  scrollbar-width: thin;
+   370→   370→  scrollbar-color: rgba(48, 54, 61, 0.5) transparent;
+   371→   371→}
+   372→   372→
+   373→   373→/* Monaco editor customizations */
+   374→   374→.monaco-editor .margin,
+   375→   375→.monaco-editor,
+   376→   376→.monaco-editor-background,
+   377→   377→.monaco-editor .inputarea.ime-input {
+   378→   378→  background-color: #161b22 !important;
+   379→   379→}
+   380→   380→
+   381→   381→/* Resize handle cursor */
+   382→   382→.resize-handle {
+   383→   383→  cursor: ns-resize;
+   384→   384→  transition: background-color 0.15s ease;
+   385→   385→}
+   386→   386→
+   387→   387→.resize-handle:hover {
+   388→   388→  background-color: rgba(35, 134, 54, 0.3);
+   389→   389→}
+   390→   390→
+   391→   391→/* ---- NEW: Additional animations & effects for Cycle 4 ---- */
+   392→   392→
+   393→   393→/* Smooth spring entrance for cards */
+   394→   394→@keyframes card-spring-in {
+   395→   395→  0% {
+   396→   396→    opacity: 0;
+   397→   397→    transform: translateY(12px) scale(0.97);
+   398→   398→  }
+   399→   399→  60% {
+   400→   400→    opacity: 1;
+   401→   401→    transform: translateY(-2px) scale(1.005);
+   402→   402→  }
+   403→   403→  100% {
+   404→   404→    opacity: 1;
+   405→   405→    transform: translateY(0) scale(1);
+   406→   406→  }
+   407→   407→}
+   408→   408→
+   409→   409→.card-spring-in {
+   410→   410→  animation: card-spring-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+   411→   411→}
+   412→   412→
+   413→   413→/* Staggered children animation delay helper */
+   414→   414→.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+   415→   415→.stagger-children > *:nth-child(2) { animation-delay: 60ms; }
+   416→   416→.stagger-children > *:nth-child(3) { animation-delay: 120ms; }
+   417→   417→.stagger-children > *:nth-child(4) { animation-delay: 180ms; }
+   418→   418→.stagger-children > *:nth-child(5) { animation-delay: 240ms; }
+   419→   419→.stagger-children > *:nth-child(6) { animation-delay: 300ms; }
+   420→   420→.stagger-children > *:nth-child(7) { animation-delay: 360ms; }
+   421→   421→.stagger-children > *:nth-child(8) { animation-delay: 420ms; }
+   422→   422→.stagger-children > *:nth-child(9) { animation-delay: 480ms; }
+   423→   423→.stagger-children > *:nth-child(10) { animation-delay: 540ms; }
+   424→   424→
+   425→   425→/* Glow button hover effect */
+   426→   426→@keyframes glow-pulse-green {
+   427→   427→  0%, 100% {
+   428→   428→    box-shadow: 0 0 8px rgba(35, 134, 54, 0.3), 0 0 16px rgba(35, 134, 54, 0.1);
+   429→   429→  }
+   430→   430→  50% {
+   431→   431→    box-shadow: 0 0 14px rgba(35, 134, 54, 0.5), 0 0 28px rgba(35, 134, 54, 0.2);
+   432→   432→  }
+   433→   433→}
+   434→   434→
+   435→   435→.glow-btn-green {
+   436→   436→  transition: all 0.3s ease;
+   437→   437→}
+   438→   438→
+   439→   439→.glow-btn-green:hover {
+   440→   440→  animation: glow-pulse-green 1.5s ease-in-out infinite;
+   441→   441→}
+   442→   442→
+   443→   443→/* Gradient shimmer for the "Create" button */
+   444→   444→@keyframes btn-gradient-shift {
+   445→   445→  0% { background-position: 0% 50%; }
+   446→   446→  50% { background-position: 100% 50%; }
+   447→   447→  100% { background-position: 0% 50%; }
+   448→   448→}
+   449→   449→
+   450→   450→.btn-gradient-animated {
+   451→   451→  background-size: 200% 200%;
+   452→   452→  animation: btn-gradient-shift 3s ease infinite;
+   453→   453→}
+   454→   454→
+   455→   455→/* Smooth scale on hover for interactive cards */
+   456→   456→.hover-lift {
+   457→   457→  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+   458→   458→}
+   459→   459→
+   460→   460→.hover-lift:hover {
+   461→   461→  transform: translateY(-3px) scale(1.01);
+   462→   462→  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.4), 0 0 12px rgba(35, 134, 54, 0.08);
+   463→   463→}
+   464→   464→
+   465→   465→/* Focus-visible within cards */
+   466→   466→.card-focus-ring:focus-visible {
+   467→   467→  outline: 2px solid #238636;
+   468→   468→  outline-offset: 2px;
+   469→   469→  border-radius: inherit;
+   470→   470→}
+   471→   471→
+   472→   472→/* File tree item hover slide effect */
+   473→   473→.file-tree-item {
+   474→   474→  position: relative;
+   475→   475→  overflow: hidden;
+   476→   476→}
+   477→   477→
+   478→   478→.file-tree-item::before {
+   479→   479→  content: "";
+   480→   480→  position: absolute;
+   481→   481→  left: 0;
+   482→   482→  top: 0;
+   483→   483→  bottom: 0;
+   484→   484→  width: 2px;
+   485→   485→  background: #238636;
+   486→   486→  transform: scaleY(0);
+   487→   487→  transition: transform 0.2s ease;
+   488→   488→  border-radius: 0 2px 2px 0;
+   489→   489→}
+   490→   490→
+   491→   491→.file-tree-item:hover::before,
+   492→   492→.file-tree-item.active::before {
+   493→   493→  transform: scaleY(1);
+   494→   494→}
+   495→   495→
+   496→   496→/* Chat message slide-in */
+   497→   497→@keyframes chat-msg-in {
+   498→   498→  from {
+   499→   499→    opacity: 0;
+   500→   500→    transform: translateX(8px) scale(0.98);
+   501→   501→  }
+   502→   502→  to {
+   503→   503→    opacity: 1;
+   504→   504→    transform: translateX(0) scale(1);
+   505→   505→  }
+   506→   506→}
+   507→   507→
+   508→   508→.chat-msg-animate {
+   509→   509→  animation: chat-msg-in 0.25s ease-out both;
+   510→   510→}
+   511→   511→
+   512→   512→/* Tooltip subtle fade */
+   513→   513→@keyframes tooltip-fade {
+   514→   514→  from { opacity: 0; transform: translateY(2px); }
+   515→   515→  to { opacity: 1; transform: translateY(0); }
+   516→   516→}
+   517→   517→
+   518→   518→/* Toast notification slide-in */
+   519→   519→@keyframes toast-slide {
+   520→   520→  from {
+   521→   521→    opacity: 0;
+   522→   522→    transform: translateX(100%) scale(0.95);
+   523→   523→  }
+   524→   524→  to {
+   525→   525→    opacity: 1;
+   526→   526→    transform: translateX(0) scale(1);
+   527→   527→  }
+   528→   528→}
+   529→   529→
+   530→   530→/* Status bar gradient shimmer */
+   531→   531→@keyframes status-shimmer {
+   532→   532→  0% { opacity: 0.4; }
+   533→   533→  50% { opacity: 0.6; }
+   534→   534→  100% { opacity: 0.4; }
+   535→   535→}
+   536→   536→
+   537→   537→.status-shimmer {
+   538→   538→  animation: status-shimmer 4s ease-in-out infinite;
+   539→   539→}
+   540→   540→
+   541→   541→/* Improved Monaco editor line highlight */
+   542→   542→.monaco-editor .current-line {
+   543→   543→  border-left: 2px solid rgba(35, 134, 54, 0.4) !important;
+   544→   544→  background: rgba(35, 134, 54, 0.04) !important;
+   545→   545→}
+   546→   546→
+   547→   547→/* Quick action button ripple */
+   548→   548→@keyframes ripple {
+   549→   549→  0% {
+   550→   550→    transform: scale(0);
+   551→   551→    opacity: 0.5;
+   552→   552→  }
+   553→   553→  100% {
+   554→   554→    transform: scale(2.5);
+   555→   555→    opacity: 0;
+   556→   556→  }
+   557→   557→}
+   558→   558→
+   559→   559→/* Dialog overlay backdrop */
+   560→   560→.dialog-overlay {
+   561→   561→  backdrop-filter: blur(4px) saturate(120%);
+   562→   562→  -webkit-backdrop-filter: blur(4px) saturate(120%);
+   563→   563→}
+   564→   564→
+   565→   565→/* Responsive bottom sheet animation */
+   566→   566→@keyframes slide-up-sheet {
+   567→   567→  from {
+   568→   568→    transform: translateY(100%);
+   569→   569→  }
+   570→   570→  to {
+   571→   571→    transform: translateY(0);
+   572→   572→  }
+   573→   573→}
+   574→   574→
+   575→   575→@keyframes slide-down-sheet {
+   576→   576→  from {
+   577→   577→    transform: translateY(0);
+   578→   578→  }
+   579→   579→  to {
+   580→   580→    transform: translateY(100%);
+   581→   581→  }
+   582→   582→}
+   583→   583→
+   584→   584→.bottom-sheet-enter {
+   585→   585→  animation: slide-up-sheet 0.3s cubic-bezier(0.32, 0.72, 0, 1) both;
+   586→   586→}
+   587→   587→
+   588→   588→.bottom-sheet-exit {
+   589→   589→  animation: slide-down-sheet 0.2s ease-in both;
+   590→   590→}
+   591→   591→
+   592→   592→/* Run button success flash */
+   593→   593→@keyframes run-success {
+   594→   594→  0% { background-color: rgba(35, 134, 54, 0.3); }
+   595→   595→  100% { background-color: transparent; }
+   596→   596→}
+   597→   597→
+   598→   598→.run-success-flash {
+   599→   599→  animation: run-success 0.6s ease-out;
+   600→   600→}
+   601→   601→
+   602→   602→/* Terminal cursor blink */
+   603→   603→@keyframes terminal-cursor {
+   604→   604→  0%, 100% { opacity: 1; }
+   605→   605→  50% { opacity: 0; }
+   606→   606→}
+   607→   607→
+   608→   608→.terminal-cursor::after {
+   609→   609→  content: "▋";
+   610→   610→  animation: terminal-cursor 1s step-end infinite;
+   611→   611→  color: #238636;
+   612→   612→  font-size: 0.9em;
+   613→   613→  margin-left: 1px;
+   614→   614→}
+   615→   615→
+   616→   616→/* ---- NEW: Task 5-c styling polish utilities ---- */
+   617→   617→
+   618→   618→/* Shimmer border animation for premium buttons */
+   619→   619→@keyframes shimmer-border {
+   620→   620→  0% {
+   621→   621→    background-position: 0% 0%;
+   622→   622→  }
+   623→   623→  50% {
+   624→   624→    background-position: 100% 100%;
+   625→   625→  }
+   626→   626→  100% {
+   627→   627→    background-position: 0% 0%;
+   628→   628→  }
+   629→   629→}
+   630→   630→
+   631→   631→.shimmer-border {
+   632→   632→  position: relative;
+   633→   633→  border: none !important;
+   634→   634→  background-clip: padding-box;
+   635→   635→}
+   636→   636→
+   637→   637→.shimmer-border::before {
+   638→   638→  content: "";
+   639→   639→  position: absolute;
+   640→   640→  inset: 0;
+   641→   641→  border-radius: inherit;
+   642→   642→  padding: 1.5px;
+   643→   643→  background: linear-gradient(
+   644→   644→    135deg,
+   645→   645→    #238636,
+   646→   646→    #58a6ff,
+   647→   647→    #a371f7,
+   648→   648→    #238636
+   649→   649→  );
+   650→   650→  background-size: 300% 300%;
+   651→   651→  animation: shimmer-border 4s ease-in-out infinite;
+   652→   652→  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+   653→   653→  -webkit-mask-composite: xor;
+   654→   654→  mask-composite: exclude;
+   655→   655→  pointer-events: none;
+   656→   656→}
+   657→   657→
+   658→   658→/* Purple glow effect */
+   659→   659→.glow-purple {
+   660→   660→  box-shadow: 0 0 20px rgba(163, 113, 247, 0.25);
+   661→   661→}
+   662→   662→
+   663→   663→.glow-purple-strong {
+   664→   664→  box-shadow: 0 0 30px rgba(163, 113, 247, 0.35), 0 0 60px rgba(163, 113, 247, 0.12);
+   665→   665→}
+   666→   666→
+   667→   667→/* Code background display class */
+   668→   668→.code-bg {
+   669→   669→  background-color: #0d1117;
+   670→   670→  border: 1px solid #30363d;
+   671→   671→  border-radius: 0.375rem;
+   672→   672→  font-family: 'Geist Mono', 'Fira Code', monospace;
+   673→   673→}
+   674→   674→
+   675→   675→/* Fade-in-up animation for page transitions */
+   676→   676→@keyframes fade-in-up {
+   677→   677→  from {
+   678→   678→    opacity: 0;
+   679→   679→    transform: translateY(8px);
+   680→   680→  }
+   681→   681→  to {
+   682→   682→    opacity: 1;
+   683→   683→    transform: translateY(0);
+   684→   684→  }
+   685→   685→}
+   686→   686→
+   687→   687→.fade-in-up {
+   688→   688→  animation: fade-in-up 0.3s ease-out both;
+   689→   689→}
+   690→   690→
+   691→   691→/* ---- Task 6-d: Comprehensive styling enhancements ---- */
+   692→   692→
+   693→   693→/* 1. Breathing glow effect */
+   694→   694→@keyframes breathe-glow {
+   695→   695→  0%, 100% {
+   696→   696→    transform: scale(1);
+   697→   697→    opacity: 0.5;
+   698→   698→  }
+   699→   699→  50% {
+   700→   700→    transform: scale(1.02);
+   701→   701→    opacity: 0.8;
+   702→   702→  }
+   703→   703→}
+   704→   704→
+   705→   705→.breathe-glow {
+   706→   706→  animation: breathe-glow 3s ease-in-out infinite;
+   707→   707→}
+   708→   708→
+   709→   709→/* 2. Staggered grid animation (12 items) */
+   710→   710→.stagger-grid > *:nth-child(1) { animation-delay: 0ms; }
+   711→   711→.stagger-grid > *:nth-child(2) { animation-delay: 50ms; }
+   712→   712→.stagger-grid > *:nth-child(3) { animation-delay: 100ms; }
+   713→   713→.stagger-grid > *:nth-child(4) { animation-delay: 150ms; }
+   714→   714→.stagger-grid > *:nth-child(5) { animation-delay: 200ms; }
+   715→   715→.stagger-grid > *:nth-child(6) { animation-delay: 250ms; }
+   716→   716→.stagger-grid > *:nth-child(7) { animation-delay: 300ms; }
+   717→   717→.stagger-grid > *:nth-child(8) { animation-delay: 350ms; }
+   718→   718→.stagger-grid > *:nth-child(9) { animation-delay: 400ms; }
+   719→   719→.stagger-grid > *:nth-child(10) { animation-delay: 450ms; }
+   720→   720→.stagger-grid > *:nth-child(11) { animation-delay: 500ms; }
+   721→   721→.stagger-grid > *:nth-child(12) { animation-delay: 550ms; }
+   722→   722→
+   723→   723→/* 3. Text gradient animation */
+   724→   724→@keyframes text-gradient-shift {
+   725→   725→  0% { background-position: 0% 50%; }
+   726→   726→  25% { background-position: 50% 100%; }
+   727→   727→  50% { background-position: 100% 50%; }
+   728→   728→  75% { background-position: 50% 0%; }
+   729→   729→  100% { background-position: 0% 50%; }
+   730→   730→}
+   731→   731→
+   732→   732→.gradient-text-animated {
+   733→   733→  background: linear-gradient(135deg, #238636, #58a6ff, #a371f7, #238636);
+   734→   734→  background-size: 300% 300%;
+   735→   735→  -webkit-background-clip: text;
+   736→   736→  -webkit-text-fill-color: transparent;
+   737→   737→  background-clip: text;
+   738→   738→  animation: text-gradient-shift 4s ease infinite;
+   739→   739→}
+   740→   740→
+   741→   741→/* 4. Subtle float animation */
+   742→   742→@keyframes subtle-float {
+   743→   743→  0%, 100% {
+   744→   744→    transform: translateY(0);
+   745→   745→  }
+   746→   746→  50% {
+   747→   747→    transform: translateY(-3px);
+   748→   748→  }
+   749→   749→}
+   750→   750→
+   751→   751→.subtle-float {
+   752→   752→  animation: subtle-float 4s ease-in-out infinite;
+   753→   753→}
+   754→   754→
+   755→   755→/* 5. Skeleton loading shimmer */
+   756→   756→.skeleton-shimmer {
+   757→   757→  position: relative;
+   758→   758→  overflow: hidden;
+   759→   759→  background: rgba(48, 54, 61, 0.3);
+   760→   760→  border-radius: 4px;
+   761→   761→}
+   762→   762→
+   763→   763→.skeleton-shimmer::after {
+   764→   764→  content: "";
+   765→   765→  position: absolute;
+   766→   766→  inset: 0;
+   767→   767→  background: linear-gradient(
+   768→   768→    90deg,
+   769→   769→    transparent 0%,
+   770→   770→    rgba(230, 237, 243, 0.04) 20%,
+   771→   771→    rgba(230, 237, 243, 0.08) 50%,
+   772→   772→    rgba(230, 237, 243, 0.04) 80%,
+   773→   773→    transparent 100%
+   774→   774→  );
+   775→   775→  animation: shimmer 2s ease-in-out infinite;
+   776→   776→}
+   777→   777→
+   778→   778→/* 6. Badge pulse animation */
+   779→   779→@keyframes badge-pulse {
+   780→   780→  0%, 100% {
+   781→   781→    transform: scale(1);
+   782→   782→  }
+   783→   783→  50% {
+   784→   784→    transform: scale(1.15);
+   785→   785→  }
+   786→   786→}
+   787→   787→
+   788→   788→.badge-pulse {
+   789→   789→  animation: badge-pulse 2s ease-in-out infinite;
+   790→   790→}
+   791→   791→
+   792→   792→/* 7. Button press effect */
+   793→   793→.btn-press:active {
+   794→   794→  transform: scale(0.96);
+   795→   795→  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+   796→   796→  transition: transform 0.08s ease, box-shadow 0.08s ease;
+   797→   797→}
+   798→   798→
+   799→   799→/* 8. Tooltip entrance */
+   800→   800→@keyframes tooltip-enter {
+   801→   801→  0% {
+   802→   802→    opacity: 0;
+   803→   803→    transform: scale(0.95);
+   804→   804→  }
+   805→   805→  100% {
+   806→   806→    opacity: 1;
+   807→   807→    transform: scale(1);
+   808→   808→  }
+   809→   809→}
+   810→   810→
+   811→   811→.tooltip-enter {
+   812→   812→  animation: tooltip-enter 0.15s ease-out both;
+   813→   813→}
+   814→   814→
+   815→   815→/* 9. Scroll indicator bounce */
+   816→   816→@keyframes scroll-bounce {
+   817→   817→  0%, 100% {
+   818→   818→    transform: translateY(0) translateX(-50%);
+   819→   819→  }
+   820→   820→  50% {
+   821→   821→    transform: translateY(-3px) translateX(-50%);
+   822→   822→  }
+   823→   823→}
+   824→   824→
+   825→   825→.scroll-bounce {
+   826→   826→  animation: scroll-bounce 1.5s ease-in-out infinite;
+   827→   827→}
+   828→   828→
+   829→   829→/* 10. Connection status breathing */
+   830→   830→@keyframes status-breathe {
+   831→   831→  0%, 100% {
+   832→   832→    box-shadow: 0 0 0 0 rgba(35, 134, 54, 0.4);
+   833→   833→    opacity: 1;
+   834→   834→  }
+   835→   835→  50% {
+   836→   836→    box-shadow: 0 0 0 4px rgba(35, 134, 54, 0);
+   837→   837→    opacity: 0.7;
+   838→   838→  }
+   839→   839→}
+   840→   840→
+   841→   841→.status-breathe {
+   842→   842→  animation: status-breathe 2.5s ease-in-out infinite;
+   843→   843→}
+   844→   844→
+   845→   845→/* 11. Radial gradient spotlight on hover */
+   846→   846→.spotlight-glow {
+   847→   847→  position: relative;
+   848→   848→  overflow: hidden;
+   849→   849→}
+   850→   850→
+   851→   851→.spotlight-glow::after {
+   852→   852→  content: "";
+   853→   853→  position: absolute;
+   854→   854→  inset: 0;
+   855→   855→  border-radius: inherit;
+   856→   856→  opacity: 0;
+   857→   857→  transition: opacity 0.4s ease;
+   858→   858→  background: radial-gradient(
+   859→   859→    300px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+   860→   860→    rgba(35, 134, 54, 0.06) 0%,
+   861→   861→    transparent 70%
+   862→   862→  );
+   863→   863→  pointer-events: none;
+   864→   864→}
+   865→   865→
+   866→   866→.spotlight-glow:hover::after {
+   867→   867→  opacity: 1;
+   868→   868→}
+   869→   869→
+   870→   870→/* 13. Typing indicator animation (improved) */
+   871→   871→.typing-indicator {
+   872→   872→  display: inline-flex;
+   873→   873→  align-items: center;
+   874→   874→  gap: 3px;
+   875→   875→}
+   876→   876→
+   877→   877→.typing-indicator span {
+   878→   878→  display: inline-block;
+   879→   879→  width: 5px;
+   880→   880→  height: 5px;
+   881→   881→  border-radius: 50%;
+   882→   882→  background-color: #8b949e;
+   883→   883→  animation: typing-dot-advanced 1.4s ease-in-out infinite;
+   884→   884→}
+   885→   885→
+   886→   886→.typing-indicator span:nth-child(1) {
+   887→   887→  animation-delay: 0s;
+   888→   888→}
+   889→   889→.typing-indicator span:nth-child(2) {
+   890→   890→  animation-delay: 0.15s;
+   891→   891→}
+   892→   892→.typing-indicator span:nth-child(3) {
+   893→   893→  animation-delay: 0.3s;
+   894→   894→}
+   895→   895→
+   896→   896→@keyframes typing-dot-advanced {
+   897→   897→  0%, 60%, 100% {
+   898→   898→    transform: translateY(0) scale(1);
+   899→   899→    opacity: 0.4;
+   900→   900→  }
+   901→   901→  30% {
+   902→   902→    transform: translateY(-4px) scale(1.2);
+   903→   903→    opacity: 1;
+   904→   904→  }
+   905→   905→}
+   906→   906→
+   907→   907→/* 14. Glow text shadow */
+   908→   908→.glow-text-green {
+   909→   909→  text-shadow: 0 0 20px rgba(35, 134, 54, 0.5);
+   910→   910→}
+   911→   911→
+   912→   912→/* 15. Editor panel border glow */
+   913→   913→.panel-glow {
+   914→   914→  box-shadow: inset 3px 0 8px -2px rgba(35, 134, 54, 0.15);
+   915→   915→}
+   916→   916→
+   917→   917→/* Code line staggered fade-in for landing page */
+   918→   918→@keyframes code-line-in {
+   919→   919→  from {
+   920→   920→    opacity: 0;
+   921→   921→    transform: translateX(-4px);
+   922→   922→  }
+   923→   923→  to {
+   924→   924→    opacity: 1;
+   925→   925→    transform: translateX(0);
+   926→   926→  }
+   927→   927→}
+   928→   928→
+   929→   929→.code-line-stagger {
+   930→   930→  animation: code-line-in 0.3s ease-out both;
+   931→   931→}
+   932→   932→
+   933→   933→/* Hover underline animation for links */
+   934→   934→.hover-underline-anim {
+   935→   935→  position: relative;
+   936→   936→  display: inline-block;
+   937→   937→}
+   938→   938→
+   939→   939→.hover-underline-anim::after {
+   940→   940→  content: "";
+   941→   941→  position: absolute;
+   942→   942→  bottom: -1px;
+   943→   943→  left: 50%;
+   944→   944→  width: 0;
+   945→   945→  height: 1.5px;
+   946→   946→  background: #238636;
+   947→   947→  transition: width 0.3s ease, left 0.3s ease;
+   948→   948→}
+   949→   949→
+   950→   950→.hover-underline-anim:hover::after {
+   951→   951→  width: 100%;
+   952→   952→  left: 0;
+   953→   953→}
+   954→   954→
+   955→   955→/* Input animated bottom border on focus */
+   956→   956→.input-focus-line {
+   957→   957→  position: relative;
+   958→   958→}
+   959→   959→
+   960→   960→.input-focus-line::after {
+   961→   961→  content: "";
+   962→   962→  position: absolute;
+   963→   963→  bottom: 0;
+   964→   964→  left: 50%;
+   965→   965→  width: 0;
+   966→   966→  height: 2px;
+   967→   967→  background: #238636;
+   968→   968→  border-radius: 1px;
+   969→   969→  transition: width 0.3s ease, left 0.3s ease;
+   970→   970→}
+   971→   971→
+   972→   972→.input-focus-line:focus-within::after {
+   973→   973→  width: 100%;
+   974→   974→  left: 0;
+   975→   975→}
+   976→   976→
+   977→   977→/* ---- Task 7-c: Notifications, Diff, and Styling Polish ---- */
+   978→   978→
+   979→   979→/* Notification slide-in from right */
+   980→   980→@keyframes notification-slide {
+   981→   981→  from {
+   982→   982→    transform: translateX(20px);
+   983→   983→    opacity: 0;
+   984→   984→  }
+   985→   985→  to {
+   986→   986→    transform: translateX(0);
+   987→   987→    opacity: 1;
+   988→   988→  }
+   989→   989→}
+   990→   990→
+   991→   991→.notification-enter {
+   992→   992→  animation: notification-slide 0.25s ease-out both;
+   993→   993→}
+   994→   994→
+   995→   995→/* Count badge pop effect */
+   996→   996→@keyframes count-badge-pop {
+   997→   997→  0% {
+   998→   998→    transform: scale(1);
+   999→   999→  }
+  1000→  1000→  50% {
+  1001→  1001→    transform: scale(1.3);
+  1002→  1002→  }
+  1003→  1003→  100% {
+  1004→  1004→    transform: scale(1);
+  1005→  1005→  }
+  1006→  1006→}
+  1007→  1007→
+  1008→  1008→.badge-pop {
+  1009→  1009→  animation: count-badge-pop 0.3s ease-out both;
+  1010→  1010→}
+  1011→  1011→
+  1012→  1012→/* Diff line highlight flash */
+  1013→  1013→@keyframes diff-highlight {
+  1014→  1014→  0% {
+  1015→  1015→    background-color: rgba(88, 166, 255, 0.15);
+  1016→  1016→  }
+  1017→  1017→  100% {
+  1018→  1018→    background-color: transparent;
+  1019→  1019→  }
+  1020→  1020→}
+  1021→  1021→
+  1022→  1022→.diff-highlight {
+  1023→  1023→  animation: diff-highlight 0.6s ease-out both;
+  1024→  1024→}
+  1025→  1025→
+  1026→  1026→/* Diff line styling */
+  1027→  1027→.diff-line-new {
+  1028→  1028→  background-color: rgba(35, 134, 54, 0.10);
+  1029→  1029→  border-left: 2px solid #238636;
+  1030→  1030→}
+  1031→  1031→
+  1032→  1032→.diff-line-removed {
+  1033→  1033→  background-color: rgba(248, 81, 73, 0.10);
+  1034→  1034→  border-left: 2px solid #f85149;
+  1035→  1035→}
+  1036→  1036→
+  1037→  1037→.diff-line-unchanged {
+  1038→  1038→  /* no special styling */
+  1039→  1039→}
+  1040→  1040→
+  1041→  1041→.diff-line-empty-left {
+  1042→  1042→  background-color: rgba(35, 134, 54, 0.03);
+  1043→  1043→}
+  1044→  1044→
+  1045→  1045→.diff-line-empty-right {
+  1046→  1046→  background-color: rgba(248, 81, 73, 0.03);
+  1047→  1047→}
+  1048→  1048→
+  1049→  1049→/* Orange pulse border glow for read-only banner */
+  1050→  1050→@keyframes pulse-border-orange {
+  1051→  1051→  0%, 100% {
+  1052→  1052→    border-color: rgba(240, 136, 62, 0.3);
+  1053→  1053→    box-shadow: 0 0 10px rgba(240, 136, 62, 0.05);
+  1054→  1054→  }
+  1055→  1055→  50% {
+  1056→  1056→    border-color: rgba(240, 136, 62, 0.55);
+  1057→  1057→    box-shadow: 0 0 20px rgba(240, 136, 62, 0.1);
+  1058→  1058→  }
+  1059→  1059→}
+  1060→  1060→
+  1061→  1061→/* ---- Cycle 7 Additional Styling ---- */
+  1062→  1062→
+  1063→  1063→/* Tab drag preview effect */
+  1064→  1064→@keyframes tab-drag-lift {
+  1065→  1065→  0% { transform: scale(1); box-shadow: 0 0 0 transparent; }
+  1066→  1066→  100% { transform: scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+  1067→  1067→}
+  1068→  1068→
+  1069→  1069→.tab-drag-preview {
+  1070→  1070→  animation: tab-drag-lift 0.15s ease-out both;
+  1071→  1071→}
+  1072→  1072→
+  1073→  1073→/* Smooth panel transition for all editor panels */
+  1074→  1074→.panel-transition {
+  1075→  1075→  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+  1076→  1076→}
+  1077→  1077→
+  1078→  1078→/* Reaction emoji hover scale */
+  1079→  1079→.emoji-reaction-btn {
+  1080→  1080→  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.15s ease;
+  1081→  1081→}
+  1082→  1082→.emoji-reaction-btn:hover {
+  1083→  1083→  transform: scale(1.25);
+  1084→  1084→}
+  1085→  1085→.emoji-reaction-btn:active {
+  1086→  1086→  transform: scale(0.95);
+  1087→  1087→}
+  1088→  1088→
+  1089→  1089→/* Mention dropdown animation */
+  1090→  1090→@keyframes mention-dropdown {
+  1091→  1091→  from { opacity: 0; transform: translateY(4px) scale(0.98); }
+  1092→  1092→  to { opacity: 1; transform: translateY(0) scale(1); }
+  1093→  1093→}
+  1094→  1094→.mention-dropdown-enter {
+  1095→  1095→  animation: mention-dropdown 0.15s ease-out both;
+  1096→  1096→}
+  1097→  1097→
+  1098→  1098→/* Notification badge pop */
+  1099→  1099→@keyframes count-badge-pop {
+  1100→  1100→  0% { transform: scale(1); }
+  1101→  1101→  50% { transform: scale(1.3); }
+  1102→  1102→  100% { transform: scale(1); }
+  1103→  1103→}
+  1104→  1104→.badge-pop {
+  1105→  1105→  animation: count-badge-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  1106→  1106→}
+  1107→  1107→
+  1108→  1108→/* Notification slide-in */
+  1109→  1109→@keyframes notification-slide {
+  1110→  1110→  from { opacity: 0; transform: translateX(12px); }
+  1111→  1111→  to { opacity: 1; transform: translateX(0); }
+  1112→  1112→}
+  1113→  1113→.notification-enter {
+  1114→  1114→  animation: notification-slide 0.2s ease-out both;
+  1115→  1115→}
+  1116→  1116→
+  1117→  1117→/* Diff line styles */
+  1118→  1118→.diff-line-new {
+  1119→  1119→  background-color: rgba(35, 134, 54, 0.1);
+  1120→  1120→  border-left: 2px solid #238636;
+  1121→  1121→}
+  1122→  1122→.diff-line-removed {
+  1123→  1123→  background-color: rgba(248, 81, 73, 0.1);
+  1124→  1124→  border-left: 2px solid #f85149;
+  1125→  1125→}
+  1126→  1126→.diff-line-unchanged {
+  1127→  1127→  border-left: 2px solid transparent;
+  1128→  1128→}
+  1129→  1129→.diff-line-empty {
+  1130→  1130→  background-color: rgba(88, 166, 255, 0.06);
+  1131→  1131→  border-left: 2px solid #30363d;
+  1132→  1132→}
+  1133→  1133→
+  1134→  1134→/* Enhanced scrollbar for notification/activity panels */
+  1135→  1135→.panel-scroll::-webkit-scrollbar-thumb {
+  1136→  1136→  background: rgba(48, 54, 61, 0.6);
+  1137→  1137→  border-radius: 999px;
+  1138→  1138→}
+  1139→  1139→.panel-scroll::-webkit-scrollbar-thumb:hover {
+  1140→  1140→  background: rgba(72, 79, 88, 0.9);
+  1141→  1141→}
+  1142→  1142→
+  1143→  1143→/* Export/download button special hover */
+  1144→  1144→@keyframes download-pulse {
+  1145→  1145→  0% { box-shadow: 0 0 0 0 rgba(35, 134, 54, 0.4); }
+  1146→  1146→  70% { box-shadow: 0 0 0 6px rgba(35, 134, 54, 0); }
+  1147→  1147→  100% { box-shadow: 0 0 0 0 rgba(35, 134, 54, 0); }
+  1148→  1148→}
+  1149→  1149→.download-btn-pulse {
+  1150→  1150→  animation: download-pulse 1.5s ease-in-out;
+  1151→  1151→}
+  1152→  1152→
+  1153→  1153→/* Trusted logos section */
+  1154→  1154→@keyframes logo-fade-in {
+  1155→  1155→  from { opacity: 0; transform: translateY(8px); }
+  1156→  1156→  to { opacity: 1; transform: translateY(0); }
+  1157→  1157→}
+  1158→  1158→.logo-stagger > *:nth-child(1) { animation: logo-fade-in 0.4s ease-out 0ms both; }
+  1159→  1159→.logo-stagger > *:nth-child(2) { animation: logo-fade-in 0.4s ease-out 80ms both; }
+  1160→  1160→.logo-stagger > *:nth-child(3) { animation: logo-fade-in 0.4s ease-out 160ms both; }
+  1161→  1161→.logo-stagger > *:nth-child(4) { animation: logo-fade-in 0.4s ease-out 240ms both; }
+  1162→  1162→.logo-stagger > *:nth-child(5) { animation: logo-fade-in 0.4s ease-out 320ms both; }
+  1163→  1163→.logo-stagger > *:nth-child(6) { animation: logo-fade-in 0.4s ease-out 400ms both; }

@@ -373,8 +373,10 @@ export default function LandingPage() {
 
             <motion.div
               variants={itemVariants}
-              className="max-w-2xl mx-auto"
+              className="max-w-2xl mx-auto relative"
             >
+              {/* Subtle radial gradient glow behind typing container */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(35,134,54,0.05) 0%, transparent 70%)' }} />
               <TypingEffect key="typing" />
             </motion.div>
           </motion.div>
@@ -436,7 +438,7 @@ export default function LandingPage() {
                 <motion.div
                   key={feature.title}
                   variants={itemVariants}
-                  className="group relative rounded-xl border border-[#30363d] bg-[#161b22] p-5 sm:p-6 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:border-[#238636]/50 hover:shadow-[0_0_20px_rgba(35,134,54,0.15)] hover-lift spotlight-glow"
+                  className="group relative rounded-xl border border-[#30363d] bg-[#161b22] p-5 sm:p-6 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:border-[#238636]/50 hover:shadow-[0_0_20px_rgba(35,134,54,0.15)] hover-lift spotlight-glow glass-card hover-glow-green"
                 >
                   {/* Inner glow effect on hover */}
                   <div
@@ -479,7 +481,7 @@ export default function LandingPage() {
 
         {/* Trusted by developers section */}
         <section className="px-4 sm:px-6 pb-16 sm:pb-20">
-          <div className="max-w-4xl mx-auto text-center">
+          <div className="max-w-4xl mx-auto text-center border-glow-cycle rounded-2xl border border-[#30363d]/30 py-6 px-4">
             <p className="text-xs text-[#484f58] uppercase tracking-widest mb-8 font-medium">
               Trusted by developers at
             </p>
@@ -498,7 +500,7 @@ export default function LandingPage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.1, duration: 0.5 }}
-                  className="flex items-center gap-2.5 opacity-[0.35] hover:opacity-[0.6] transition-opacity duration-300"
+                  className="flex items-center gap-2.5 opacity-[0.35] hover:opacity-[0.6] transition-opacity duration-300 hover-glow-blue rounded-lg p-1"
                 >
                   <div className="w-7 h-7 rounded-lg bg-[#21262d] border border-[#30363d] flex items-center justify-center">
                     <span className="text-[10px] font-bold text-[#8b949e]">{company.initials}</span>
@@ -540,9 +542,9 @@ export default function LandingPage() {
               <div>
                 <h4 className="text-sm font-semibold text-[#e6edf3] mb-3">Product</h4>
                 <ul className="space-y-2">
-                  <li><span className="text-sm text-[#8b949e] hover:text-[#58a6ff] cursor-pointer transition-colors">Features</span></li>
-                  <li><span className="text-sm text-[#8b949e] hover:text-[#58a6ff] cursor-pointer transition-colors">Pricing</span></li>
-                  <li><span className="text-sm text-[#8b949e] hover:text-[#58a6ff] cursor-pointer transition-colors">Changelog</span></li>
+                  <li><span className="text-sm text-[#8b949e] hover:text-[#58a6ff] cursor-pointer transition-colors hover-underline-anim">Features</span></li>
+                  <li><span className="text-sm text-[#8b949e] hover:text-[#58a6ff] cursor-pointer transition-colors hover-underline-anim">Pricing</span></li>
+                  <li><span className="text-sm text-[#8b949e] hover:text-[#58a6ff] cursor-pointer transition-colors hover-underline-anim">Changelog</span></li>
                 </ul>
               </div>
 
@@ -550,9 +552,9 @@ export default function LandingPage() {
               <div>
                 <h4 className="text-sm font-semibold text-[#e6edf3] mb-3">Resources</h4>
                 <ul className="space-y-2">
-                  <li><span className="text-sm text-[#8b949e] hover:text-[#58a6ff] cursor-pointer transition-colors">Documentation</span></li>
-                  <li><span className="text-sm text-[#8b949e] hover:text-[#58a6ff] cursor-pointer transition-colors">API</span></li>
-                  <li><span className="text-sm text-[#8b949e] hover:text-[#58a6ff] cursor-pointer transition-colors">Support</span></li>
+                  <li><span className="text-sm text-[#8b949e] hover:text-[#58a6ff] cursor-pointer transition-colors hover-underline-anim">Documentation</span></li>
+                  <li><span className="text-sm text-[#8b949e] hover:text-[#58a6ff] cursor-pointer transition-colors hover-underline-anim">API</span></li>
+                  <li><span className="text-sm text-[#8b949e] hover:text-[#58a6ff] cursor-pointer transition-colors hover-underline-anim">Support</span></li>
                 </ul>
               </div>
 

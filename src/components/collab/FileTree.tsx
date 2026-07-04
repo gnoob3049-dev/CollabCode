@@ -44,6 +44,7 @@ interface FileTreeProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
   isReadOnly?: boolean;
+  onReorderFiles?: (files: string[]) => void;
 }
 
 function getFileIcon(fileName: string) {
@@ -81,6 +82,7 @@ export default function FileTree({
   collapsed,
   onToggleCollapse,
   isReadOnly = false,
+  onReorderFiles,
 }: FileTreeProps) {
   const [showNewFileInput, setShowNewFileInput] = useState(false);
   const [newFileName, setNewFileName] = useState('');
@@ -88,6 +90,10 @@ export default function FileTree({
   const [renameValue, setRenameValue] = useState('');
   const newFileInputRef = useRef<HTMLInputElement>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
+
+  // Drag-and-drop state
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+  const [dropIndicatorIdx, setDropIndicatorIdx] = useState<number | null>(null);
 
   useEffect(() => {
     if (showNewFileInput && newFileInputRef.current) {
@@ -141,6 +147,71 @@ export default function FileTree({
     },
     [handleCreateFile, handleRenameSubmit]
   );
+
+  // Drag-and-drop handlers
+  const handleDragStart = useCallback((e: React.DragEvent, idx: number) => {
+    setDraggedIdx(idx);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(idx));
+    // Add slight delay so browser captures the element before applying opacity
+    requestAnimationFrame(() => {
+      if (e.currentTarget instanceof HTMLElement) {
+        e.currentTarget.style.opacity = '0.5';
+        e.currentTarget.style.transform = 'scale(0.95)';
+        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+      }
+    });
+  }, []);
+
+  const handleDragEnd = useCallback((e: React.DragEvent) => {
+    setDraggedIdx(null);
+    setDropIndicatorIdx(null);
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '1';
+      e.currentTarget.style.transform = 'scale(1)';
+      e.currentTarget.style.boxShadow = 'none';
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (draggedIdx !== null && draggedIdx !== idx) {
+      // Determine if dropping above or below the target
+      const rect = e.currentTarget.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      setDropIndicatorIdx(e.clientY < midY ? idx : idx + 1);
+    }
+  }, [draggedIdx]);
+
+  const handleDragLeave = useCallback(() => {
+    setDropIndicatorIdx(null);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, targetIdx: number) => {
+    e.preventDefault();
+    if (draggedIdx === null || draggedIdx === targetIdx) {
+      setDraggedIdx(null);
+      setDropIndicatorIdx(null);
+      return;
+    }
+
+    const newFiles = [...files];
+    const [moved] = newFiles.splice(draggedIdx, 1);
+    const actualTarget = draggedIdx < targetIdx ? targetIdx - 1 : targetIdx;
+    newFiles.splice(actualTarget, 0, moved);
+
+    onReorderFiles?.(newFiles);
+    setDraggedIdx(null);
+    setDropIndicatorIdx(null);
+
+    // Brief green flash on drop target
+    const targetEl = e.currentTarget as HTMLElement;
+    targetEl.style.backgroundColor = 'rgba(35, 134, 54, 0.15)';
+    setTimeout(() => {
+      targetEl.style.backgroundColor = '';
+    }, 400);
+  }, [draggedIdx, files, onReorderFiles]);
 
   // Collapsed mobile view
   if (collapsed) {
@@ -300,18 +371,31 @@ export default function FileTree({
             const isActive = file === currentFile;
             const isRenaming = renamingFile === file;
             const showDivider = idx < files.length - 1;
+            const isDragging = draggedIdx === idx;
 
             return (
               <div key={file}>
+                {/* Drop indicator line */}
+                {dropIndicatorIdx === idx && (
+                  <div className="mx-2 h-0.5 rounded-full bg-[#238636]" style={{ boxShadow: '0 0 6px rgba(35, 134, 54, 0.5)' }} />
+                )}
                 <ContextMenu>
                   <ContextMenuTrigger asChild>
                     <div
                       className={cn(
-                        'group file-tree-item flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-all duration-150 text-sm relative',
+                        'group file-tree-item flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-all duration-150 text-sm relative press-effect',
                         isActive
                           ? 'active bg-[#161b22] text-[#e6edf3] shadow-[inset_0_0_0_1px_rgba(35,134,54,0.15)]'
-                          : 'text-[#8b949e] hover:bg-[#161b22]/80 hover:text-[#e6edf3]'
+                          : 'text-[#8b949e] hover:bg-[#161b22]/80 hover:text-[#e6edf3]',
+                        isDragging && 'opacity-50 scale-95'
                       )}
+                      style={isActive ? { boxShadow: '8px 0 12px -4px rgba(35,134,54,0.15), inset 0 0 0 1px rgba(35,134,54,0.15)' } : undefined}
+                      draggable={!isReadOnly && !isRenaming}
+                      onDragStart={(e) => handleDragStart(e, idx)}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={(e) => handleDragOver(e, idx)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, idx)}
                       onClick={() => onSelectFile(file)}
                       onDoubleClick={() => {
                         if (isReadOnly) return;
@@ -383,15 +467,24 @@ export default function FileTree({
                 {showDivider && (
                   <div className="mx-3 my-0.5 h-px bg-[#30363d]/50" />
                 )}
+                {/* Drop indicator after last item */}
+                {!showDivider && dropIndicatorIdx === files.length && (
+                  <div className="mx-2 h-0.5 rounded-full bg-[#238636]" style={{ boxShadow: '0 0 6px rgba(35, 134, 54, 0.5)' }} />
+                )}
               </div>
             );
           })}
+
+          {/* Drop indicator at very end when dragging past all files */}
+          {dropIndicatorIdx === files.length && files.length > 0 && (
+            <div className="mx-2 h-0.5 rounded-full bg-[#238636]" style={{ boxShadow: '0 0 6px rgba(35, 134, 54, 0.5)' }} />
+          )}
 
           {/* NEW FILE button at bottom of list */}
           {files.length > 0 && !showNewFileInput && !isReadOnly && (
             <button
               onClick={() => setShowNewFileInput(true)}
-              className="flex items-center gap-2 px-3 py-2 mx-1 mt-1 rounded-md text-xs text-[#238636] hover:bg-[#238636]/10 hover:glow-btn-green transition-all duration-200 w-full"
+              className="flex items-center gap-2 px-3 py-2 mx-1 mt-1 rounded-md text-xs text-[#238636] hover:bg-[#238636]/10 hover:glow-btn-green transition-all duration-200 w-full hover-glow-green"
             >
               <Plus className="size-3" />
               <span className="font-medium">New File</span>
@@ -404,7 +497,7 @@ export default function FileTree({
               <div
                 className="w-14 h-14 mx-auto mb-3 rounded-xl border border-[#30363d] flex items-center justify-center breathe-glow bg-[#0d1117]"
               >
-                <FileCode className="size-7 text-[#484f58] float-bob" />
+                <FileCode className="size-7 text-[#484f58] float-subtle" />
               </div>
               <p className="text-[#8b949e] text-xs font-medium">
                 No files yet

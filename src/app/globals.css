@@ -1161,3 +1161,116 @@ textarea:focus,
 .logo-stagger > *:nth-child(4) { animation: logo-fade-in 0.4s ease-out 240ms both; }
 .logo-stagger > *:nth-child(5) { animation: logo-fade-in 0.4s ease-out 320ms both; }
 .logo-stagger > *:nth-child(6) { animation: logo-fade-in 0.4s ease-out 400ms both; }
+
+/* ====== Cycle 8: Comprehensive Styling Polish ====== */
+
+/* 1. Skeleton shimmer loading */
+@keyframes shimmer-loading {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #21262d 25%, #30363d 50%, #21262d 75%);
+  background-size: 200% 100%;
+  animation: shimmer-loading 2s infinite;
+}
+
+/* 2. Slide in right soft */
+@keyframes slide-in-right-soft {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.slide-in-right-soft {
+  animation: slide-in-right-soft 0.2s ease-out both;
+}
+
+/* 3. Scale in soft */
+@keyframes scale-in-soft {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+.scale-in-soft {
+  animation: scale-in-soft 0.15s ease-out both;
+}
+
+/* 4. Border glow cycle */
+@keyframes border-glow-cycle {
+  0% { box-shadow: 0 0 12px rgba(63, 185, 80, 0.2), 0 0 24px rgba(63, 185, 80, 0.08); }
+  33% { box-shadow: 0 0 12px rgba(88, 166, 255, 0.2), 0 0 24px rgba(88, 166, 255, 0.08); }
+  66% { box-shadow: 0 0 12px rgba(163, 113, 247, 0.2), 0 0 24px rgba(163, 113, 247, 0.08); }
+  100% { box-shadow: 0 0 12px rgba(63, 185, 80, 0.2), 0 0 24px rgba(63, 185, 80, 0.08); }
+}
+.border-glow-cycle {
+  animation: border-glow-cycle 6s ease-in-out infinite;
+}
+
+/* 5. Text shimmer */
+@keyframes text-shimmer {
+  0% { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+.text-shimmer {
+  background: linear-gradient(90deg, #e6edf3 0%, #3fb950 25%, #e6edf3 50%, #58a6ff 75%, #e6edf3 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: text-shimmer 3s linear infinite;
+}
+
+/* 6. Glass card */
+.glass-card {
+  background: rgba(22, 27, 34, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(48, 54, 61, 0.6);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+/* 7. Hover glow green */
+.hover-glow-green {
+  transition: box-shadow 0.3s;
+}
+.hover-glow-green:hover {
+  box-shadow: 0 0 20px rgba(35, 134, 54, 0.2), 0 0 40px rgba(35, 134, 54, 0.1);
+}
+
+/* 8. Hover glow blue */
+.hover-glow-blue {
+  transition: box-shadow 0.3s;
+}
+.hover-glow-blue:hover {
+  box-shadow: 0 0 20px rgba(88, 166, 255, 0.2), 0 0 40px rgba(88, 166, 255, 0.1);
+}
+
+/* 9. Hover glow purple */
+.hover-glow-purple {
+  transition: box-shadow 0.3s;
+}
+.hover-glow-purple:hover {
+  box-shadow: 0 0 20px rgba(163, 113, 247, 0.2), 0 0 40px rgba(163, 113, 247, 0.1);
+}
+
+/* 10. Press effect */
+.press-effect:active {
+  transform: scale(0.97);
+  transition: transform 0.1s;
+}
+
+/* 11. Float subtle */
+@keyframes float-subtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+.float-subtle {
+  animation: float-subtle 5s ease-in-out infinite;
+}
+
+/* 12. Input glow focus */
+.input-glow-focus {
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.input-glow-focus:focus {
+  border-color: rgba(35, 134, 54, 0.4);
+  box-shadow: 0 0 0 3px rgba(35, 134, 54, 0.08), 0 0 16px rgba(35, 134, 54, 0.06);
+}
