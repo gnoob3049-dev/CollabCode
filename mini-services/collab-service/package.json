@@ -1,0 +1,14 @@
+{
+  "name": "collab-service",
+  "scripts": {
+    "dev": "bun --hot index.ts"
+  },
+  "dependencies": {
+    "lib0": "^0.2.117",
+    "socket.io": "^4.8.3",
+    "ws": "^8.18.0",
+    "y-protocols": "^1.0.7",
+    "y-websocket": "^3.0.0",
+    "yjs": "^13.6.31"
+  }
+}
