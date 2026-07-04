@@ -642,8 +642,11 @@ function TestimonialCard({
 export default function LandingPage() {
   const { setCurrentPage, setCurrentRoomId, isAuthenticated, setUser } =
     useStore();
+  const [mounted, setMounted] = useState(false);
   const [visibleFeatures, setVisibleFeatures] = useState(false);
   const [creatingDemo, setCreatingDemo] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
   const featuresRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
 
@@ -740,7 +743,8 @@ export default function LandingPage() {
           {/* 3 animated gradient orbs */}
           <GradientOrbs />
 
-          {/* Star field — twinkling dots */}
+          {/* Star field — twinkling dots (client-only to avoid hydration mismatch) */}
+          {mounted && (
           <div className="absolute inset-0 pointer-events-none z-0" aria-hidden="true">
             {stars.map((star) => (
               <span
@@ -749,8 +753,8 @@ export default function LandingPage() {
                 style={{
                   top: star.top,
                   left: star.left,
-                  width: star.size,
-                  height: star.size,
+                  width: `${star.size}px`,
+                  height: `${star.size}px`,
                   animation: prefersReducedMotion
                     ? "none"
                     : `twinkle ${star.duration}s ease-in-out ${star.delay}s infinite`,
@@ -758,6 +762,7 @@ export default function LandingPage() {
               />
             ))}
           </div>
+          )}
 
           {/* Subtle grid pattern overlay */}
           <div

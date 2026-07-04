@@ -1,0 +1,1011 @@
+     1→## Error Type
+     2→Console Error
+     3→
+     4→## Error Message
+     5→A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+     6→
+     7→- A server/client branch `if (typeof window !== 'undefined')`.
+     8→- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+     9→- Date formatting in a user's locale which doesn't match the server.
+    10→- External changing data without sending a snapshot of it along with the HTML.
+    11→- Invalid HTML tag nesting.
+    12→
+    13→It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+    14→
+    15→https://react.dev/link/hydration-mismatch
+    16→
+    17→  ...
+    18→    <LoadingBoundary name="/" loading={null}>
+    19→      <HTTPAccessFallbackBoundary notFound={<SegmentViewNode>} forbidden={undefined} unauthorized={undefined}>
+    20→        <HTTPAccessFallbackErrorBoundary pathname="/" notFound={<SegmentViewNode>} forbidden={undefined} ...>
+    21→          <RedirectBoundary>
+    22→            <RedirectErrorBoundary router={{...}}>
+    23→              <InnerLayoutRouter url="/" tree={[...]} params={{}} cacheNode={{rsc:<Fragment>, ...}} segmentPath={[...]} ...>
+    24→                <SegmentViewNode type="page" pagePath="page.tsx">
+    25→                  <SegmentTrieNode>
+    26→                  <ClientPageRoot Component={function Home} serverProvidedParams={{...}}>
+    27→                    <Home params={Promise} searchParams={Promise}>
+    28→                      <LandingPage>
+    29→                        <div className="min-h-scre...">
+    30→                          <div>
+    31→                          <div className="relative z...">
+    32→                            <header ref={{current:null}} className="pt-16 sm:p...">
+    33→                              <GradientOrbs>
+    34→                              <div className="absolute i..." aria-hidden="true">
+    35→                                <span
+    36→                                  className="absolute rounded-full bg-white"
+    37→                                  style={{
+    38→+                                   top: "13%"
+    39→-                                   top: "13%"
+    40→+                                   left: "7%"
+    41→-                                   left: "7%"
+    42→+                                   width: 2
+    43→-                                   width: "2px"
+    44→+                                   height: 2
+    45→-                                   height: "2px"
+    46→+                                   animation: "none"
+    47→-                                   animation-duration: "3s"
+    48→-                                   animation-timing-function: "ease-in-out"
+    49→-                                   animation-delay: "0s"
+    50→-                                   animation-iteration-count: "infinite"
+    51→-                                   animation-direction: "normal"
+    52→-                                   animation-fill-mode: "none"
+    53→-                                   animation-play-state: "running"
+    54→-                                   animation-name: "twinkle"
+    55→-                                   animation-timeline: "auto"
+    56→-                                   animation-range-start: "normal"
+    57→-                                   animation-range-end: "normal"
+    58→                                  }}
+    59→                                >
+    60→                                <span
+    61→                                  className="absolute rounded-full bg-white"
+    62→                                  style={{
+    63→+                                   top: "50%"
+    64→-                                   top: "50%"
+    65→+                                   left: "60%"
+    66→-                                   left: "60%"
+    67→+                                   width: 1
+    68→-                                   width: "1px"
+    69→+                                   height: 1
+    70→-                                   height: "1px"
+    71→+                                   animation: "none"
+    72→-                                   animation-duration: "4s"
+    73→-                                   animation-timing-function: "ease-in-out"
+    74→-                                   animation-delay: "0.4s"
+    75→-                                   animation-iteration-count: "infinite"
+    76→-                                   animation-direction: "normal"
+    77→-                                   animation-fill-mode: "none"
+    78→-                                   animation-play-state: "running"
+    79→-                                   animation-name: "twinkle"
+    80→-                                   animation-timeline: "auto"
+    81→-                                   animation-range-start: "normal"
+    82→-                                   animation-range-end: "normal"
+    83→                                  }}
+    84→                                >
+    85→                                <span
+    86→                                  className="absolute rounded-full bg-white"
+    87→                                  style={{
+    88→+                                   top: "87%"
+    89→-                                   top: "87%"
+    90→+                                   left: "13%"
+    91→-                                   left: "13%"
+    92→+                                   width: 1
+    93→-                                   width: "1px"
+    94→+                                   height: 1
+    95→-                                   height: "1px"
+    96→+                                   animation: "none"
+    97→-                                   animation-duration: "5s"
+    98→-                                   animation-timing-function: "ease-in-out"
+    99→-                                   animation-delay: "0.8s"
+   100→-                                   animation-iteration-count: "infinite"
+   101→-                                   animation-direction: "normal"
+   102→-                                   animation-fill-mode: "none"
+   103→-                                   animation-play-state: "running"
+   104→-                                   animation-name: "twinkle"
+   105→-                                   animation-timeline: "auto"
+   106→-                                   animation-range-start: "normal"
+   107→-                                   animation-range-end: "normal"
+   108→                                  }}
+   109→                                >
+   110→                                <span
+   111→                                  className="absolute rounded-full bg-white"
+   112→                                  style={{
+   113→+                                   top: "24%"
+   114→-                                   top: "24%"
+   115→+                                   left: "66%"
+   116→-                                   left: "66%"
+   117→+                                   width: 2
+   118→-                                   width: "2px"
+   119→+                                   height: 2
+   120→-                                   height: "2px"
+   121→+                                   animation: "none"
+   122→-                                   animation-duration: "6s"
+   123→-                                   animation-timing-function: "ease-in-out"
+   124→-                                   animation-delay: "1.2s"
+   125→-                                   animation-iteration-count: "infinite"
+   126→-                                   animation-direction: "normal"
+   127→-                                   animation-fill-mode: "none"
+   128→-                                   animation-play-state: "running"
+   129→-                                   animation-name: "twinkle"
+   130→-                                   animation-timeline: "auto"
+   131→-                                   animation-range-start: "normal"
+   132→-                                   animation-range-end: "normal"
+   133→                                  }}
+   134→                                >
+   135→                                <span
+   136→                                  className="absolute rounded-full bg-white"
+   137→                                  style={{
+   138→+                                   top: "61%"
+   139→-                                   top: "61%"
+   140→+                                   left: "19%"
+   141→-                                   left: "19%"
+   142→+                                   width: 1
+   143→-                                   width: "1px"
+   144→+                                   height: 1
+   145→-                                   height: "1px"
+   146→+                                   animation: "none"
+   147→-                                   animation-duration: "7s"
+   148→-                                   animation-timing-function: "ease-in-out"
+   149→-                                   animation-delay: "1.6s"
+   150→-                                   animation-iteration-count: "infinite"
+   151→-                                   animation-direction: "normal"
+   152→-                                   animation-fill-mode: "none"
+   153→-                                   animation-play-state: "running"
+   154→-                                   animation-name: "twinkle"
+   155→-                                   animation-timeline: "auto"
+   156→-                                   animation-range-start: "normal"
+   157→-                                   animation-range-end: "normal"
+   158→                                  }}
+   159→                                >
+   160→                                <span
+   161→                                  className="absolute rounded-full bg-white"
+   162→                                  style={{
+   163→+                                   top: "98%"
+   164→-                                   top: "98%"
+   165→+                                   left: "72%"
+   166→-                                   left: "72%"
+   167→+                                   width: 1
+   168→-                                   width: "1px"
+   169→+                                   height: 1
+   170→-                                   height: "1px"
+   171→+                                   animation: "none"
+   172→-                                   animation-duration: "8s"
+   173→-                                   animation-timing-function: "ease-in-out"
+   174→-                                   animation-delay: "2s"
+   175→-                                   animation-iteration-count: "infinite"
+   176→-                                   animation-direction: "normal"
+   177→-                                   animation-fill-mode: "none"
+   178→-                                   animation-play-state: "running"
+   179→-                                   animation-name: "twinkle"
+   180→-                                   animation-timeline: "auto"
+   181→-                                   animation-range-start: "normal"
+   182→-                                   animation-range-end: "normal"
+   183→                                  }}
+   184→                                >
+   185→                                <span
+   186→                                  className="absolute rounded-full bg-white"
+   187→                                  style={{
+   188→+                                   top: "35%"
+   189→-                                   top: "35%"
+   190→+                                   left: "25%"
+   191→-                                   left: "25%"
+   192→+                                   width: 2
+   193→-                                   width: "2px"
+   194→+                                   height: 2
+   195→-                                   height: "2px"
+   196→+                                   animation: "none"
+   197→-                                   animation-duration: "3s"
+   198→-                                   animation-timing-function: "ease-in-out"
+   199→-                                   animation-delay: "2.4s"
+   200→-                                   animation-iteration-count: "infinite"
+   201→-                                   animation-direction: "normal"
+   202→-                                   animation-fill-mode: "none"
+   203→-                                   animation-play-state: "running"
+   204→-                                   animation-name: "twinkle"
+   205→-                                   animation-timeline: "auto"
+   206→-                                   animation-range-start: "normal"
+   207→-                                   animation-range-end: "normal"
+   208→                                  }}
+   209→                                >
+   210→                                <span
+   211→                                  className="absolute rounded-full bg-white"
+   212→                                  style={{
+   213→+                                   top: "72%"
+   214→-                                   top: "72%"
+   215→+                                   left: "78%"
+   216→-                                   left: "78%"
+   217→+                                   width: 1
+   218→-                                   width: "1px"
+   219→+                                   height: 1
+   220→-                                   height: "1px"
+   221→+                                   animation: "none"
+   222→-                                   animation-duration: "4s"
+   223→-                                   animation-timing-function: "ease-in-out"
+   224→-                                   animation-delay: "2.8s"
+   225→-                                   animation-iteration-count: "infinite"
+   226→-                                   animation-direction: "normal"
+   227→-                                   animation-fill-mode: "none"
+   228→-                                   animation-play-state: "running"
+   229→-                                   animation-name: "twinkle"
+   230→-                                   animation-timeline: "auto"
+   231→-                                   animation-range-start: "normal"
+   232→-                                   animation-range-end: "normal"
+   233→                                  }}
+   234→                                >
+   235→                                <span
+   236→                                  className="absolute rounded-full bg-white"
+   237→                                  style={{
+   238→+                                   top: "9%"
+   239→-                                   top: "9%"
+   240→+                                   left: "31%"
+   241→-                                   left: "31%"
+   242→+                                   width: 1
+   243→-                                   width: "1px"
+   244→+                                   height: 1
+   245→-                                   height: "1px"
+   246→+                                   animation: "none"
+   247→-                                   animation-duration: "5s"
+   248→-                                   animation-timing-function: "ease-in-out"
+   249→-                                   animation-delay: "3.2s"
+   250→-                                   animation-iteration-count: "infinite"
+   251→-                                   animation-direction: "normal"
+   252→-                                   animation-fill-mode: "none"
+   253→-                                   animation-play-state: "running"
+   254→-                                   animation-name: "twinkle"
+   255→-                                   animation-timeline: "auto"
+   256→-                                   animation-range-start: "normal"
+   257→-                                   animation-range-end: "normal"
+   258→                                  }}
+   259→                                >
+   260→                                <span
+   261→                                  className="absolute rounded-full bg-white"
+   262→                                  style={{
+   263→+                                   top: "46%"
+   264→-                                   top: "46%"
+   265→+                                   left: "84%"
+   266→-                                   left: "84%"
+   267→+                                   width: 2
+   268→-                                   width: "2px"
+   269→+                                   height: 2
+   270→-                                   height: "2px"
+   271→+                                   animation: "none"
+   272→-                                   animation-duration: "6s"
+   273→-                                   animation-timing-function: "ease-in-out"
+   274→-                                   animation-delay: "3.6s"
+   275→-                                   animation-iteration-count: "infinite"
+   276→-                                   animation-direction: "normal"
+   277→-                                   animation-fill-mode: "none"
+   278→-                                   animation-play-state: "running"
+   279→-                                   animation-name: "twinkle"
+   280→-                                   animation-timeline: "auto"
+   281→-                                   animation-range-start: "normal"
+   282→-                                   animation-range-end: "normal"
+   283→                                  }}
+   284→                                >
+   285→                                <span
+   286→                                  className="absolute rounded-full bg-white"
+   287→                                  style={{
+   288→+                                   top: "83%"
+   289→-                                   top: "83%"
+   290→+                                   left: "37%"
+   291→-                                   left: "37%"
+   292→+                                   width: 1
+   293→-                                   width: "1px"
+   294→+                                   height: 1
+   295→-                                   height: "1px"
+   296→+                                   animation: "none"
+   297→-                                   animation-duration: "7s"
+   298→-                                   animation-timing-function: "ease-in-out"
+   299→-                                   animation-delay: "4s"
+   300→-                                   animation-iteration-count: "infinite"
+   301→-                                   animation-direction: "normal"
+   302→-                                   animation-fill-mode: "none"
+   303→-                                   animation-play-state: "running"
+   304→-                                   animation-name: "twinkle"
+   305→-                                   animation-timeline: "auto"
+   306→-                                   animation-range-start: "normal"
+   307→-                                   animation-range-end: "normal"
+   308→                                  }}
+   309→                                >
+   310→                                <span
+   311→                                  className="absolute rounded-full bg-white"
+   312→                                  style={{
+   313→+                                   top: "20%"
+   314→-                                   top: "20%"
+   315→+                                   left: "90%"
+   316→-                                   left: "90%"
+   317→+                                   width: 1
+   318→-                                   width: "1px"
+   319→+                                   height: 1
+   320→-                                   height: "1px"
+   321→+                                   animation: "none"
+   322→-                                   animation-duration: "8s"
+   323→-                                   animation-timing-function: "ease-in-out"
+   324→-                                   animation-delay: "4.4s"
+   325→-                                   animation-iteration-count: "infinite"
+   326→-                                   animation-direction: "normal"
+   327→-                                   animation-fill-mode: "none"
+   328→-                                   animation-play-state: "running"
+   329→-                                   animation-name: "twinkle"
+   330→-                                   animation-timeline: "auto"
+   331→-                                   animation-range-start: "normal"
+   332→-                                   animation-range-end: "normal"
+   333→                                  }}
+   334→                                >
+   335→                                <span
+   336→                                  className="absolute rounded-full bg-white"
+   337→                                  style={{
+   338→+                                   top: "57%"
+   339→-                                   top: "57%"
+   340→+                                   left: "43%"
+   341→-                                   left: "43%"
+   342→+                                   width: 2
+   343→-                                   width: "2px"
+   344→+                                   height: 2
+   345→-                                   height: "2px"
+   346→+                                   animation: "none"
+   347→-                                   animation-duration: "3s"
+   348→-                                   animation-timing-function: "ease-in-out"
+   349→-                                   animation-delay: "4.8s"
+   350→-                                   animation-iteration-count: "infinite"
+   351→-                                   animation-direction: "normal"
+   352→-                                   animation-fill-mode: "none"
+   353→-                                   animation-play-state: "running"
+   354→-                                   animation-name: "twinkle"
+   355→-                                   animation-timeline: "auto"
+   356→-                                   animation-range-start: "normal"
+   357→-                                   animation-range-end: "normal"
+   358→                                  }}
+   359→                                >
+   360→                                <span
+   361→                                  className="absolute rounded-full bg-white"
+   362→                                  style={{
+   363→+                                   top: "94%"
+   364→-                                   top: "94%"
+   365→+                                   left: "96%"
+   366→-                                   left: "96%"
+   367→+                                   width: 1
+   368→-                                   width: "1px"
+   369→+                                   height: 1
+   370→-                                   height: "1px"
+   371→+                                   animation: "none"
+   372→-                                   animation-duration: "4s"
+   373→-                                   animation-timing-function: "ease-in-out"
+   374→-                                   animation-delay: "0.2s"
+   375→-                                   animation-iteration-count: "infinite"
+   376→-                                   animation-direction: "normal"
+   377→-                                   animation-fill-mode: "none"
+   378→-                                   animation-play-state: "running"
+   379→-                                   animation-name: "twinkle"
+   380→-                                   animation-timeline: "auto"
+   381→-                                   animation-range-start: "normal"
+   382→-                                   animation-range-end: "normal"
+   383→                                  }}
+   384→                                >
+   385→                                <span
+   386→                                  className="absolute rounded-full bg-white"
+   387→                                  style={{
+   388→+                                   top: "31%"
+   389→-                                   top: "31%"
+   390→+                                   left: "49%"
+   391→-                                   left: "49%"
+   392→+                                   width: 1
+   393→-                                   width: "1px"
+   394→+                                   height: 1
+   395→-                                   height: "1px"
+   396→+                                   animation: "none"
+   397→-                                   animation-duration: "5s"
+   398→-                                   animation-timing-function: "ease-in-out"
+   399→-                                   animation-delay: "0.6s"
+   400→-                                   animation-iteration-count: "infinite"
+   401→-                                   animation-direction: "normal"
+   402→-                                   animation-fill-mode: "none"
+   403→-                                   animation-play-state: "running"
+   404→-                                   animation-name: "twinkle"
+   405→-                                   animation-timeline: "auto"
+   406→-                                   animation-range-start: "normal"
+   407→-                                   animation-range-end: "normal"
+   408→                                  }}
+   409→                                >
+   410→                                <span
+   411→                                  className="absolute rounded-full bg-white"
+   412→                                  style={{
+   413→+                                   top: "68%"
+   414→-                                   top: "68%"
+   415→+                                   left: "2%"
+   416→-                                   left: "2%"
+   417→+                                   width: 2
+   418→-                                   width: "2px"
+   419→+                                   height: 2
+   420→-                                   height: "2px"
+   421→+                                   animation: "none"
+   422→-                                   animation-duration: "6s"
+   423→-                                   animation-timing-function: "ease-in-out"
+   424→-                                   animation-delay: "1s"
+   425→-                                   animation-iteration-count: "infinite"
+   426→-                                   animation-direction: "normal"
+   427→-                                   animation-fill-mode: "none"
+   428→-                                   animation-play-state: "running"
+   429→-                                   animation-name: "twinkle"
+   430→-                                   animation-timeline: "auto"
+   431→-                                   animation-range-start: "normal"
+   432→-                                   animation-range-end: "normal"
+   433→                                  }}
+   434→                                >
+   435→                                <span
+   436→                                  className="absolute rounded-full bg-white"
+   437→                                  style={{
+   438→+                                   top: "5%"
+   439→-                                   top: "5%"
+   440→+                                   left: "55%"
+   441→-                                   left: "55%"
+   442→+                                   width: 1
+   443→-                                   width: "1px"
+   444→+                                   height: 1
+   445→-                                   height: "1px"
+   446→+                                   animation: "none"
+   447→-                                   animation-duration: "7s"
+   448→-                                   animation-timing-function: "ease-in-out"
+   449→-                                   animation-delay: "1.4s"
+   450→-                                   animation-iteration-count: "infinite"
+   451→-                                   animation-direction: "normal"
+   452→-                                   animation-fill-mode: "none"
+   453→-                                   animation-play-state: "running"
+   454→-                                   animation-name: "twinkle"
+   455→-                                   animation-timeline: "auto"
+   456→-                                   animation-range-start: "normal"
+   457→-                                   animation-range-end: "normal"
+   458→                                  }}
+   459→                                >
+   460→                                <span
+   461→                                  className="absolute rounded-full bg-white"
+   462→                                  style={{
+   463→+                                   top: "42%"
+   464→-                                   top: "42%"
+   465→+                                   left: "8%"
+   466→-                                   left: "8%"
+   467→+                                   width: 1
+   468→-                                   width: "1px"
+   469→+                                   height: 1
+   470→-                                   height: "1px"
+   471→+                                   animation: "none"
+   472→-                                   animation-duration: "8s"
+   473→-                                   animation-timing-function: "ease-in-out"
+   474→-                                   animation-delay: "1.8s"
+   475→-                                   animation-iteration-count: "infinite"
+   476→-                                   animation-direction: "normal"
+   477→-                                   animation-fill-mode: "none"
+   478→-                                   animation-play-state: "running"
+   479→-                                   animation-name: "twinkle"
+   480→-                                   animation-timeline: "auto"
+   481→-                                   animation-range-start: "normal"
+   482→-                                   animation-range-end: "normal"
+   483→                                  }}
+   484→                                >
+   485→                                <span
+   486→                                  className="absolute rounded-full bg-white"
+   487→                                  style={{
+   488→+                                   top: "79%"
+   489→-                                   top: "79%"
+   490→+                                   left: "61%"
+   491→-                                   left: "61%"
+   492→+                                   width: 2
+   493→-                                   width: "2px"
+   494→+                                   height: 2
+   495→-                                   height: "2px"
+   496→+                                   animation: "none"
+   497→-                                   animation-duration: "3s"
+   498→-                                   animation-timing-function: "ease-in-out"
+   499→-                                   animation-delay: "2.2s"
+   500→-                                   animation-iteration-count: "infinite"
+   501→-                                   animation-direction: "normal"
+   502→-                                   animation-fill-mode: "none"
+   503→-                                   animation-play-state: "running"
+   504→-                                   animation-name: "twinkle"
+   505→-                                   animation-timeline: "auto"
+   506→-                                   animation-range-start: "normal"
+   507→-                                   animation-range-end: "normal"
+   508→                                  }}
+   509→                                >
+   510→                                <span
+   511→                                  className="absolute rounded-full bg-white"
+   512→                                  style={{
+   513→+                                   top: "16%"
+   514→-                                   top: "16%"
+   515→+                                   left: "14%"
+   516→-                                   left: "14%"
+   517→+                                   width: 1
+   518→-                                   width: "1px"
+   519→+                                   height: 1
+   520→-                                   height: "1px"
+   521→+                                   animation: "none"
+   522→-                                   animation-duration: "4s"
+   523→-                                   animation-timing-function: "ease-in-out"
+   524→-                                   animation-delay: "2.6s"
+   525→-                                   animation-iteration-count: "infinite"
+   526→-                                   animation-direction: "normal"
+   527→-                                   animation-fill-mode: "none"
+   528→-                                   animation-play-state: "running"
+   529→-                                   animation-name: "twinkle"
+   530→-                                   animation-timeline: "auto"
+   531→-                                   animation-range-start: "normal"
+   532→-                                   animation-range-end: "normal"
+   533→                                  }}
+   534→                                >
+   535→                                <span
+   536→                                  className="absolute rounded-full bg-white"
+   537→                                  style={{
+   538→+                                   top: "53%"
+   539→-                                   top: "53%"
+   540→+                                   left: "67%"
+   541→-                                   left: "67%"
+   542→+                                   width: 1
+   543→-                                   width: "1px"
+   544→+                                   height: 1
+   545→-                                   height: "1px"
+   546→+                                   animation: "none"
+   547→-                                   animation-duration: "5s"
+   548→-                                   animation-timing-function: "ease-in-out"
+   549→-                                   animation-delay: "3s"
+   550→-                                   animation-iteration-count: "infinite"
+   551→-                                   animation-direction: "normal"
+   552→-                                   animation-fill-mode: "none"
+   553→-                                   animation-play-state: "running"
+   554→-                                   animation-name: "twinkle"
+   555→-                                   animation-timeline: "auto"
+   556→-                                   animation-range-start: "normal"
+   557→-                                   animation-range-end: "normal"
+   558→                                  }}
+   559→                                >
+   560→                                <span
+   561→                                  className="absolute rounded-full bg-white"
+   562→                                  style={{
+   563→+                                   top: "90%"
+   564→-                                   top: "90%"
+   565→+                                   left: "20%"
+   566→-                                   left: "20%"
+   567→+                                   width: 2
+   568→-                                   width: "2px"
+   569→+                                   height: 2
+   570→-                                   height: "2px"
+   571→+                                   animation: "none"
+   572→-                                   animation-duration: "6s"
+   573→-                                   animation-timing-function: "ease-in-out"
+   574→-                                   animation-delay: "3.4s"
+   575→-                                   animation-iteration-count: "infinite"
+   576→-                                   animation-direction: "normal"
+   577→-                                   animation-fill-mode: "none"
+   578→-                                   animation-play-state: "running"
+   579→-                                   animation-name: "twinkle"
+   580→-                                   animation-timeline: "auto"
+   581→-                                   animation-range-start: "normal"
+   582→-                                   animation-range-end: "normal"
+   583→                                  }}
+   584→                                >
+   585→                                <span
+   586→                                  className="absolute rounded-full bg-white"
+   587→                                  style={{
+   588→+                                   top: "27%"
+   589→-                                   top: "27%"
+   590→+                                   left: "73%"
+   591→-                                   left: "73%"
+   592→+                                   width: 1
+   593→-                                   width: "1px"
+   594→+                                   height: 1
+   595→-                                   height: "1px"
+   596→+                                   animation: "none"
+   597→-                                   animation-duration: "7s"
+   598→-                                   animation-timing-function: "ease-in-out"
+   599→-                                   animation-delay: "3.8s"
+   600→-                                   animation-iteration-count: "infinite"
+   601→-                                   animation-direction: "normal"
+   602→-                                   animation-fill-mode: "none"
+   603→-                                   animation-play-state: "running"
+   604→-                                   animation-name: "twinkle"
+   605→-                                   animation-timeline: "auto"
+   606→-                                   animation-range-start: "normal"
+   607→-                                   animation-range-end: "normal"
+   608→                                  }}
+   609→                                >
+   610→                                <span
+   611→                                  className="absolute rounded-full bg-white"
+   612→                                  style={{
+   613→+                                   top: "64%"
+   614→-                                   top: "64%"
+   615→+                                   left: "26%"
+   616→-                                   left: "26%"
+   617→+                                   width: 1
+   618→-                                   width: "1px"
+   619→+                                   height: 1
+   620→-                                   height: "1px"
+   621→+                                   animation: "none"
+   622→-                                   animation-duration: "8s"
+   623→-                                   animation-timing-function: "ease-in-out"
+   624→-                                   animation-delay: "4.2s"
+   625→-                                   animation-iteration-count: "infinite"
+   626→-                                   animation-direction: "normal"
+   627→-                                   animation-fill-mode: "none"
+   628→-                                   animation-play-state: "running"
+   629→-                                   animation-name: "twinkle"
+   630→-                                   animation-timeline: "auto"
+   631→-                                   animation-range-start: "normal"
+   632→-                                   animation-range-end: "normal"
+   633→                                  }}
+   634→                                >
+   635→                                <span
+   636→                                  className="absolute rounded-full bg-white"
+   637→                                  style={{
+   638→+                                   top: "1%"
+   639→-                                   top: "1%"
+   640→+                                   left: "79%"
+   641→-                                   left: "79%"
+   642→+                                   width: 2
+   643→-                                   width: "2px"
+   644→+                                   height: 2
+   645→-                                   height: "2px"
+   646→+                                   animation: "none"
+   647→-                                   animation-duration: "3s"
+   648→-                                   animation-timing-function: "ease-in-out"
+   649→-                                   animation-delay: "4.6s"
+   650→-                                   animation-iteration-count: "infinite"
+   651→-                                   animation-direction: "normal"
+   652→-                                   animation-fill-mode: "none"
+   653→-                                   animation-play-state: "running"
+   654→-                                   animation-name: "twinkle"
+   655→-                                   animation-timeline: "auto"
+   656→-                                   animation-range-start: "normal"
+   657→-                                   animation-range-end: "normal"
+   658→                                  }}
+   659→                                >
+   660→                              ...
+   661→                            <section>
+   662→                            ...
+   663→                              <div className="grid grid-..." style={{opacity:0}} ref={function useMotionRef.useCallback}>
+   664→                                <FeatureCard feature={{icon:{...}, ...}}>
+   665→                                  <motion.div ref={{current:null}} variants={{hidden:{...}, ...}} ...>
+   666→                                    <div className="group rela..." ...>
+   667→                                      <div
+   668→                                        className="absolute -inset-px rounded-xl opacity-0 group-hover:opacity-100 tra..."
+   669→                                        style={{
+   670→+                                         background: "linear-gradient(135deg, rgba(35,134,54,0.4), rgba(88,166,255,0...."
+   671→+                                         backgroundSize: "300% 300%"
+   672→+                                         animation: "none"
+   673→+                                         WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)"
+   674→+                                         WebkitMaskComposite: "xor"
+   675→+                                         maskComposite: "exclude"
+   676→+                                         padding: "1px"
+   677→-                                         background-image: "linear-gradient(135deg, rgba(35, 134, 54, 0.4), rgba(88, ..."
+   678→-                                         background-position-x: "initial"
+   679→-                                         background-position-y: "initial"
+   680→-                                         background-repeat: "initial"
+   681→-                                         background-attachment: "initial"
+   682→-                                         background-origin: "initial"
+   683→-                                         background-clip: "initial"
+   684→-                                         background-color: "initial"
+   685→-                                         background-size: "300% 300%"
+   686→-                                         animation-duration: "4s"
+   687→-                                         animation-timing-function: "ease-in-out"
+   688→-                                         animation-delay: "0s"
+   689→-                                         animation-iteration-count: "infinite"
+   690→-                                         animation-direction: "normal"
+   691→-                                         animation-fill-mode: "none"
+   692→-                                         animation-play-state: "running"
+   693→-                                         animation-name: "shimmer"
+   694→-                                         animation-timeline: "auto"
+   695→-                                         animation-range-start: "normal"
+   696→-                                         animation-range-end: "normal"
+   697→-                                         mask-image: "linear-gradient(rgb(255, 255, 255) 0px, rgb(255, 255, 255) 0px)..."
+   698→-                                         -webkit-mask-position-x: "0%, 0%"
+   699→-                                         -webkit-mask-position-y: "0%, 0%"
+   700→-                                         mask-size: "auto, auto"
+   701→-                                         mask-repeat: "repeat, repeat"
+   702→-                                         mask-origin: "content-box, border-box"
+   703→-                                         mask-clip: "content-box, border-box"
+   704→-                                         mask-mode: "match-source, match-source"
+   705→-                                         mask-composite: "exclude"
+   706→-                                         padding-top: "1px"
+   707→-                                         padding-right: "1px"
+   708→-                                         padding-bottom: "1px"
+   709→-                                         padding-left: "1px"
+   710→                                        }}
+   711→                                      >
+   712→                                      ...
+   713→                                <FeatureCard feature={{icon:{...}, ...}}>
+   714→                                  <motion.div ref={{current:null}} variants={{hidden:{...}, ...}} ...>
+   715→                                    <div className="group rela..." ...>
+   716→                                      <div
+   717→                                        className="absolute -inset-px rounded-xl opacity-0 group-hover:opacity-100 tra..."
+   718→                                        style={{
+   719→+                                         background: "linear-gradient(135deg, rgba(35,134,54,0.4), rgba(88,166,255,0...."
+   720→+                                         backgroundSize: "300% 300%"
+   721→+                                         animation: "none"
+   722→+                                         WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)"
+   723→+                                         WebkitMaskComposite: "xor"
+   724→+                                         maskComposite: "exclude"
+   725→+                                         padding: "1px"
+   726→-                                         background-image: "linear-gradient(135deg, rgba(35, 134, 54, 0.4), rgba(88, ..."
+   727→-                                         background-position-x: "initial"
+   728→-                                         background-position-y: "initial"
+   729→-                                         background-repeat: "initial"
+   730→-                                         background-attachment: "initial"
+   731→-                                         background-origin: "initial"
+   732→-                                         background-clip: "initial"
+   733→-                                         background-color: "initial"
+   734→-                                         background-size: "300% 300%"
+   735→-                                         animation-duration: "4s"
+   736→-                                         animation-timing-function: "ease-in-out"
+   737→-                                         animation-delay: "0s"
+   738→-                                         animation-iteration-count: "infinite"
+   739→-                                         animation-direction: "normal"
+   740→-                                         animation-fill-mode: "none"
+   741→-                                         animation-play-state: "running"
+   742→-                                         animation-name: "shimmer"
+   743→-                                         animation-timeline: "auto"
+   744→-                                         animation-range-start: "normal"
+   745→-                                         animation-range-end: "normal"
+   746→-                                         mask-image: "linear-gradient(rgb(255, 255, 255) 0px, rgb(255, 255, 255) 0px)..."
+   747→-                                         -webkit-mask-position-x: "0%, 0%"
+   748→-                                         -webkit-mask-position-y: "0%, 0%"
+   749→-                                         mask-size: "auto, auto"
+   750→-                                         mask-repeat: "repeat, repeat"
+   751→-                                         mask-origin: "content-box, border-box"
+   752→-                                         mask-clip: "content-box, border-box"
+   753→-                                         mask-mode: "match-source, match-source"
+   754→-                                         mask-composite: "exclude"
+   755→-                                         padding-top: "1px"
+   756→-                                         padding-right: "1px"
+   757→-                                         padding-bottom: "1px"
+   758→-                                         padding-left: "1px"
+   759→                                        }}
+   760→                                      >
+   761→                                      ...
+   762→                                <FeatureCard feature={{icon:{...}, ...}}>
+   763→                                  <motion.div ref={{current:null}} variants={{hidden:{...}, ...}} ...>
+   764→                                    <div className="group rela..." ...>
+   765→                                      <div
+   766→                                        className="absolute -inset-px rounded-xl opacity-0 group-hover:opacity-100 tra..."
+   767→                                        style={{
+   768→+                                         background: "linear-gradient(135deg, rgba(35,134,54,0.4), rgba(88,166,255,0...."
+   769→+                                         backgroundSize: "300% 300%"
+   770→+                                         animation: "none"
+   771→+                                         WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)"
+   772→+                                         WebkitMaskComposite: "xor"
+   773→+                                         maskComposite: "exclude"
+   774→+                                         padding: "1px"
+   775→-                                         background-image: "linear-gradient(135deg, rgba(35, 134, 54, 0.4), rgba(88, ..."
+   776→-                                         background-position-x: "initial"
+   777→-                                         background-position-y: "initial"
+   778→-                                         background-repeat: "initial"
+   779→-                                         background-attachment: "initial"
+   780→-                                         background-origin: "initial"
+   781→-                                         background-clip: "initial"
+   782→-                                         background-color: "initial"
+   783→-                                         background-size: "300% 300%"
+   784→-                                         animation-duration: "4s"
+   785→-                                         animation-timing-function: "ease-in-out"
+   786→-                                         animation-delay: "0s"
+   787→-                                         animation-iteration-count: "infinite"
+   788→-                                         animation-direction: "normal"
+   789→-                                         animation-fill-mode: "none"
+   790→-                                         animation-play-state: "running"
+   791→-                                         animation-name: "shimmer"
+   792→-                                         animation-timeline: "auto"
+   793→-                                         animation-range-start: "normal"
+   794→-                                         animation-range-end: "normal"
+   795→-                                         mask-image: "linear-gradient(rgb(255, 255, 255) 0px, rgb(255, 255, 255) 0px)..."
+   796→-                                         -webkit-mask-position-x: "0%, 0%"
+   797→-                                         -webkit-mask-position-y: "0%, 0%"
+   798→-                                         mask-size: "auto, auto"
+   799→-                                         mask-repeat: "repeat, repeat"
+   800→-                                         mask-origin: "content-box, border-box"
+   801→-                                         mask-clip: "content-box, border-box"
+   802→-                                         mask-mode: "match-source, match-source"
+   803→-                                         mask-composite: "exclude"
+   804→-                                         padding-top: "1px"
+   805→-                                         padding-right: "1px"
+   806→-                                         padding-bottom: "1px"
+   807→-                                         padding-left: "1px"
+   808→                                        }}
+   809→                                      >
+   810→                                      ...
+   811→                                <FeatureCard feature={{icon:{...}, ...}}>
+   812→                                  <motion.div ref={{current:null}} variants={{hidden:{...}, ...}} ...>
+   813→                                    <div className="group rela..." ...>
+   814→                                      <div
+   815→                                        className="absolute -inset-px rounded-xl opacity-0 group-hover:opacity-100 tra..."
+   816→                                        style={{
+   817→+                                         background: "linear-gradient(135deg, rgba(35,134,54,0.4), rgba(88,166,255,0...."
+   818→+                                         backgroundSize: "300% 300%"
+   819→+                                         animation: "none"
+   820→+                                         WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)"
+   821→+                                         WebkitMaskComposite: "xor"
+   822→+                                         maskComposite: "exclude"
+   823→+                                         padding: "1px"
+   824→-                                         background-image: "linear-gradient(135deg, rgba(35, 134, 54, 0.4), rgba(88, ..."
+   825→-                                         background-position-x: "initial"
+   826→-                                         background-position-y: "initial"
+   827→-                                         background-repeat: "initial"
+   828→-                                         background-attachment: "initial"
+   829→-                                         background-origin: "initial"
+   830→-                                         background-clip: "initial"
+   831→-                                         background-color: "initial"
+   832→-                                         background-size: "300% 300%"
+   833→-                                         animation-duration: "4s"
+   834→-                                         animation-timing-function: "ease-in-out"
+   835→-                                         animation-delay: "0s"
+   836→-                                         animation-iteration-count: "infinite"
+   837→-                                         animation-direction: "normal"
+   838→-                                         animation-fill-mode: "none"
+   839→-                                         animation-play-state: "running"
+   840→-                                         animation-name: "shimmer"
+   841→-                                         animation-timeline: "auto"
+   842→-                                         animation-range-start: "normal"
+   843→-                                         animation-range-end: "normal"
+   844→-                                         mask-image: "linear-gradient(rgb(255, 255, 255) 0px, rgb(255, 255, 255) 0px)..."
+   845→-                                         -webkit-mask-position-x: "0%, 0%"
+   846→-                                         -webkit-mask-position-y: "0%, 0%"
+   847→-                                         mask-size: "auto, auto"
+   848→-                                         mask-repeat: "repeat, repeat"
+   849→-                                         mask-origin: "content-box, border-box"
+   850→-                                         mask-clip: "content-box, border-box"
+   851→-                                         mask-mode: "match-source, match-source"
+   852→-                                         mask-composite: "exclude"
+   853→-                                         padding-top: "1px"
+   854→-                                         padding-right: "1px"
+   855→-                                         padding-bottom: "1px"
+   856→-                                         padding-left: "1px"
+   857→                                        }}
+   858→                                      >
+   859→                                      ...
+   860→                                <FeatureCard feature={{icon:{...}, ...}}>
+   861→                                  <motion.div ref={{current:null}} variants={{hidden:{...}, ...}} ...>
+   862→                                    <div className="group rela..." ...>
+   863→                                      <div
+   864→                                        className="absolute -inset-px rounded-xl opacity-0 group-hover:opacity-100 tra..."
+   865→                                        style={{
+   866→+                                         background: "linear-gradient(135deg, rgba(35,134,54,0.4), rgba(88,166,255,0...."
+   867→+                                         backgroundSize: "300% 300%"
+   868→+                                         animation: "none"
+   869→+                                         WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)"
+   870→+                                         WebkitMaskComposite: "xor"
+   871→+                                         maskComposite: "exclude"
+   872→+                                         padding: "1px"
+   873→-                                         background-image: "linear-gradient(135deg, rgba(35, 134, 54, 0.4), rgba(88, ..."
+   874→-                                         background-position-x: "initial"
+   875→-                                         background-position-y: "initial"
+   876→-                                         background-repeat: "initial"
+   877→-                                         background-attachment: "initial"
+   878→-                                         background-origin: "initial"
+   879→-                                         background-clip: "initial"
+   880→-                                         background-color: "initial"
+   881→-                                         background-size: "300% 300%"
+   882→-                                         animation-duration: "4s"
+   883→-                                         animation-timing-function: "ease-in-out"
+   884→-                                         animation-delay: "0s"
+   885→-                                         animation-iteration-count: "infinite"
+   886→-                                         animation-direction: "normal"
+   887→-                                         animation-fill-mode: "none"
+   888→-                                         animation-play-state: "running"
+   889→-                                         animation-name: "shimmer"
+   890→-                                         animation-timeline: "auto"
+   891→-                                         animation-range-start: "normal"
+   892→-                                         animation-range-end: "normal"
+   893→-                                         mask-image: "linear-gradient(rgb(255, 255, 255) 0px, rgb(255, 255, 255) 0px)..."
+   894→-                                         -webkit-mask-position-x: "0%, 0%"
+   895→-                                         -webkit-mask-position-y: "0%, 0%"
+   896→-                                         mask-size: "auto, auto"
+   897→-                                         mask-repeat: "repeat, repeat"
+   898→-                                         mask-origin: "content-box, border-box"
+   899→-                                         mask-clip: "content-box, border-box"
+   900→-                                         mask-mode: "match-source, match-source"
+   901→-                                         mask-composite: "exclude"
+   902→-                                         padding-top: "1px"
+   903→-                                         padding-right: "1px"
+   904→-                                         padding-bottom: "1px"
+   905→-                                         padding-left: "1px"
+   906→                                        }}
+   907→                                      >
+   908→                                      ...
+   909→                                <FeatureCard feature={{icon:{...}, ...}}>
+   910→                                  <motion.div ref={{current:null}} variants={{hidden:{...}, ...}} ...>
+   911→                                    <div className="group rela..." ...>
+   912→                                      <div
+   913→                                        className="absolute -inset-px rounded-xl opacity-0 group-hover:opacity-100 tra..."
+   914→                                        style={{
+   915→+                                         background: "linear-gradient(135deg, rgba(35,134,54,0.4), rgba(88,166,255,0...."
+   916→+                                         backgroundSize: "300% 300%"
+   917→+                                         animation: "none"
+   918→+                                         WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)"
+   919→+                                         WebkitMaskComposite: "xor"
+   920→+                                         maskComposite: "exclude"
+   921→+                                         padding: "1px"
+   922→-                                         background-image: "linear-gradient(135deg, rgba(35, 134, 54, 0.4), rgba(88, ..."
+   923→-                                         background-position-x: "initial"
+   924→-                                         background-position-y: "initial"
+   925→-                                         background-repeat: "initial"
+   926→-                                         background-attachment: "initial"
+   927→-                                         background-origin: "initial"
+   928→-                                         background-clip: "initial"
+   929→-                                         background-color: "initial"
+   930→-                                         background-size: "300% 300%"
+   931→-                                         animation-duration: "4s"
+   932→-                                         animation-timing-function: "ease-in-out"
+   933→-                                         animation-delay: "0s"
+   934→-                                         animation-iteration-count: "infinite"
+   935→-                                         animation-direction: "normal"
+   936→-                                         animation-fill-mode: "none"
+   937→-                                         animation-play-state: "running"
+   938→-                                         animation-name: "shimmer"
+   939→-                                         animation-timeline: "auto"
+   940→-                                         animation-range-start: "normal"
+   941→-                                         animation-range-end: "normal"
+   942→-                                         mask-image: "linear-gradient(rgb(255, 255, 255) 0px, rgb(255, 255, 255) 0px)..."
+   943→-                                         -webkit-mask-position-x: "0%, 0%"
+   944→-                                         -webkit-mask-position-y: "0%, 0%"
+   945→-                                         mask-size: "auto, auto"
+   946→-                                         mask-repeat: "repeat, repeat"
+   947→-                                         mask-origin: "content-box, border-box"
+   948→-                                         mask-clip: "content-box, border-box"
+   949→-                                         mask-mode: "match-source, match-source"
+   950→-                                         mask-composite: "exclude"
+   951→-                                         padding-top: "1px"
+   952→-                                         padding-right: "1px"
+   953→-                                         padding-bottom: "1px"
+   954→-                                         padding-left: "1px"
+   955→                                        }}
+   956→                                      >
+   957→                                      ...
+   958→                            <section>
+   959→                            <section>
+   960→                            <footer className="relative p...">
+   961→                              <div
+   962→                                className="absolute top-0 left-0 right-0 h-px will-change-transform"
+   963→                                style={{
+   964→+                                 background: "linear-gradient(90deg, transparent 0%, #238636 20%, #58a6ff 50%, #a371f..."
+   965→+                                 backgroundSize: "200% 100%"
+   966→+                                 animation: "none"
+   967→-                                 background-image: "linear-gradient(90deg, transparent 0%, rgb(35, 134, 54) 20%, rgb(..."
+   968→-                                 background-position-x: "initial"
+   969→-                                 background-position-y: "initial"
+   970→-                                 background-repeat: "initial"
+   971→-                                 background-attachment: "initial"
+   972→-                                 background-origin: "initial"
+   973→-                                 background-clip: "initial"
+   974→-                                 background-color: "initial"
+   975→-                                 background-size: "200% 100%"
+   976→-                                 animation-duration: "4s"
+   977→-                                 animation-timing-function: "ease"
+   978→-                                 animation-delay: "0s"
+   979→-                                 animation-iteration-count: "infinite"
+   980→-                                 animation-direction: "normal"
+   981→-                                 animation-fill-mode: "none"
+   982→-                                 animation-play-state: "running"
+   983→-                                 animation-name: "shimmer"
+   984→-                                 animation-timeline: "auto"
+   985→-                                 animation-range-start: "normal"
+   986→-                                 animation-range-end: "normal"
+   987→                                }}
+   988→                              >
+   989→                              ...
+   990→                ...
+   991→              ...
+   992→
+   993→
+   994→
+   995→    at span (<anonymous>:null:null)
+   996→    at <unknown> (src/components/collab/LandingPage.tsx:746:15)
+   997→    at Array.map (<anonymous>:null:null)
+   998→    at LandingPage (src/components/collab/LandingPage.tsx:745:20)
+   999→    at Home (src/app/page.tsx:100:14)
+  1000→
+  1001→## Code Frame
+  1002→  744 |           <div className="absolute inset-0 pointer-events-none z-0" aria-hidden="true">
+  1003→  745 |             {stars.map((star) => (
+  1004→> 746 |               <span
+  1005→      |               ^
+  1006→  747 |                 key={star.id}
+  1007→  748 |                 className="absolute rounded-full bg-white"
+  1008→  749 |                 style={{
+  1009→
+  1010→Next.js version: 16.1.3 (Turbopack)
+  1011→
