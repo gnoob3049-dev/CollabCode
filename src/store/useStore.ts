@@ -55,6 +55,16 @@ export interface ChatMessage {
   text: string;
   createdAt?: string;
   system?: boolean;
+  reactions?: Record<string, string[]>;
+}
+
+export interface NotificationItem {
+  id: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  title: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
 }
 
 interface AppState {
@@ -104,9 +114,17 @@ interface AppState {
   chatMessages: ChatMessage[];
   addChatMessage: (msg: ChatMessage) => void;
   clearChatMessages: () => void;
+  toggleReaction: (messageId: string, emoji: string, userId: string) => void;
   unreadChatCount: number;
   incrementUnreadChatCount: () => void;
   resetUnreadChatCount: () => void;
+
+  // Notifications
+  notifications: NotificationItem[];
+  addNotification: (n: Omit<NotificationItem, 'id' | 'timestamp' | 'read'>) => void;
+  markNotificationRead: (id: string) => void;
+  clearNotifications: () => void;
+  unreadNotificationCount: number;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -149,8 +167,49 @@ export const useStore = create<AppState>((set) => ({
   addChatMessage: (msg) =>
     set((state) => ({ chatMessages: [...state.chatMessages, msg] })),
   clearChatMessages: () => set({ chatMessages: [] }),
+  toggleReaction: (messageId, emoji, userId) =>
+    set((state) => ({
+      chatMessages: state.chatMessages.map((msg) => {
+        if (msg.id !== messageId) return msg;
+        const reactions = { ...(msg.reactions || {}) };
+        const users = reactions[emoji] || [];
+        if (users.includes(userId)) {
+          const filtered = users.filter((u) => u !== userId);
+          if (filtered.length === 0) {
+            delete reactions[emoji];
+          } else {
+            reactions[emoji] = filtered;
+          }
+        } else {
+          reactions[emoji] = [...users, userId];
+        }
+        return { ...msg, reactions };
+      }),
+    })),
   unreadChatCount: 0,
   incrementUnreadChatCount: () =>
     set((state) => ({ unreadChatCount: state.unreadChatCount + 1 })),
   resetUnreadChatCount: () => set({ unreadChatCount: 0 }),
+
+  notifications: [],
+  addNotification: (n) =>
+    set((state) => ({
+      notifications: [
+        {
+          ...n,
+          id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          timestamp: new Date().toISOString(),
+          read: false,
+        },
+        ...state.notifications,
+      ],
+    })),
+  markNotificationRead: (id) =>
+    set((state) => ({
+      notifications: state.notifications.map((n) =>
+        n.id === id ? { ...n, read: true } : n
+      ),
+    })),
+  clearNotifications: () => set({ notifications: [] }),
+  unreadNotificationCount: 0,
 }));

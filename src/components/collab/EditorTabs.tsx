@@ -64,10 +64,12 @@ export default function EditorTabs({
 
   return (
     <div
-      className="flex items-center h-9 bg-[#161b22] border-b border-[#30363d] shrink-0"
+      className="flex items-center h-9 bg-[#161b22] border-b border-[#30363d] shrink-0 relative"
       style={{ overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
     >
-      <div className="flex items-center h-full">
+      {/* Subtle left gradient fade on scrollable area */}
+      <div className="absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-[#161b22] to-transparent pointer-events-none z-10" />
+      <div className="flex items-center h-full relative z-0">
         {files.map((file) => {
           const isActive = file === activeFile;
           const { icon: Icon, color } = getFileIcon(file);
@@ -78,17 +80,17 @@ export default function EditorTabs({
               key={file}
               onClick={() => onSelectFile(file)}
               className={cn(
-                'group relative flex items-center gap-1.5 h-full px-3 text-xs font-mono transition-all duration-150 shrink-0 border-t-2',
+                'group relative flex items-center gap-1.5 h-full px-3 text-xs font-mono transition-all duration-200 shrink-0 border-t-2',
                 isActive
-                  ? 'bg-[#0d1117] border-t-[#238636] text-[#e6edf3]'
-                  : 'bg-transparent border-t-[#30363d] text-[#8b949e] hover:bg-[#161b22]/60 hover:text-[#e6edf3]'
+                  ? 'bg-[#0d1117] border-t-[#238636] text-[#e6edf3] shadow-[inset_0_1px_0_rgba(35,134,54,0.15)]'
+                  : 'bg-transparent border-t-[#30363d]/60 text-[#8b949e] hover:bg-[#161b22]/60 hover:text-[#e6edf3] hover:border-t-[#484f58]'
               )}
             >
               <Icon className={cn('size-3.5 shrink-0', isActive ? color : 'text-[#8b949e] group-hover:' + color)} />
               <span className="truncate max-w-[120px]">{basename}</span>
 
               {/* Modified indicator dot */}
-              <span className="w-1.5 h-1.5 rounded-full bg-[#238636] shrink-0" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#238636] shrink-0 opacity-80 group-hover:opacity-100 transition-opacity" />
 
               {/* Close button — visible on hover */}
               {onCloseFile && (
@@ -103,8 +105,8 @@ export default function EditorTabs({
                     }
                   }}
                   className={cn(
-                    'flex items-center justify-center size-4 rounded shrink-0 transition-colors duration-150',
-                    'opacity-0 group-hover:opacity-100 hover:bg-[#30363d]'
+                    'flex items-center justify-center size-4 rounded shrink-0 transition-all duration-150',
+                    'opacity-0 group-hover:opacity-100 hover:bg-[#30363d] active:scale-90'
                   )}
                   aria-label={`Close ${basename}`}
                 >

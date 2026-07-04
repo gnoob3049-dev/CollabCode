@@ -29,6 +29,8 @@ import {
   Replace,
   FileSearch,
   History,
+  Download,
+  Inbox,
 } from 'lucide-react';
 import { playSound, isAudioEnabled as checkAudioEnabled, toggleAudio as doToggleAudio } from '@/lib/audio';
 import { useStore } from '@/store/useStore';
@@ -41,12 +43,13 @@ import OutputPanel from './OutputPanel';
 import RoomSettingsModal from './RoomSettingsModal';
 import KeyboardShortcutsDialog from './KeyboardShortcutsDialog';
 import EditorStatusBar from './EditorStatusBar';
-import CommandPalette, { type CommandItem } from './CommandPalette';
+import CommandPalette, { type CommandItem, type FileItem } from './CommandPalette';
 import HtmlPreview from './HtmlPreview';
 import MarkdownPreview from './MarkdownPreview';
 import EditorTabs from './EditorTabs';
 import VersionHistoryPanel, { type VersionSnapshot } from './VersionHistoryPanel';
 import ActivityLogPanel from './ActivityLogPanel';
+import NotificationsPanel from './NotificationsPanel';
 import type { ChatMessage, Room, ActivityLogEntry } from '@/store/useStore';
 
 const LANGUAGE_MAP: Record<string, string> = {
@@ -95,6 +98,10 @@ export default function EditorPage() {
     unreadChatCount,
     incrementUnreadChatCount,
     resetUnreadChatCount,
+    notifications,
+    addNotification,
+    markNotificationRead,
+    clearNotifications,
   } = useStore();
 
   const ydocRef = useRef<Y.Doc | null>(null);
@@ -114,6 +121,8 @@ export default function EditorPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [commandFilter, setCommandFilter] = useState<string | null>(null);
+  const [fileSearchFiles, setFileSearchFiles] = useState<FileItem[] | undefined>(undefined);
   const [wordWrap, setWordWrap] = useState<'on' | 'off'>('on');
   const [minimapEnabled, setMinimapEnabled] = useState(false);
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
@@ -124,9 +133,12 @@ export default function EditorPage() {
   });
   const audioEnabledRef = useRef(audioEnabled);
   audioEnabledRef.current = audioEnabled;
+  const [runResultIsHtml, setRunResultIsHtml] = useState(false);
+  const [runResultIsCss, setRunResultIsCss] = useState(false);
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const [versionSnapshots, setVersionSnapshots] = useState<VersionSnapshot[]>([]);
   const [activityLogOpen, setActivityLogOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [activities, setActivities] = useState<ActivityLogEntry[]>([]);
   const undoManagerRef = useRef<Y.UndoManager | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -349,6 +361,7 @@ export default function EditorPage() {
         roomId: currentRoomId,
         user: { id: user.id, name: user.name, color: user.avatarColor },
       });
+      addNotification({ type: 'success', title: 'Room joined', message: `Connected to room ${currentRoomId}` });
     });
 
     socket.on('disconnect', () => {
@@ -383,6 +396,7 @@ export default function EditorPage() {
 
     socket.on('user_joined', ({ text }: { text: string }) => {
       playSound('join');
+      addNotification({ type: 'info', title: 'Collaborator joined', message: text });
       addChatMessage({
         id: `sys-${Date.now()}-joined`,
         roomId: currentRoomId,
@@ -396,6 +410,7 @@ export default function EditorPage() {
 
     socket.on('user_left', ({ text }: { text: string }) => {
       playSound('leave');
+      addNotification({ type: 'warning', title: 'Collaborator left', message: text });
       addChatMessage({
         id: `sys-${Date.now()}-left`,
         roomId: currentRoomId,
@@ -587,6 +602,8 @@ export default function EditorPage() {
     if (!ydocRef.current) return;
     setIsRunning(true);
     setOutput('');
+    setRunResultIsHtml(false);
+    setRunResultIsCss(false);
     setOutputPanelOpen(true);
     playSound('run_start');
     try {
@@ -602,13 +619,23 @@ export default function EditorPage() {
       });
       const data = await res.json();
       const hasErrors = !!data.error;
-      setOutput(data.output || data.error || 'No output');
+      if (data.isHtml) {
+        setRunResultIsHtml(true);
+        setOutput(data.output || '');
+      } else if (data.isCss) {
+        setRunResultIsCss(true);
+        setOutput(data.output || 'CSS preview available in the Preview panel');
+      } else {
+        setOutput(data.output || data.error || 'No output');
+      }
       playSound('run_complete', { hasErrors });
       if (hasErrors) {
         const firstLine = (data.error || 'Unknown error').split('\n')[0];
         toast.error(firstLine.length > 80 ? firstLine.slice(0, 80) + '…' : firstLine);
+        addNotification({ type: 'error', title: 'Run error', message: firstLine.length > 120 ? firstLine.slice(0, 120) + '…' : firstLine });
       } else {
         toast.success('Code executed successfully');
+        addNotification({ type: 'success', title: 'Code ran', message: `${currentFileName} executed successfully` });
       }
       logActivity('run', `ran code in ${currentFileName}`);
     } catch {
@@ -638,10 +665,12 @@ export default function EditorPage() {
       });
       playSound('save');
       toast.success('Room saved');
+      addNotification({ type: 'success', title: 'File saved', message: 'Room saved successfully' });
       logActivity('save', 'saved the document');
     } catch {
       playSound('error');
       toast.error('Failed to save');
+      addNotification({ type: 'error', title: 'Save failed', message: 'Failed to save room' });
     } finally {
       setIsSaving(false);
     }
@@ -656,6 +685,33 @@ export default function EditorPage() {
       () => toast.error('Failed to copy link')
     );
   }, [currentRoom]);
+
+  // Export room as ZIP
+  const handleExportRoom = useCallback(async () => {
+    if (!currentRoomId) return;
+    try {
+      const res = await fetch(`/api/rooms/${currentRoomId}/export`, {
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        toast.error('Failed to export room');
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${(currentRoom?.name || 'room').replace(/[^a-zA-Z0-9_\-.]/g, '_')}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Room exported successfully!');
+      logActivity('export', 'exported room as ZIP');
+    } catch {
+      toast.error('Failed to export room');
+    }
+  }, [currentRoomId, currentRoom, logActivity]);
 
   // Chat send
   const handleSendMessage = useCallback(
@@ -841,6 +897,13 @@ export default function EditorPage() {
         action: handleSave,
       },
       {
+        id: 'export-room',
+        label: 'Export Room as ZIP',
+        icon: Download,
+        category: 'File Operations',
+        action: handleExportRoom,
+      },
+      {
         id: 'run-code',
         label: 'Run Code',
         icon: Play,
@@ -935,10 +998,14 @@ export default function EditorPage() {
         category: 'Navigation',
         action: () => {
           if (files.length <= 1) return;
-          const name = window.prompt('Open file:', files.join(', '));
-          if (name?.trim() && files.includes(name.trim())) {
-            setCurrentFileName(name.trim());
-          }
+          setFileSearchFiles(
+            files.map((f) => ({
+              name: f,
+              action: () => setCurrentFileName(f),
+            }))
+          );
+          setCommandFilter(null);
+          setCommandPaletteOpen(true);
         },
       },
       {
@@ -957,6 +1024,14 @@ export default function EditorPage() {
         category: 'View',
         action: handleToggleVersionHistory,
       },
+      {
+        id: 'toggle-notifications',
+        label: 'Toggle Notifications',
+        icon: Inbox,
+        shortcut: ['Ctrl', 'Shift', 'N'],
+        category: 'View',
+        action: () => setNotificationsOpen((v) => !v),
+      },
     ],
     [
       handleCreateFile,
@@ -964,6 +1039,7 @@ export default function EditorPage() {
       handleDeleteFile,
       handleSave,
       handleRun,
+      handleExportRoom,
       handleBack,
       currentFileName,
       files.length,
@@ -998,9 +1074,19 @@ export default function EditorPage() {
         e.stopPropagation();
         setRightPanelOpen(!rightPanelOpen);
       } else if (isMod && !e.shiftKey && (e.key === 'p' || e.key === 'P')) {
-        // Block browser print dialog — let command palette handle Ctrl+Shift+P
+        // Ctrl+P: Open file search in command palette
         e.preventDefault();
         e.stopPropagation();
+        if (files.length > 1) {
+          setFileSearchFiles(
+            files.map((f) => ({
+              name: f,
+              action: () => setCurrentFileName(f),
+            }))
+          );
+          setCommandFilter(null);
+          setCommandPaletteOpen(true);
+        }
       } else if (isMod && e.key === '/') {
         e.preventDefault();
         e.stopPropagation();
@@ -1013,6 +1099,10 @@ export default function EditorPage() {
         e.preventDefault();
         e.stopPropagation();
         handleToggleVersionHistory();
+      } else if (isMod && e.shiftKey && (e.key === 'N' || e.key === 'n')) {
+        e.preventDefault();
+        e.stopPropagation();
+        setNotificationsOpen((v) => !v);
       } else if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
@@ -1020,11 +1110,12 @@ export default function EditorPage() {
         setOutputPanelOpen(false);
         setHtmlPreviewOpen(false);
         setVersionHistoryOpen(false);
+        setNotificationsOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [handleSave, handleRun, rightPanelOpen, commandPaletteOpen, isHtmlFile, isMarkdownFile, handleTogglePreview, handleToggleVersionHistory]);
+  }, [handleSave, handleRun, rightPanelOpen, commandPaletteOpen, isHtmlFile, isMarkdownFile, handleTogglePreview, handleToggleVersionHistory, files, setCurrentFileName]);
 
   // Remote cursor decorations: CSS for y-monaco's built-in selection highlighting
   // + name labels for each remote user's cursor position
@@ -1158,6 +1249,10 @@ export default function EditorPage() {
         historyOpen={versionHistoryOpen}
         isReadOnly={currentRoom?.isReadOnly ?? false}
         isOwner={isOwner}
+        onExport={handleExportRoom}
+        onToggleNotifications={() => setNotificationsOpen((v) => !v)}
+        notificationsOpen={notificationsOpen}
+        unreadNotificationCount={notifications.filter((n) => !n.read).length}
       />
 
       {/* Read-only mode banner */}
@@ -1309,9 +1404,11 @@ export default function EditorPage() {
                 <OutputPanel
                   output={output}
                   isRunning={isRunning}
-                  onClear={() => setOutput('')}
+                  onClear={() => { setOutput(''); setRunResultIsHtml(false); setRunResultIsCss(false); }}
                   onClose={() => setOutputPanelOpen(false)}
                   onToggle={() => setOutputPanelOpen(false)}
+                  isHtml={runResultIsHtml}
+                  isCss={runResultIsCss}
                 />
               </motion.div>
             )}
@@ -1364,6 +1461,7 @@ export default function EditorPage() {
                       user={user}
                       messages={chatMessages}
                       onSendMessage={handleSendMessage}
+                      onlineUsers={onlineUsers}
                     />
                   </TabsContent>
 
@@ -1420,8 +1518,14 @@ export default function EditorPage() {
       {/* Command Palette */}
       <CommandPalette
         open={commandPaletteOpen}
-        onClose={() => setCommandPaletteOpen(false)}
+        onClose={() => {
+          setCommandPaletteOpen(false);
+          setCommandFilter(null);
+          setFileSearchFiles(undefined);
+        }}
         commands={commandItems}
+        commandFilter={commandFilter}
+        files={fileSearchFiles}
       />
 
       {/* Activity Log Panel */}
@@ -1429,6 +1533,17 @@ export default function EditorPage() {
         isOpen={activityLogOpen}
         onClose={() => setActivityLogOpen(false)}
         activities={activities}
+      />
+
+      {/* Notifications Panel */}
+      <NotificationsPanel
+        isOpen={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+        notifications={notifications}
+        unreadCount={notifications.filter((n) => !n.read).length}
+        onMarkRead={markNotificationRead}
+        onMarkAllRead={() => notifications.forEach((n) => { if (!n.read) markNotificationRead(n.id); })}
+        onClearAll={clearNotifications}
       />
     </div>
   );

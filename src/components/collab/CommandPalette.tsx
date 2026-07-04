@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, type LucideIcon } from 'lucide-react';
+import { Search, FileSearch, type LucideIcon } from 'lucide-react';
 
 export interface CommandItem {
   id: string;
@@ -13,21 +13,45 @@ export interface CommandItem {
   action: () => void;
 }
 
+export interface FileItem {
+  name: string;
+  action: () => void;
+}
+
 interface CommandPaletteProps {
   open: boolean;
   onClose: () => void;
   commands: CommandItem[];
+  /** If provided, switches to file search mode */
+  files?: FileItem[];
+  /** Pre-filter the command palette to a specific category */
+  commandFilter?: string | null;
+}
+
+// Simple fuzzy match: all chars must appear in order
+function fuzzyMatch(query: string, target: string): boolean {
+  const q = query.toLowerCase();
+  const t = target.toLowerCase();
+  let qi = 0;
+  for (let ti = 0; ti < t.length && qi < q.length; ti++) {
+    if (t[ti] === q[qi]) qi++;
+  }
+  return qi === q.length;
 }
 
 export default function CommandPalette({
   open,
   onClose,
   commands,
+  files,
+  commandFilter,
 }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  const isFileMode = !!(files && files.length > 0);
 
   // Reset state when open changes (adjusting state during render)
   const [prevOpen, setPrevOpen] = useState(open);
@@ -39,16 +63,33 @@ export default function CommandPalette({
     }
   }
 
-  // Filter commands by search query
+  // Filter commands by search query and commandFilter
   const filtered = useMemo(() => {
-    if (!query.trim()) return commands;
+    let cmds = commands;
+    // Apply category filter if provided
+    if (commandFilter) {
+      cmds = cmds.filter((c) =>
+        c.category.toLowerCase().includes(commandFilter.toLowerCase())
+      );
+    }
+    if (!query.trim()) return cmds;
     const lower = query.toLowerCase();
-    return commands.filter(
+    return cmds.filter(
       (cmd) =>
         cmd.label.toLowerCase().includes(lower) ||
         cmd.category.toLowerCase().includes(lower)
     );
-  }, [query, commands]);
+  }, [query, commands, commandFilter]);
+
+  // Filter files by fuzzy search
+  const filteredFiles = useMemo(() => {
+    if (!isFileMode) return [];
+    if (!query.trim()) return files!;
+    return files!.filter((f) => fuzzyMatch(query, f.name));
+  }, [query, files, isFileMode]);
+
+  // Total items count for navigation
+  const totalItems = isFileMode ? filteredFiles.length : filtered.length;
 
   // Reset selected index when query changes (adjusting state during render)
   const [prevQuery, setPrevQuery] = useState(query);
@@ -83,19 +124,22 @@ export default function CommandPalette({
 
       switch (e.key) {
         case 'ArrowDown':
-          if (filtered.length > 0) {
-            setSelectedIndex((prev) => (prev + 1) % filtered.length);
+          if (totalItems > 0) {
+            setSelectedIndex((prev) => (prev + 1) % totalItems);
           }
           break;
         case 'ArrowUp':
-          if (filtered.length > 0) {
+          if (totalItems > 0) {
             setSelectedIndex(
-              (prev) => (prev - 1 + filtered.length) % filtered.length
+              (prev) => (prev - 1 + totalItems) % totalItems
             );
           }
           break;
         case 'Enter':
-          if (filtered[selectedIndex]) {
+          if (isFileMode && filteredFiles[selectedIndex]) {
+            filteredFiles[selectedIndex].action();
+            onClose();
+          } else if (filtered[selectedIndex]) {
             filtered[selectedIndex].action();
             onClose();
           }
@@ -108,7 +152,7 @@ export default function CommandPalette({
 
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [open, filtered, selectedIndex, onClose]);
+  }, [open, filtered, filteredFiles, selectedIndex, onClose, totalItems, isFileMode]);
 
   // Scroll selected item into view
   useEffect(() => {
@@ -152,13 +196,23 @@ export default function CommandPalette({
           >
             {/* Search input */}
             <div className="flex items-center gap-3 px-4 border-b border-[#30363d]">
-              <Search className="size-4 text-[#8b949e] shrink-0" />
+              {isFileMode ? (
+                <FileSearch className="size-4 text-[#8b949e] shrink-0" />
+              ) : (
+                <Search className="size-4 text-[#8b949e] shrink-0" />
+              )}
               <input
                 ref={inputRef}
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Type a command..."
+                placeholder={
+                  isFileMode
+                    ? 'Search files by name...'
+                    : commandFilter
+                      ? `Search ${commandFilter} commands...`
+                      : 'Type a command...'
+                }
                 className="flex-1 bg-transparent py-3.5 text-sm text-[#e6edf3] outline-none placeholder-[#484f58]"
               />
               <kbd
@@ -169,7 +223,7 @@ export default function CommandPalette({
               </kbd>
             </div>
 
-            {/* Command list */}
+            {/* List */}
             <div
               ref={listRef}
               className="max-h-[320px] overflow-y-auto py-1.5 px-1.5"
@@ -178,7 +232,62 @@ export default function CommandPalette({
                 scrollbarColor: '#30363d #161b22',
               }}
             >
-              {filtered.length === 0 ? (
+              {isFileMode ? (
+                // File search mode
+                filteredFiles.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-10 text-[#484f58]">
+                    <FileSearch className="size-5 mb-2" />
+                    <span className="text-sm">No files found</span>
+                  </div>
+                ) : (
+                  filteredFiles.map((file, idx) => {
+                    const isSelected = idx === selectedIndex;
+                    return (
+                      <button
+                        key={file.name}
+                        type="button"
+                        data-selected={isSelected}
+                        onClick={() => {
+                          file.action();
+                          onClose();
+                        }}
+                        onMouseEnter={() => setSelectedIndex(idx)}
+                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-all duration-150 ${
+                          isSelected
+                            ? 'bg-[#0d1117] text-[#e6edf3]'
+                            : 'text-[#8b949e] hover:bg-[#0d1117]/60 hover:text-[#e6edf3]'
+                        }`}
+                        style={
+                          isSelected
+                            ? {
+                                borderLeft: '2px solid #238636',
+                                paddingLeft: '10px',
+                              }
+                            : {
+                                borderLeft: '2px solid transparent',
+                                paddingLeft: '10px',
+                              }
+                        }
+                      >
+                        <FileSearch
+                          className={`size-4 shrink-0 ${
+                            isSelected ? 'text-[#238636]' : 'text-[#8b949e]'
+                          }`}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm truncate block">
+                            {file.name}
+                          </span>
+                          <span className="text-[10px] text-[#484f58]">
+                            File
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })
+                )
+              ) : // Command mode
+              filtered.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 text-[#484f58]">
                   <Search className="size-5 mb-2" />
                   <span className="text-sm">No commands found</span>

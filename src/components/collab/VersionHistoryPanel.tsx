@@ -12,6 +12,7 @@ import {
   RotateCcw,
   Eye,
   Search,
+  GitCompare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -76,6 +77,209 @@ function computeDiff(prevContent: string, newContent: string): { added: string[]
   return { added: added.slice(0, 5), removed: removed.slice(0, 5) };
 }
 
+// Simple LCS-based side-by-side diff for the full diff view
+interface DiffLine {
+  leftNum: number | null;
+  rightNum: number | null;
+  leftContent: string;
+  rightContent: string;
+  type: 'added' | 'removed' | 'unchanged';
+}
+
+function computeSideBySideDiff(prevContent: string, newContent: string, maxLines: number = 200): DiffLine[] {
+  const prevLines = prevContent.split('\n').slice(0, maxLines);
+  const newLines = newContent.split('\n').slice(0, maxLines);
+
+  // Build LCS table for diff alignment
+  const m = prevLines.length;
+  const n = newLines.length;
+
+  // For performance, limit LCS computation
+  if (m * n > 40000) {
+    // Fallback: simple line-by-line comparison
+    const result: DiffLine[] = [];
+    const maxLen = Math.max(m, n);
+    for (let i = 0; i < maxLen; i++) {
+      const prev = prevLines[i];
+      const next = newLines[i];
+      if (prev !== undefined && next !== undefined) {
+        if (prev === next) {
+          result.push({ leftNum: i + 1, rightNum: i + 1, leftContent: prev, rightContent: next, type: 'unchanged' });
+        } else {
+          result.push({ leftNum: i + 1, rightNum: null, leftContent: prev, rightContent: '', type: 'removed' });
+          result.push({ leftNum: null, rightNum: i + 1, leftContent: '', rightContent: next, type: 'added' });
+        }
+      } else if (prev !== undefined) {
+        result.push({ leftNum: i + 1, rightNum: null, leftContent: prev, rightContent: '', type: 'removed' });
+      } else if (next !== undefined) {
+        result.push({ leftNum: null, rightNum: i + 1, leftContent: '', rightContent: next, type: 'added' });
+      }
+    }
+    return result;
+  }
+
+  // LCS DP table
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (prevLines[i - 1] === newLines[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+      }
+    }
+  }
+
+  // Backtrack to find diff
+  const result: DiffLine[] = [];
+  let i = m;
+  let j = n;
+  const reversed: DiffLine[] = [];
+
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && prevLines[i - 1] === newLines[j - 1]) {
+      reversed.push({ leftNum: i, rightNum: j, leftContent: prevLines[i - 1], rightContent: newLines[j - 1], type: 'unchanged' });
+      i--;
+      j--;
+    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+      reversed.push({ leftNum: null, rightNum: j, leftContent: '', rightContent: newLines[j - 1], type: 'added' });
+      j--;
+    } else {
+      reversed.push({ leftNum: i, rightNum: null, leftContent: prevLines[i - 1], rightContent: '', type: 'removed' });
+      i--;
+    }
+  }
+
+  // Reverse and assign correct line numbers
+  const ordered = reversed.reverse();
+  let leftLineNum = 0;
+  let rightLineNum = 0;
+
+  for (const line of ordered) {
+    if (line.type === 'unchanged') {
+      leftLineNum = line.leftNum!;
+      rightLineNum = line.rightNum!;
+    } else if (line.type === 'removed') {
+      leftLineNum = line.leftNum!;
+    } else {
+      rightLineNum = line.rightNum!;
+    }
+    result.push(line);
+  }
+
+  return result;
+}
+
+// Side-by-side diff view component
+function SideBySideDiffView({
+  prevContent,
+  newContent,
+  prevIndex,
+  newIndex,
+  onClose,
+}: {
+  prevContent: string;
+  newContent: string;
+  prevIndex: number;
+  newIndex: number;
+  onClose: () => void;
+}) {
+  const diffLines = useMemo(() => computeSideBySideDiff(prevContent, newContent), [prevContent, newContent]);
+
+  const addedCount = diffLines.filter((l) => l.type === 'added').length;
+  const removedCount = diffLines.filter((l) => l.type === 'removed').length;
+
+  return (
+    <div className="flex flex-col h-full bg-[#0d1117]">
+      {/* Diff header */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#30363d] shrink-0 bg-[#161b22]">
+        <div className="flex items-center gap-2">
+          <GitCompare className="size-3.5 text-[#58a6ff]" />
+          <span className="text-xs font-semibold text-[#e6edf3]">
+            Comparing: snapshot {newIndex} → snapshot {prevIndex}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] text-[#238636]">+{addedCount}</span>
+          <span className="text-[10px] text-[#f85149]">-{removedCount}</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d]"
+            onClick={onClose}
+            aria-label="Close diff view"
+          >
+            <X className="size-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Side by side panels */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* Previous version (left) */}
+        <div className="flex-1 min-w-0 border-r border-[#30363d] flex flex-col">
+          <div className="px-3 py-1.5 text-[10px] text-[#8b949e] font-medium bg-[#161b22] border-b border-[#30363d] shrink-0">
+            Previous (snapshot {prevIndex})
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+            {diffLines.map((line, idx) => (
+              <div
+                key={idx}
+                className={cn(
+                  'flex font-mono text-[11px] leading-5 min-h-[20px]',
+                  line.type === 'removed' && 'diff-line-removed diff-highlight',
+                  line.type === 'added' && 'diff-line-empty-left',
+                  line.type === 'unchanged' && 'diff-line-unchanged',
+                )}
+              >
+                <span className="w-10 shrink-0 text-right text-[#484f58] select-none pr-2 border-r border-[#21262d]">
+                  {line.leftNum ?? ''}
+                </span>
+                <span className={cn(
+                  'flex-1 px-2 whitespace-pre-wrap break-all',
+                  line.type === 'removed' ? 'text-[#e6edf3]' : 'text-transparent select-none',
+                )}>
+                  {line.leftContent || ' '}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Current version (right) */}
+        <div className="flex-1 min-w-0 flex flex-col">
+          <div className="px-3 py-1.5 text-[10px] text-[#8b949e] font-medium bg-[#161b22] border-b border-[#30363d] shrink-0">
+            Current (snapshot {newIndex})
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+            {diffLines.map((line, idx) => (
+              <div
+                key={idx}
+                className={cn(
+                  'flex font-mono text-[11px] leading-5 min-h-[20px]',
+                  line.type === 'added' && 'diff-line-new diff-highlight',
+                  line.type === 'removed' && 'diff-line-empty-right',
+                  line.type === 'unchanged' && 'diff-line-unchanged',
+                )}
+              >
+                <span className="w-10 shrink-0 text-right text-[#484f58] select-none pr-2 border-r border-[#21262d]">
+                  {line.rightNum ?? ''}
+                </span>
+                <span className={cn(
+                  'flex-1 px-2 whitespace-pre-wrap break-all',
+                  line.type === 'added' ? 'text-[#e6edf3]' : 'text-transparent select-none',
+                )}>
+                  {line.rightContent || ' '}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function VersionHistoryPanel({
   isOpen,
   onClose,
@@ -85,6 +289,7 @@ export default function VersionHistoryPanel({
 }: VersionHistoryPanelProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [previewingSnapshot, setPreviewingSnapshot] = useState<VersionSnapshot | null>(null);
+  const [diffingSnapshot, setDiffingSnapshot] = useState<VersionSnapshot | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -144,6 +349,52 @@ export default function VersionHistoryPanel({
   const handlePreview = (snapshot: VersionSnapshot) => {
     setPreviewingSnapshot(previewingSnapshot?.id === snapshot.id ? null : snapshot);
   };
+
+  const handleDiff = (snapshot: VersionSnapshot) => {
+    if (!snapshot.prevContent) {
+      toast.info('No previous version to compare');
+      return;
+    }
+    setDiffingSnapshot(diffingSnapshot?.id === snapshot.id ? null : snapshot);
+  };
+
+  // If we're in diff view, show the side-by-side diff
+  if (diffingSnapshot && diffingSnapshot.prevContent) {
+    // Find the indices
+    const currentIndex = filteredSnapshots.findIndex((s) => s.id === diffingSnapshot!.id);
+    const prevIndex = currentIndex + 1; // previous snapshot in time (newer in the array since sorted newest first... but snapshots are added chronologically)
+
+    // Actually, snapshots are stored chronologically (oldest first, newest last)
+    // So the previous snapshot for diffing is the one before it in the array
+    const prevSnapshot = currentIndex > 0 ? filteredSnapshots[currentIndex - 1] : null;
+    const prevLabel = prevSnapshot ? filteredSnapshots.indexOf(prevSnapshot) + 1 : 0;
+    const currentLabel = filteredSnapshots.indexOf(diffingSnapshot) + 1;
+
+    return (
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            key="version-history"
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 380, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ type: 'tween', duration: 0.2 }}
+            className="border-l border-[#30363d] overflow-hidden shrink-0 bg-[#0d1117]"
+          >
+            <div className="w-[380px] h-full flex flex-col bg-[#0d1117]">
+              <SideBySideDiffView
+                prevContent={prevSnapshot?.content || ''}
+                newContent={diffingSnapshot.content}
+                prevIndex={prevLabel || 0}
+                newIndex={currentLabel}
+                onClose={() => setDiffingSnapshot(null)}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    );
+  }
 
   return (
     <AnimatePresence initial={false}>
@@ -335,6 +586,22 @@ export default function VersionHistoryPanel({
                                   <Eye className="size-3" />
                                   {isPreviewing ? 'Hide' : 'Preview'}
                                 </Button>
+                                {snapshot.prevContent && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className={cn(
+                                      'h-6 px-2 text-[10px] gap-1',
+                                      diffingSnapshot?.id === snapshot.id
+                                        ? 'text-[#d29922] bg-[#d29922]/10'
+                                        : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d]'
+                                    )}
+                                    onClick={() => handleDiff(snapshot)}
+                                  >
+                                    <GitCompare className="size-3" />
+                                    Diff
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           </div>

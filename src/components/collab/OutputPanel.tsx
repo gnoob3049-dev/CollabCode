@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   Terminal,
   AlertTriangle,
@@ -9,6 +9,8 @@ import {
   X,
   Loader2,
   Circle,
+  ExternalLink,
+  Info,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -20,6 +22,8 @@ interface OutputPanelProps {
   onClear: () => void;
   onClose: () => void;
   onToggle: () => void;
+  isHtml?: boolean;
+  isCss?: boolean;
 }
 
 export default function OutputPanel({
@@ -28,6 +32,8 @@ export default function OutputPanel({
   onClear,
   onClose,
   onToggle,
+  isHtml = false,
+  isCss = false,
 }: OutputPanelProps) {
   const [activeTab, setActiveTab] = useState<'output' | 'problems'>('output');
   const [copied, setCopied] = useState(false);
@@ -37,6 +43,21 @@ export default function OutputPanel({
   const startYRef = useRef(0);
   const startHeightRef = useRef(0);
   const panelRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Generate a blob URL for the HTML iframe
+  const htmlBlobUrl = useMemo(() => {
+    if (!isHtml || !output) return null;
+    const blob = new Blob([output], { type: 'text/html' });
+    return URL.createObjectURL(blob);
+  }, [isHtml, output]);
+
+  // Cleanup blob URL on unmount or change
+  useEffect(() => {
+    return () => {
+      if (htmlBlobUrl) URL.revokeObjectURL(htmlBlobUrl);
+    };
+  }, [htmlBlobUrl]);
 
   // Get viewport ref
   useEffect(() => {
@@ -60,6 +81,14 @@ export default function OutputPanel({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
+  }, [output]);
+
+  // Preview in browser: open HTML in a new tab
+  const handlePreviewInBrowser = useCallback(() => {
+    if (!output) return;
+    const blob = new Blob([output], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank', 'noopener');
   }, [output]);
 
   // Resize handle drag
@@ -129,6 +158,9 @@ export default function OutputPanel({
             <span className="flex items-center gap-1.5">
               <Terminal className="size-3" />
               Output
+              {isHtml && (
+                <span className="text-[9px] text-[#e34c26] font-semibold ml-1">HTML</span>
+              )}
             </span>
           </button>
           <button
@@ -164,6 +196,20 @@ export default function OutputPanel({
               <span className="text-[10px] text-[#484f58]">No output</span>
             )}
           </div>
+
+          {/* Preview in browser (HTML only) */}
+          {isHtml && htmlBlobUrl && (
+            <TooltipWrapper label="Preview in browser">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-6 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d]"
+                onClick={handlePreviewInBrowser}
+              >
+                <ExternalLink className="size-3" />
+              </Button>
+            </TooltipWrapper>
+          )}
 
           {/* Copy */}
           <Button
@@ -205,47 +251,77 @@ export default function OutputPanel({
 
       {/* Content */}
       {activeTab === 'output' ? (
-        <ScrollArea className="flex-1 min-h-0" ref={scrollRef}>
-          <div className="p-3 font-mono text-xs leading-relaxed">
-            {isRunning && !output ? (
-              <div className="flex items-center gap-2 text-[#8b949e] py-2">
-                <Loader2 className="size-3.5 animate-spin text-[#d29922]" />
-                <span>Executing code...</span>
-              </div>
-            ) : output ? (
-              <div className="space-y-0">
-                {lines.map((line, i) => {
-                  const isError = line.toLowerCase().includes('error') || line.toLowerCase().includes('exception');
-                  const isWarning = line.toLowerCase().includes('warning') || line.toLowerCase().includes('warn');
-                  return (
-                    <div
-                      key={i}
-                      className={cn(
-                        'px-1 -mx-1 rounded-sm fade-in-up',
-                        isError && 'bg-[#f85149]/10 text-[#f85149]',
-                        isWarning && !isError && 'text-[#d29922]',
-                        !isError && !isWarning && 'text-[#e6edf3]'
-                      )}
-                      style={{ animationDelay: `${Math.min(i * 20, 500)}ms` }}
-                    >
-                      <span className="inline-block w-6 text-right mr-3 text-[#30363d] select-none shrink-0">
-                        {i + 1}
-                      </span>
-                      {line || '\u00A0'}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="flex items-center justify-center py-6 text-[#30363d]">
-                <span className="flex items-center gap-2 text-xs terminal-cursor">
-                  <Terminal className="size-4" />
-                  Run your code to see output here
-                </span>
-              </div>
-            )}
+        isHtml && htmlBlobUrl ? (
+          /* HTML iframe preview */
+          <div className="flex-1 min-h-0 bg-white">
+            <iframe
+              ref={iframeRef}
+              src={htmlBlobUrl}
+              className="w-full h-full border-0"
+              sandbox="allow-scripts allow-modals"
+              title="HTML Preview"
+            />
           </div>
-        </ScrollArea>
+        ) : isCss ? (
+          /* CSS message */
+          <div className="flex-1 flex items-center justify-center bg-[#0d1117]">
+            <div className="text-center flex flex-col items-center gap-3">
+              <div className="flex items-center justify-center size-10 rounded-full bg-[#563d7c]/10">
+                <Info className="size-5 text-[#563d7c]" />
+              </div>
+              <div>
+                <p className="text-sm text-[#e6edf3] font-medium mb-1">CSS Preview</p>
+                <p className="text-xs text-[#8b949e] max-w-xs">
+                  CSS preview is available in the Preview panel. Use the eye icon in the toolbar or press{' '}
+                  <kbd className="px-1.5 py-0.5 rounded bg-[#30363d] text-[#e6edf3] text-[10px] font-mono">Ctrl+Shift+V</kbd>{' '}
+                  to toggle it.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <ScrollArea className="flex-1 min-h-0" ref={scrollRef}>
+            <div className="p-3 font-mono text-xs leading-relaxed">
+              {isRunning && !output ? (
+                <div className="flex items-center gap-2 text-[#8b949e] py-2">
+                  <Loader2 className="size-3.5 animate-spin text-[#d29922]" />
+                  <span>Executing code...</span>
+                </div>
+              ) : output ? (
+                <div className="space-y-0">
+                  {lines.map((line, i) => {
+                    const isError = line.toLowerCase().includes('error') || line.toLowerCase().includes('exception');
+                    const isWarning = line.toLowerCase().includes('warning') || line.toLowerCase().includes('warn');
+                    return (
+                      <div
+                        key={i}
+                        className={cn(
+                          'px-1 -mx-1 rounded-sm fade-in-up',
+                          isError && 'bg-[#f85149]/10 text-[#f85149]',
+                          isWarning && !isError && 'text-[#d29922]',
+                          !isError && !isWarning && 'text-[#e6edf3]'
+                        )}
+                        style={{ animationDelay: `${Math.min(i * 20, 500)}ms` }}
+                      >
+                        <span className="inline-block w-6 text-right mr-3 text-[#30363d] select-none shrink-0">
+                          {i + 1}
+                        </span>
+                        {line || '\u00A0'}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex items-center justify-center py-6 text-[#30363d]">
+                  <span className="flex items-center gap-2 text-xs terminal-cursor">
+                    <Terminal className="size-4" />
+                    Run your code to see output here
+                  </span>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        )
       ) : (
         <div className="flex-1 flex items-center justify-center text-[#484f58] text-xs">
           <div className="text-center">
@@ -254,6 +330,18 @@ export default function OutputPanel({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* Simple inline tooltip component to avoid importing the full Tooltip set */
+function TooltipWrapper({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="relative group">
+      {children}
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded bg-[#1f2937] text-[#e6edf3] text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+        {label}
+      </div>
     </div>
   );
 }

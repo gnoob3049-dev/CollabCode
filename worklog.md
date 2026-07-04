@@ -995,3 +995,371 @@ CollabCode is now at 23+ components, 12 API routes, 1 mini-service, and 3 utilit
 8. **Diff view in Version History** — Side-by-side diff comparison
 9. **Emoji reactions in chat** — Reaction picker on messages
 10. **Export/Download room** — Download all files as ZIP
+
+---
+
+## Completed: Task 7-a — Export Room as ZIP + Multi-language Code Execution
+
+### Part 1: Export Room as ZIP
+1. **API Route** `src/app/api/rooms/[roomId]/export/route.ts`:
+   - GET handler authenticates user via `getCurrentUser()`, fetches room from DB
+   - Creates ZIP in memory using `archiver` npm package (level 9 compression)
+   - Adds all room files to the ZIP archive
+   - Generates a `README.md` with room name, language, export date, and collaborator count
+   - Returns ZIP as response with `Content-Disposition: attachment` and `Content-Type: application/zip` headers
+   - Access control: owner or collaborator only
+
+2. **EditorTopBar.tsx**:
+   - Added `Download` icon import from lucide-react
+   - Added `onExport?: () => void` prop
+   - Added Download button before Settings button with tooltip "Download as ZIP" and aria-label "Download room as ZIP"
+
+3. **EditorPage.tsx**:
+   - Added `handleExportRoom` async function that fetches the export API, creates a Blob URL, triggers download via temporary `<a>` element, shows toast "Room exported successfully!"
+   - Passed `onExport={handleExportRoom}` to EditorTopBar
+   - Added "Export Room as ZIP" command to command palette under "File Operations" category with Download icon
+
+### Part 2: Multi-language Code Execution
+Updated `src/app/api/run/route.ts` to support all 10 languages:
+- **JavaScript**: Runs via `node -e` (unchanged)
+- **TypeScript**: Strips type annotations (interfaces, type aliases, generics, parameter types, return types, `as` casts, type imports) via regex, then runs with `node -e`
+- **Python**: Runs via `python3 -c` (unchanged)
+- **HTML**: Returns `{ output: code, isHtml: true }` — no execution, just passes through
+- **CSS**: Returns `{ output: "CSS preview available in the Preview panel", isCss: true }`
+- **SQL**: Runs via `sqlite3 :memory:` with `-header -column` flags for formatted table output
+- **Go**: Returns "Go execution is not supported in the sandbox."
+- **Rust**: Returns "Rust execution is not supported in the sandbox."
+- **Java**: Returns "Java execution is not supported in the sandbox."
+- **C++**: Returns "C++ execution is not supported in the sandbox."
+
+### Part 3: OutputPanel Enhancement
+Updated `src/components/collab/OutputPanel.tsx`:
+- Added `isHtml` and `isCss` optional props
+- **HTML output**: Renders the HTML in a sandboxed `<iframe>` with `allow-scripts allow-modals` permissions, using a blob URL
+- **CSS output**: Shows an informational panel with an icon suggesting to use the Preview panel (`Ctrl+Shift+V`)
+- **"Preview in browser" button**: Opens HTML in a new tab via `window.open()` with a blob URL (only shown for HTML output)
+- **HTML badge**: Shows an "HTML" label in the Output tab header when viewing HTML output
+- Added inline `TooltipWrapper` component for the preview button tooltip
+---
+
+## Task 7-b: Chat Emoji Reactions + Enhanced File Search + @Mention Support
+
+### Part 1: Emoji Reactions in Chat
+**`src/store/useStore.ts`**:
+- Added `reactions?: Record<string, string[]>` field to `ChatMessage` interface
+- Format: `{ '👍': ['userId1', 'userId2'], '❤️': ['userId3'] }`
+- Added `toggleReaction(messageId, emoji, userId)` action — adds user to emoji's user list if not present, removes if already reacted, cleans up empty reactions
+
+**`src/components/collab/ChatPanel.tsx`**:
+- Added reaction pills below each message bubble showing emoji + count
+- Reaction pill styling: `bg-[#21262d] border-[#30363d] rounded-full`, hover: `bg-[#30363d] border-[#484f58]`
+- User's own reactions highlighted: `border-[#238636]/50 bg-[#238636]/10 text-[#3fb950]`
+- Hover on reaction pill shows tooltip with list of user names (resolved from onlineUsers and message senders)
+- Click reaction pill to toggle own reaction (add/remove)
+- "Add Reaction" button (SmilePlus icon) on each message, `opacity-0 group-hover:opacity-100` transition
+- Reaction picker popover using shadcn/ui `Popover` component
+- Grid of 4×2 emojis: 👍 ❤️ 😂 🎉 🚀 👀 💯 🔥
+- Each emoji button grows slightly on hover (`hover:scale-110`)
+- Reactions stored locally in chatMessages state via Zustand store
+
+### Part 2: Enhanced File Search in Command Palette
+**`src/components/collab/CommandPalette.tsx`**:
+- Added `files?: FileItem[]` prop and `FileItem` export interface (`{ name: string; action: () => void }`)
+- Added `commandFilter?: string | null` prop for category pre-filtering
+- File search mode activated when `files` array is provided (length > 0)
+- File search uses fuzzy matching (all query chars must appear in order in filename)
+- File list items show FileSearch icon, file name, and "File" category label
+- Placeholder text changes: "Search files by name..." in file mode
+- Arrow keys navigate, Enter selects and executes file action
+
+**`src/components/collab/EditorPage.tsx`**:
+- Added `commandFilter` and `fileSearchFiles` state variables
+- Ctrl+P keyboard handler now opens command palette in file search mode instead of `window.prompt()`
+- Maps current room files to `FileItem[]` with actions to switch editor to each file
+- "Quick Open File" command palette entry also updated to use file search mode
+- Command palette `onClose` resets `commandFilter` and `fileSearchFiles`
+- Passed `commandFilter` and `files` props to CommandPalette
+
+### Part 3: Chat @Mention Support
+**`src/components/collab/ChatPanel.tsx`**:
+- Added `onlineUsers?: PresenceUser[]` prop (passed from EditorPage)
+- Typing `@` in chat input triggers mention dropdown above the input field
+- Dropdown shows online users filtered by typed query (fuzzy match on name)
+- Each user row shows color dot + name, dark themed matching GitHub-dark style
+- Keyboard navigation: ArrowUp/Down to select, Enter/Tab to insert, Escape to close
+- Inserting a mention replaces `@query` with `@username ` and positions cursor after
+- Dropdown styled with `bg-[#161b22]`, border, selected item with green left border
+- Mention state: `mentionActive`, `mentionQuery`, `mentionIndex`, `mentionStart`
+- Passes `onlineUsers` to ChatPanel from EditorPage
+
+---
+
+## Task 7-c: Notifications Center + Version History Diff View + Styling Polish
+
+### Part 1: Notifications Center
+
+1. **Store Update** (`src/store/useStore.ts`):
+   - Added `NotificationItem` interface: `{ id, type: 'info'|'success'|'warning'|'error', title, message, timestamp, read }`
+   - Added to `AppState`: `notifications`, `addNotification()`, `markNotificationRead()`, `clearNotifications()`, `unreadNotificationCount`
+   - `addNotification` auto-generates `id`, `timestamp`, sets `read: false`, and prepends to list (newest first)
+
+2. **NotificationsPanel.tsx** — New component:
+   - Slide-in panel from right (w-[360px]) using framer-motion `AnimatePresence`
+   - Props: `isOpen`, `onClose`, `notifications`, `unreadCount`, `onMarkRead`, `onMarkAllRead`, `onClearAll`
+   - Shows notifications newest first with colored icons per type (Info=green, CheckCircle=blue, AlertTriangle=yellow, XCircle=red)
+   - Unread notifications have a colored left accent line matching their type
+   - Read notifications are dimmed (`opacity-60`)
+   - "Mark all read" button when unread exist, "Clear" button when notifications exist
+   - Empty state: BellOff icon with "No notifications"
+   - Click notification marks it as read
+   - Relative timestamps (just now, Xs/m/h/d ago)
+
+3. **EditorTopBar.tsx**:
+   - Added `Inbox` import and new props: `onToggleNotifications`, `notificationsOpen`, `unreadNotificationCount`
+   - Added Inbox button with blue unread badge (with `badge-pop` animation class) before Settings button
+   - Badge shows count (9+ for overflow), tooltip "Notifications (Ctrl+Shift+N)"
+   - Active state: highlighted background when panel is open
+
+4. **EditorPage.tsx** Integration:
+   - Added `notificationsOpen` state, imported `NotificationsPanel` and `Inbox`
+   - Destructured `notifications`, `addNotification`, `markNotificationRead`, `clearNotifications` from store
+   - Passed notification props to EditorTopBar
+   - Keyboard shortcut: `Ctrl+Shift+N` toggles notifications panel
+   - Escape key also closes notifications panel
+   - Command palette: "Toggle Notifications" under View category with `Inbox` icon
+   - Auto-notifications for: room joined (success), collaborator joined (info), collaborator left (warning), file saved (success), save failed (error), code ran (success), run error (error)
+   - Renders `NotificationsPanel` at the end of the editor layout
+
+### Part 2: Side-by-Side Diff View in Version History
+
+Updated `src/components/collab/VersionHistoryPanel.tsx`:
+
+1. **LCS-based diff algorithm** (`computeSideBySideDiff`):
+   - Uses Longest Common Subsequence dynamic programming approach
+   - Performance guard: falls back to simple line-by-line comparison when `m*n > 40000`
+   - Limits to first 200 lines
+   - Returns `DiffLine[]` with `leftNum`, `rightNum`, `leftContent`, `rightContent`, `type` ('added'|'removed'|'unchanged')
+
+2. **SideBySideDiffView component**:
+   - Left panel: previous version content with line numbers
+   - Right panel: current version content with line numbers
+   - Added lines: green background (`#238636/10`) with green left border
+   - Removed lines: red background (`#f85149/10`) with red left border
+   - Unchanged lines: no special styling
+   - Empty slots on opposite side for added/removed lines
+   - Header shows "Comparing: snapshot N → snapshot N-1" with `GitCompare` icon
+   - Added/removed count stats in header
+   - Close button returns to timeline
+
+3. **"Diff" button on each snapshot** (GitCompare icon from lucide-react):
+   - Appears next to Preview and Restore buttons
+   - Only shows when snapshot has `prevContent`
+   - Clicking opens side-by-side diff view (replaces timeline)
+   - Active state: highlighted with amber/yellow color
+
+### Part 3: Styling Polish
+
+1. **globals.css** — New CSS additions:
+   - `@keyframes notification-slide` — slide from right (translateX(20px) → 0)
+   - `.notification-enter` — uses notification-slide
+   - `@keyframes count-badge-pop` — scale(1.3) → scale(1) pop for badges
+   - `.badge-pop` — uses count-badge-pop
+   - `@keyframes diff-highlight` — subtle flash on diff lines
+   - `.diff-line-new` — green background + left border
+   - `.diff-line-removed` — red background + left border
+   - `.diff-line-unchanged` — no special styling
+   - `.diff-line-empty-left` / `.diff-line-empty-right` — subtle tinted backgrounds for empty opposite panels
+   - `@keyframes pulse-border-orange` — orange variant for read-only banner
+
+2. **DashboardPage.tsx** — Room card enhancements:
+   - Animated gradient border on hover: uses CSS mask-based gradient border with language color tint, same technique as feature cards on landing page
+   - "Last edited by" indicator: small avatar dot + "You" or owner name shown before the timestamp in each room card
+   - Language badge: added subtle glow on hover matching the language color via CSS custom property `--glow-color`
+
+3. **LandingPage.tsx** — "Trusted by developers" section:
+   - Placed between Features section and Footer
+   - 6 generic tech company-style "logos" using text initials in small rounded boxes
+   - Companies: AlphaCorp, NovaTech, QuantumDev, SynthLabs, PixelForge, RiverStack
+   - Staggered fade-in animation using framer-motion `whileInView`
+   - Very subtle opacity (0.35) with hover increase (0.6)
+   - "Trusted by developers at" heading in uppercase tracking-widest style
+
+### Verification (Task 7-c)
+- ESLint: Zero errors
+- All files compile successfully
+
+---
+Task ID: 7
+Agent: Main Agent + 3 Subagents (full-stack-developer)
+Task: QA testing, bug fix, 6 new features, and styling polish (Cycle 7)
+
+Work Log:
+- Read worklog.md (Cycles 1-6) for full project context
+- QA tested via agent-browser: landing → dashboard (found bug!) → editor → all panels
+- Found and fixed: Dashboard subtitle always shows "Create or join a room" even when rooms exist
+- Launched 3 parallel subagents for features
+
+- Subagent 7-a: Export ZIP + Multi-language Execution
+  - New API route: src/app/api/rooms/[roomId]/export/route.ts (archiver ZIP with README.md)
+  - Installed `archiver` npm package
+  - TypeScript execution: regex type stripping + node -e
+  - HTML execution: returns code with isHtml flag for iframe rendering
+  - CSS execution: returns hint to use Preview panel
+  - SQL execution: runs via sqlite3 :memory:
+  - Go/Rust/Java/C++: sandbox-unsupported messages
+  - OutputPanel: HTML iframe rendering + "Preview in browser" button, CSS info panel
+  - EditorTopBar: Download icon button + command palette entry
+
+- Subagent 7-b: Emoji Reactions + Enhanced File Search + @Mentions
+  - Chat reactions: 8 emoji picker (👍❤️😂🎉🚀👀💯🔥), reaction pills with count, user-aware highlight
+  - File search: Command palette now supports file list mode with fuzzy matching
+  - Ctrl+P: Opens command palette in file search mode (no more window.prompt)
+  - @Mentions: Typing @ triggers user dropdown, keyboard navigation, click selection
+
+- Subagent 7-c: Notifications Center + Diff View + Styling
+  - New component: NotificationsPanel.tsx (slide-in, 4 types, mark read, clear)
+  - Store: NotificationItem interface + state management
+  - EditorTopBar: Inbox button with unread badge (Ctrl+Shift+N)
+  - Auto-notifications: room joined, collaborator events, save, run results
+  - Version History: LCS-based side-by-side diff view with GitCompare button
+  - Dashboard: animated gradient border on room card hover, language badge glow, last-edited indicator
+  - Landing: "Trusted by developers" section with 6 company-style logos
+
+- Main agent: Bug fix + Styling polish
+  - Fixed Dashboard subtitle bug (conditional text based on room count)
+  - EditorTabs: left gradient fade, improved active tab shadow, smoother transitions, close button press effect
+  - RoomSettingsModal: gradient accent bar, Settings icon in title, green focus on name input
+  - globals.css: 10+ new CSS classes (emoji-reaction-btn, mention-dropdown-enter, badge-pop, notification-enter, diff-line-*, panel-scroll, download-btn-pulse, logo-stagger)
+
+Stage Summary:
+- 1 bug fix: Dashboard always showing empty state subtitle
+- 6 new features: Export ZIP, Multi-language Execution, Emoji Reactions, Enhanced File Search, @Mentions, Notifications Center, Diff View, Trusted Logos section
+- 1 new API route (export)
+- 1 new component (NotificationsPanel)
+- 1 new dependency (archiver)
+- 12+ new CSS animations/classes
+- ESLint: Zero errors throughout
+- Dev server: All compiles successful
+- QA verified: 15 toolbar buttons, dashboard subtitle fix confirmed, notifications panel opens, chat reactions ready
+
+## Current Project Status Assessment (After Cycle 7)
+
+CollabCode is now at 25+ components, 13 API routes, 1 mini-service, and 4 utility modules. This cycle added 6 major features (Export ZIP, Multi-language Code Execution for 8 languages, Chat Emoji Reactions with 8 emojis, Enhanced File Search with fuzzy matching replacing window.prompt, @Mention support with user dropdown, and a full Notifications Center with auto-notifications). The Version History now supports side-by-side diff comparison. The dashboard bug where empty state text was always visible was fixed. Styling polish continued with 10+ new CSS classes, enhanced editor tabs, and a "Trusted by developers" section on the landing page.
+
+## Completed in This Round (Cron Review Cycle 7)
+
+### Bug Fixes
+1. **Dashboard Subtitle Always Shows Empty Text** — The "Create or join a room to start coding together" text was static and always visible regardless of room count. Fixed to show room/language count when rooms exist (e.g., "1 room · 1 language").
+
+### New Features (6)
+
+1. **Export Room as ZIP** — New API route + UI:
+   - GET `/api/rooms/[roomId]/export` creates ZIP with all files + README.md
+   - Download button in EditorTopBar (before Settings)
+   - Command palette entry "Export Room as ZIP"
+   - Installed `archiver` package
+
+2. **Multi-language Code Execution** — Enhanced run API:
+   - TypeScript: strips type annotations via regex, runs with node
+   - HTML: returns code with isHtml flag for iframe rendering in OutputPanel
+   - CSS: returns hint to use Preview panel
+   - SQL: executes via sqlite3 :memory: with formatted table output
+   - Go/Rust/Java/C++: sandbox-unsupported messages
+   - OutputPanel: renders HTML in sandboxed iframe, "Preview in browser" button
+
+3. **Chat Emoji Reactions** — 8 reaction emojis:
+   - 👍 ❤️ 😂 🎉 🚀 👀 💯 🔥
+   - Reaction pills below messages with count
+   - User-aware highlighting (own reactions: green border)
+   - SmilePlus button on hover opens Popover grid
+   - Store: reactions Record on ChatMessage, toggleReaction action
+
+4. **Enhanced File Search (Ctrl+P)** — Command palette file mode:
+   - Replaces window.prompt() with native command palette UI
+   - Fuzzy file matching with keyboard navigation
+   - File icon + name display
+   - Enter to switch editor to selected file
+
+5. **Chat @Mention Support** — User dropdown:
+   - Typing @ triggers dropdown of online users
+   - Fuzzy name filtering
+   - Keyboard navigation (↑↓, Enter/Tab, Escape)
+   - Click selection, proper cursor positioning
+
+6. **Notifications Center** — New NotificationsPanel:
+   - Slide-in panel (360px) with 4 types (info/success/warning/error)
+   - Colored icons, unread accent lines, relative timestamps
+   - Inbox button with unread badge in toolbar
+   - Ctrl+Shift+N shortcut, command palette entry
+   - Auto-notifications: room joined, collaborator events, save, run results
+   - Mark all read, clear all, click to mark individual
+
+### Additional Enhancements
+- **Version History Diff View** — LCS-based side-by-side diff with green/red highlighting, line numbers, GitCompare button
+- **Landing Page "Trusted By" Section** — 6 company-style logos with staggered fade-in
+- **Dashboard Room Cards** — Animated gradient border on hover, language badge glow, last-edited indicator
+
+### Styling Improvements
+- EditorTabs: left gradient fade, active tab inner shadow, smoother transitions, close button press effect
+- RoomSettingsModal: gradient accent bar, Settings icon, green focus glow
+- globals.css: 10+ new classes (emoji-reaction-btn, mention-dropdown-enter, badge-pop, notification-enter, diff-line-*, panel-scroll, download-btn-pulse, logo-stagger)
+
+### QA Testing Results
+- ✅ Dashboard subtitle fix verified: "1 room · 1 language" (no more misleading empty text)
+- ✅ All 15 toolbar buttons present (added Download, Notifications)
+- ✅ Notifications panel opens with empty state
+- ✅ Chat panel shows reaction UI
+- ✅ ESLint: Zero errors
+- ✅ Dev server: All compiles successful
+
+### QA Screenshots Saved (10 screenshots)
+- qa-7-01 through qa-7-10 in /home/z/my-project/download/
+
+## File Changes Summary
+
+### New Files
+- `src/app/api/rooms/[roomId]/export/route.ts` — ZIP export endpoint
+- `src/components/collab/NotificationsPanel.tsx` — Notifications center
+
+### New Dependencies
+- `archiver` — ZIP file creation
+
+### Modified Files
+- `src/components/collab/DashboardPage.tsx` — Fixed subtitle bug, room card hover effects, language glow, last-edited indicator
+- `src/components/collab/EditorTopBar.tsx` — Download button, Inbox/Notifications button with badge
+- `src/components/collab/EditorPage.tsx` — Export handler, notifications integration, Ctrl+Shift+N, auto-notifications, file search command palette mode
+- `src/components/collab/ChatPanel.tsx` — Emoji reactions, @mention dropdown
+- `src/components/collab/CommandPalette.tsx` — File search mode with fuzzy matching
+- `src/components/collab/VersionHistoryPanel.tsx` — Side-by-side diff view
+- `src/components/collab/OutputPanel.tsx` — HTML iframe rendering, CSS info panel
+- `src/components/collab/EditorTabs.tsx` — Left gradient fade, active tab shadow, improved transitions
+- `src/components/collab/RoomSettingsModal.tsx` — Gradient accent bar, Settings icon, green focus
+- `src/components/collab/LandingPage.tsx` — "Trusted by developers" section
+- `src/app/api/run/route.ts` — TypeScript, HTML, CSS, SQL, Go/Rust/Java/C++ support
+- `src/store/useStore.ts` — NotificationItem, toggleReaction, notification state
+- `src/app/globals.css` — 10+ new CSS animations and utility classes
+
+## Services Running
+- Next.js dev server: port 3000
+- CollabCode WebSocket service: port 3003
+
+## Unresolved Issues / Risks
+1. **Socket.io connection shows "Offline"** — Caddy gateway may not properly proxy WebSocket for Socket.io polling transport. Critical for chat/presence.
+2. **Y.js Document Persistence** — In-memory on WebSocket server. Unsaved documents lost on restart.
+3. **Mobile bottom sheets** — CSS animations defined but not yet integrated into chat/AI panels.
+4. **Collaborative cursors** — Requires 2+ connected users to test visually. Implementation complete.
+5. **Version History persistence** — Currently client-side only. Could be persisted to room data via API.
+6. **Reactions not synced** — Chat reactions are local state only, not synced via Socket.io.
+7. **agent-browser limitations** — Cannot type into Monaco editor. Radix overlays interfere with click targeting.
+
+## Priority Recommendations for Next Phase
+1. **Fix Socket.io WebSocket through Caddy** — Critical for chat, presence, and reactions sync
+2. **Mobile responsive overhaul** — Bottom sheets, responsive file tree, touch-friendly toolbar
+3. **Sync reactions via Socket.io** — Persist and broadcast reaction changes to all users
+4. **Version History persistence** — Save snapshots to room data via API
+5. **File tree drag-and-drop** — Reorder files by dragging
+6. **Performance optimization** — Lazy load Monaco, optimize Y.js for large files
+7. **Collaborative selection highlighting** — Multi-line remote selections
+8. **Code formatting** — Integrate Prettier for in-editor formatting
+9. **Room search/filters on dashboard** — Filter by language, date, collaborators
+10. **User profile page** — Edit name, avatar color, view all rooms

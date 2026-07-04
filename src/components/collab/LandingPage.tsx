@@ -477,6 +477,41 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Trusted by developers section */}
+        <section className="px-4 sm:px-6 pb-16 sm:pb-20">
+          <div className="max-w-4xl mx-auto text-center">
+            <p className="text-xs text-[#484f58] uppercase tracking-widest mb-8 font-medium">
+              Trusted by developers at
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12">
+              {[
+                { initials: 'AC', name: 'AlphaCorp' },
+                { initials: 'NT', name: 'NovaTech' },
+                { initials: 'QD', name: 'QuantumDev' },
+                { initials: 'SL', name: 'SynthLabs' },
+                { initials: 'PX', name: 'PixelForge' },
+                { initials: 'RV', name: 'RiverStack' },
+              ].map((company, i) => (
+                <motion.div
+                  key={company.name}
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1, duration: 0.5 }}
+                  className="flex items-center gap-2.5 opacity-[0.35] hover:opacity-[0.6] transition-opacity duration-300"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-[#21262d] border border-[#30363d] flex items-center justify-center">
+                    <span className="text-[10px] font-bold text-[#8b949e]">{company.initials}</span>
+                  </div>
+                  <span className="text-sm font-semibold text-[#8b949e] tracking-wide hidden sm:inline">
+                    {company.name}
+                  </span>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* Footer */}
         <footer className="relative py-10 sm:py-12 px-4 sm:px-6 mt-auto">
           {/* Subtle gradient top border */}

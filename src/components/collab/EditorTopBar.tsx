@@ -22,6 +22,8 @@ import {
   BellOff,
   History,
   Lock,
+  Download,
+  Inbox,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -82,8 +84,12 @@ interface EditorTopBarProps {
   onToggleAudio?: () => void;
   onToggleHistory: () => void;
   historyOpen: boolean;
+  onToggleNotifications: () => void;
+  notificationsOpen: boolean;
+  unreadNotificationCount: number;
   isReadOnly?: boolean;
   isOwner?: boolean;
+  onExport?: () => void;
 }
 
 export default function EditorTopBar({
@@ -115,8 +121,12 @@ export default function EditorTopBar({
   onToggleAudio,
   onToggleHistory,
   historyOpen,
+  onToggleNotifications,
+  notificationsOpen,
+  unreadNotificationCount,
   isReadOnly = false,
   isOwner = false,
+  onExport,
 }: EditorTopBarProps) {
   const isLockedForUser = isReadOnly && !isOwner;
   const [isEditingName, setIsEditingName] = useState(false);
@@ -499,6 +509,50 @@ export default function EditorTopBar({
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">Version History (Ctrl+Shift+H)</TooltipContent>
+          </Tooltip>
+
+          {/* Download / Export */}
+          {onExport && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d]"
+                  onClick={onExport}
+                  aria-label="Download room as ZIP"
+                >
+                  <Download className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Download as ZIP</TooltipContent>
+            </Tooltip>
+          )}
+
+          {/* Notifications */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  'relative size-8 hover:bg-[#30363d]',
+                  notificationsOpen
+                    ? 'text-[#e6edf3] bg-[#30363d]'
+                    : 'text-[#8b949e] hover:text-[#e6edf3]'
+                )}
+                onClick={onToggleNotifications}
+                aria-label={unreadNotificationCount > 0 ? `Notifications (${unreadNotificationCount} unread)` : 'Notifications'}
+              >
+                {unreadNotificationCount > 0 && (
+                  <Badge className="absolute -top-1 -right-1 size-4 p-0 flex items-center justify-center text-[10px] bg-[#58a6ff] border-none badge-pop">
+                    {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
+                  </Badge>
+                )}
+                <Inbox className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Notifications (Ctrl+Shift+N)</TooltipContent>
           </Tooltip>
 
           {/* Settings */}

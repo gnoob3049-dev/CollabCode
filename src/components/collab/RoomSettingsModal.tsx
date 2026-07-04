@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Copy, Check, Loader2, Eye, EyeOff, Lock, ShieldAlert } from 'lucide-react';
+import { Copy, Check, Loader2, Eye, EyeOff, Lock, ShieldAlert, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -167,8 +167,13 @@ export default function RoomSettingsModal({
         className="sm:max-w-md"
         style={{ background: '#161b22', border: '1px solid #30363d' }}
       >
-        <DialogHeader>
-          <DialogTitle className="text-[#e6edf3]">Room Settings</DialogTitle>
+        {/* Gradient accent bar at top */}
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#238636] via-[#58a6ff] to-[#a371f7] rounded-t-lg" />
+        <DialogHeader className="pt-2">
+          <DialogTitle className="text-[#e6edf3] flex items-center gap-2">
+            <Settings className="size-4 text-[#8b949e]" />
+            Room Settings
+          </DialogTitle>
           <DialogDescription className="text-[#8b949e]">
             Configure your collaborative coding room
           </DialogDescription>
@@ -184,7 +189,7 @@ export default function RoomSettingsModal({
               id="settings-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="bg-[#0d1117] border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#58a6ff]"
+              className="bg-[#0d1117] border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#238636]/50 focus:ring-1 focus:ring-[#238636]/30 focus:shadow-[0_0_8px_rgba(35,134,54,0.12)] transition-all duration-200"
               placeholder="Enter room name"
             />
           </div>

@@ -537,7 +537,9 @@ export default function DashboardPage() {
                   Your Rooms
                 </h1>
                 <p className="text-[#8b949e] mt-1">
-                  Create or join a room to start coding together
+                  {rooms.length > 0
+                    ? `${rooms.length} room${rooms.length !== 1 ? 's' : ''} · ${new Set(rooms.map(r => r.language)).size} language${new Set(rooms.map(r => r.language)).size !== 1 ? 's' : ''}`
+                    : 'Create or join a room to start coding together'}
                 </p>
               </div>
               <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -643,6 +645,20 @@ export default function DashboardPage() {
                       style={{ background: "#161b22" }}
                       onClick={() => handleOpenRoom(room)}
                     >
+                      {/* Animated gradient border on hover */}
+                      <div
+                        className="absolute -inset-px opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none z-20"
+                        style={{
+                          background: `linear-gradient(135deg, ${langColor}40, rgba(88,166,255,0.2), ${langColor}30)`,
+                          backgroundSize: '200% 200%',
+                          animation: 'btn-gradient-shift 4s ease infinite',
+                          WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                          WebkitMaskComposite: 'xor',
+                          maskComposite: 'exclude',
+                          padding: '1.5px',
+                          borderRadius: 'inherit',
+                        }}
+                      />
                       {/* Gradient overlay at bottom for depth */}
                       <div
                         className="absolute bottom-0 left-0 right-0 h-1/3 pointer-events-none"
@@ -678,12 +694,13 @@ export default function DashboardPage() {
                           </div>
                           {/* Language pill */}
                           <div
-                            className="shrink-0 flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
+                            className="shrink-0 flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium transition-shadow duration-300 hover:shadow-[0_0_8px_var(--glow-color)]"
                             style={{
                               backgroundColor: `${langColor}15`,
                               color: langColor,
                               border: `1px solid ${langColor}30`,
-                            }}
+                              '--glow-color': `${langColor}40`,
+                            } as React.CSSProperties}
                           >
                             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: langColor }} />
                             {room.language}
@@ -716,6 +733,15 @@ export default function DashboardPage() {
                             className={`flex items-center gap-1 ${recent ? "text-[#3fb950]" : "text-[#8b949e]"} group/tooltip relative`}
                             title={room.lastActiveAt ? `Last edited: ${new Date(room.lastActiveAt).toLocaleString()}` : undefined}
                           >
+                            {/* Last edited by indicator */}
+                            <div className="flex items-center gap-1 mr-1.5">
+                              <div
+                                className="w-3.5 h-3.5 rounded-full ring-1 ring-[#30363d]"
+                                style={{ backgroundColor: user?.avatarColor || '#238636' }}
+                                title={user?.name || 'You'}
+                              />
+                              <span className="text-[10px] text-[#484f58]">{room.ownerName === user?.name ? 'You' : (room.ownerName || 'You')}</span>
+                            </div>
                             <Clock className="w-3.5 h-3.5" />
                             <span>{timeAgo(room.lastActiveAt)}</span>
                           </div>
