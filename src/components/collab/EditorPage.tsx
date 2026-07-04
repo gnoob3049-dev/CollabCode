@@ -24,6 +24,7 @@ import {
   Keyboard,
   WrapText,
   Map,
+  Eye,
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -36,6 +37,7 @@ import RoomSettingsModal from './RoomSettingsModal';
 import KeyboardShortcutsDialog from './KeyboardShortcutsDialog';
 import EditorStatusBar from './EditorStatusBar';
 import CommandPalette, { type CommandItem } from './CommandPalette';
+import HtmlPreview from './HtmlPreview';
 import type { ChatMessage, Room } from '@/store/useStore';
 
 const LANGUAGE_MAP: Record<string, string> = {
@@ -106,6 +108,7 @@ export default function EditorPage() {
   const [wordWrap, setWordWrap] = useState<'on' | 'off'>('on');
   const [minimapEnabled, setMinimapEnabled] = useState(false);
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
+  const [htmlPreviewOpen, setHtmlPreviewOpen] = useState(false);
 
   // Get language from file extension
   const getLanguageFromFilename = useCallback(
@@ -518,6 +521,16 @@ export default function EditorPage() {
     setCurrentPage('dashboard');
   }, [setCurrentRoomId, setCurrentRoom, setCurrentPage]);
 
+  // Determine if current file supports HTML preview
+  const isHtmlFile = useMemo(() => {
+    const ext = currentFileName.split('.').pop()?.toLowerCase() || '';
+    return ext === 'html' || ext === 'htm' || ext === 'css';
+  }, [currentFileName]);
+
+  const handleTogglePreview = useCallback(() => {
+    setHtmlPreviewOpen((v) => !v);
+  }, []);
+
   const handleLanguageChange = useCallback(
     (lang: string) => {
       setLanguage(lang);
@@ -682,6 +695,14 @@ export default function EditorPage() {
         category: 'View',
         action: () => setMinimapEnabled((v) => !v),
       },
+      {
+        id: 'toggle-html-preview',
+        label: 'Toggle HTML Preview',
+        icon: Eye,
+        shortcut: ['Ctrl', 'Shift', 'V'],
+        category: 'View',
+        action: handleTogglePreview,
+      },
     ],
     [
       handleCreateFile,
@@ -694,6 +715,7 @@ export default function EditorPage() {
       files.length,
       outputPanelOpen,
       rightPanelOpen,
+      htmlPreviewOpen,
     ]
   );
 
@@ -724,16 +746,21 @@ export default function EditorPage() {
         e.preventDefault();
         e.stopPropagation();
         setShortcutsOpen(true);
+      } else if (isMod && e.shiftKey && (e.key === 'V' || e.key === 'v')) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isHtmlFile) handleTogglePreview();
       } else if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
         setRightPanelOpen(false);
         setOutputPanelOpen(false);
+        setHtmlPreviewOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [handleSave, handleRun, rightPanelOpen, commandPaletteOpen]);
+  }, [handleSave, handleRun, rightPanelOpen, commandPaletteOpen, isHtmlFile, handleTogglePreview]);
 
   // Remote cursor decorations: CSS for y-monaco's built-in selection highlighting
   // + name labels for each remote user's cursor position
@@ -851,6 +878,9 @@ export default function EditorPage() {
         onBack={handleBack}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenShortcuts={() => setShortcutsOpen(true)}
+        onTogglePreview={handleTogglePreview}
+        previewOpen={htmlPreviewOpen}
+        showPreview={isHtmlFile}
         rightPanelOpen={rightPanelOpen}
         outputPanelOpen={outputPanelOpen}
         unreadChatCount={unreadChatCount}
@@ -876,50 +906,73 @@ export default function EditorPage() {
 
         {/* Editor + Output */}
         <div className="flex flex-col flex-1 min-w-0">
-          {/* Monaco Editor */}
-          <div className="flex-1 min-h-0">
-            <Editor
-              height="100%"
-              language={getMonacoLanguage(language)}
-              theme="vs-dark"
-              onMount={handleEditorMount}
-              loading={
-                <div className="flex items-center justify-center h-full bg-[#161b22]">
-                  <div className="flex flex-col items-center gap-3 text-[#8b949e]">
-                    <div className="size-6 border-2 border-[#30363d] border-t-[#238636] rounded-full animate-spin" />
-                    <span className="text-sm">Loading editor...</span>
+          {/* Editor + Preview horizontal split */}
+          <div className="flex flex-1 min-h-0">
+            {/* Monaco Editor */}
+            <div className="flex-1 min-h-0 min-w-0">
+              <Editor
+                height="100%"
+                language={getMonacoLanguage(language)}
+                theme="vs-dark"
+                onMount={handleEditorMount}
+                loading={
+                  <div className="flex items-center justify-center h-full bg-[#161b22]">
+                    <div className="flex flex-col items-center gap-3 text-[#8b949e]">
+                      <div className="size-6 border-2 border-[#30363d] border-t-[#238636] rounded-full animate-spin" />
+                      <span className="text-sm">Loading editor...</span>
+                    </div>
                   </div>
-                </div>
-              }
-              options={{
-                fontSize: 13,
-                fontFamily: "'Geist Mono', 'Fira Code', 'Cascadia Code', monospace",
-                fontLigatures: true,
-                minimap: { enabled: minimapEnabled },
-                lineNumbers: 'on',
-                scrollBeyondLastLine: false,
-                renderLineHighlight: 'line',
-                padding: { top: 12, bottom: 12 },
-                smoothScrolling: true,
-                cursorBlinking: 'smooth',
-                cursorSmoothCaretAnimation: 'on',
-                bracketPairColorization: { enabled: true },
-                automaticLayout: true,
-                tabSize: 2,
-                wordWrap: wordWrap,
-                suggestOnTriggerCharacters: true,
-                quickSuggestions: true,
-                parameterHints: { enabled: true },
-                overviewRulerBorder: false,
-                scrollbar: {
-                  verticalScrollbarSize: 8,
-                  horizontalScrollbarSize: 8,
-                  verticalSliderSize: 8,
-                  horizontalSliderSize: 8,
-                },
-                backgroundColor: '#161b22',
-              }}
-            />
+                }
+                options={{
+                  fontSize: 13,
+                  fontFamily: "'Geist Mono', 'Fira Code', 'Cascadia Code', monospace",
+                  fontLigatures: true,
+                  minimap: { enabled: minimapEnabled },
+                  lineNumbers: 'on',
+                  scrollBeyondLastLine: false,
+                  renderLineHighlight: 'line',
+                  padding: { top: 12, bottom: 12 },
+                  smoothScrolling: true,
+                  cursorBlinking: 'smooth',
+                  cursorSmoothCaretAnimation: 'on',
+                  bracketPairColorization: { enabled: true },
+                  automaticLayout: true,
+                  tabSize: 2,
+                  wordWrap: wordWrap,
+                  suggestOnTriggerCharacters: true,
+                  quickSuggestions: true,
+                  parameterHints: { enabled: true },
+                  overviewRulerBorder: false,
+                  scrollbar: {
+                    verticalScrollbarSize: 8,
+                    horizontalScrollbarSize: 8,
+                    verticalSliderSize: 8,
+                    horizontalSliderSize: 8,
+                  },
+                  backgroundColor: '#161b22',
+                }}
+              />
+            </div>
+
+            {/* HTML Preview Panel */}
+            <AnimatePresence initial={false}>
+              {htmlPreviewOpen && isHtmlFile && (
+                <motion.div
+                  key="html-preview"
+                  initial={{ width: 0, opacity: 0 }}
+                  animate={{ width: '50%', opacity: 1 }}
+                  exit={{ width: 0, opacity: 0 }}
+                  transition={{ type: 'tween', duration: 0.2 }}
+                  className="overflow-hidden shrink-0"
+                >
+                  <HtmlPreview
+                    code={currentCode}
+                    visible={htmlPreviewOpen}
+                    onClose={() => setHtmlPreviewOpen(false)}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Output Panel */}

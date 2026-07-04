@@ -387,3 +387,228 @@ textarea:focus,
 .resize-handle:hover {
   background-color: rgba(35, 134, 54, 0.3);
 }
+
+/* ---- NEW: Additional animations & effects for Cycle 4 ---- */
+
+/* Smooth spring entrance for cards */
+@keyframes card-spring-in {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.005);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.card-spring-in {
+  animation: card-spring-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Staggered children animation delay helper */
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 60ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 120ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 180ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 360ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 420ms; }
+.stagger-children > *:nth-child(9) { animation-delay: 480ms; }
+.stagger-children > *:nth-child(10) { animation-delay: 540ms; }
+
+/* Glow button hover effect */
+@keyframes glow-pulse-green {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(35, 134, 54, 0.3), 0 0 16px rgba(35, 134, 54, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(35, 134, 54, 0.5), 0 0 28px rgba(35, 134, 54, 0.2);
+  }
+}
+
+.glow-btn-green {
+  transition: all 0.3s ease;
+}
+
+.glow-btn-green:hover {
+  animation: glow-pulse-green 1.5s ease-in-out infinite;
+}
+
+/* Gradient shimmer for the "Create" button */
+@keyframes btn-gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.btn-gradient-animated {
+  background-size: 200% 200%;
+  animation: btn-gradient-shift 3s ease infinite;
+}
+
+/* Smooth scale on hover for interactive cards */
+.hover-lift {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.4), 0 0 12px rgba(35, 134, 54, 0.08);
+}
+
+/* Focus-visible within cards */
+.card-focus-ring:focus-visible {
+  outline: 2px solid #238636;
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+/* File tree item hover slide effect */
+.file-tree-item {
+  position: relative;
+  overflow: hidden;
+}
+
+.file-tree-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #238636;
+  transform: scaleY(0);
+  transition: transform 0.2s ease;
+  border-radius: 0 2px 2px 0;
+}
+
+.file-tree-item:hover::before,
+.file-tree-item.active::before {
+  transform: scaleY(1);
+}
+
+/* Chat message slide-in */
+@keyframes chat-msg-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.chat-msg-animate {
+  animation: chat-msg-in 0.25s ease-out both;
+}
+
+/* Tooltip subtle fade */
+@keyframes tooltip-fade {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Toast notification slide-in */
+@keyframes toast-slide {
+  from {
+    opacity: 0;
+    transform: translateX(100%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* Status bar gradient shimmer */
+@keyframes status-shimmer {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.6; }
+  100% { opacity: 0.4; }
+}
+
+.status-shimmer {
+  animation: status-shimmer 4s ease-in-out infinite;
+}
+
+/* Improved Monaco editor line highlight */
+.monaco-editor .current-line {
+  border-left: 2px solid rgba(35, 134, 54, 0.4) !important;
+  background: rgba(35, 134, 54, 0.04) !important;
+}
+
+/* Quick action button ripple */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+/* Dialog overlay backdrop */
+.dialog-overlay {
+  backdrop-filter: blur(4px) saturate(120%);
+  -webkit-backdrop-filter: blur(4px) saturate(120%);
+}
+
+/* Responsive bottom sheet animation */
+@keyframes slide-up-sheet {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-down-sheet {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+.bottom-sheet-enter {
+  animation: slide-up-sheet 0.3s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+.bottom-sheet-exit {
+  animation: slide-down-sheet 0.2s ease-in both;
+}
+
+/* Run button success flash */
+@keyframes run-success {
+  0% { background-color: rgba(35, 134, 54, 0.3); }
+  100% { background-color: transparent; }
+}
+
+.run-success-flash {
+  animation: run-success 0.6s ease-out;
+}
+
+/* Terminal cursor blink */
+@keyframes terminal-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.terminal-cursor::after {
+  content: "▋";
+  animation: terminal-cursor 1s step-end infinite;
+  color: #238636;
+  font-size: 0.9em;
+  margin-left: 1px;
+}

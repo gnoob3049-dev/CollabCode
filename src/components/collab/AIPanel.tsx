@@ -12,6 +12,7 @@ import {
   FileCode2,
   Copy,
   Check,
+  Square,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -42,7 +43,9 @@ export default function AIPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -55,12 +58,21 @@ export default function AIPanel({
     }
   }, [response, loading]);
 
+  const stopStreaming = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setIsStreaming(false);
+    setLoading(false);
+  }, []);
+
   const askAI = useCallback(
     async (q: string) => {
       if (!q.trim() || loading) return;
       setLoading(true);
       setError('');
       setResponse('');
+
+      abortControllerRef.current = new AbortController();
 
       try {
         const res = await fetch('/api/ai/assist', {
@@ -71,7 +83,9 @@ export default function AIPanel({
             code: currentCode,
             question: q,
             language,
+            stream: true,
           }),
+          signal: abortControllerRef.current.signal,
         });
 
         if (!res.ok) {
@@ -79,15 +93,79 @@ export default function AIPanel({
           throw new Error(data.error || 'Failed to get AI response');
         }
 
-        const data = await res.json();
-        setResponse(data.response || 'No response received.');
+        const contentType = res.headers.get('content-type') || '';
+
+        if (contentType.includes('text/event-stream')) {
+          // Streaming mode
+          setIsStreaming(true);
+          const reader = res.body?.getReader();
+          const decoder = new TextDecoder();
+          let fullText = '';
+
+          if (reader) {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              const chunk = decoder.decode(value, { stream: true });
+              const lines = chunk.split('\n');
+
+              for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                  const data = line.slice(6).trim();
+                  if (data === '[DONE]') continue;
+                  try {
+                    const parsed = JSON.parse(data);
+                    if (parsed.content) {
+                      fullText += parsed.content;
+                      setResponse(fullText);
+                    }
+                  } catch {
+                    // Skip
+                  }
+                }
+              }
+            }
+          }
+
+          // Fallback: if no content was streamed, try non-streaming
+          if (!fullText) {
+            const fallbackRes = await fetch('/api/ai/assist', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({
+                code: currentCode,
+                question: q,
+                language,
+                stream: false,
+              }),
+            });
+            const fallbackData = await fallbackRes.json();
+            fullText = fallbackData.response || 'No response received.';
+            setResponse(fullText);
+          }
+        } else {
+          // Non-streaming fallback
+          const data = await res.json();
+          setResponse(data.response || 'No response received.');
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Something went wrong');
+        if (err instanceof Error && err.name === 'AbortError') {
+          // User cancelled
+          if (!response) {
+            setResponse('*(Generation stopped)*');
+          }
+        } else {
+          setError(err instanceof Error ? err.message : 'Something went wrong');
+        }
       } finally {
         setLoading(false);
+        setIsStreaming(false);
+        abortControllerRef.current = null;
       }
     },
-    [currentCode, language, loading]
+    [currentCode, language, loading, response]
   );
 
   const handleSubmit = useCallback(() => {
@@ -146,17 +224,37 @@ export default function AIPanel({
                 <Sparkles className="size-3.5 text-white" />
               </div>
               <h3 className="text-sm font-semibold text-[#e6edf3]">AI Assistant</h3>
+              {isStreaming && (
+                <span className="flex items-center gap-1 text-[10px] text-purple-400">
+                  <span className="size-1.5 rounded-full bg-purple-400 animate-pulse" />
+                  streaming
+                </span>
+              )}
             </div>
-            {response && !loading && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-6 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d]"
-                onClick={handleCopyResponse}
-              >
-                {copied ? <Check className="size-3 text-[#238636]" /> : <Copy className="size-3" />}
-              </Button>
-            )}
+            <div className="flex items-center gap-1">
+              {isStreaming && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-6 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                  onClick={stopStreaming}
+                  aria-label="Stop generating"
+                >
+                  <Square className="size-3" />
+                </Button>
+              )}
+              {response && !loading && !isStreaming && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-6 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d]"
+                  onClick={handleCopyResponse}
+                  aria-label="Copy response"
+                >
+                  {copied ? <Check className="size-3 text-[#238636]" /> : <Copy className="size-3" />}
+                </Button>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-1.5 mt-1.5 text-xs text-[#484f58]">
             <FileCode2 className="size-3" />
@@ -175,12 +273,15 @@ export default function AIPanel({
               key={action.id}
               variant="ghost"
               size="sm"
-              className="justify-start gap-1.5 h-7 text-xs text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#161b22] px-2 group"
+              className={cn(
+                'justify-start gap-1.5 h-7 text-xs text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#161b22] px-2 group transition-all duration-200',
+                'hover:shadow-sm hover:translate-y-[-1px]',
+              )}
               onClick={() => handleQuickAction(action)}
-              disabled={loading || !currentCode.trim()}
+              disabled={loading || isStreaming || !currentCode.trim()}
             >
               <action.icon
-                className="size-3 transition-colors"
+                className="size-3 transition-all duration-200 group-hover:scale-110"
                 style={{ color: action.color }}
               />
               {action.label}
@@ -192,7 +293,7 @@ export default function AIPanel({
       {/* Response Area */}
       <ScrollArea className="flex-1 min-h-0" ref={scrollRef}>
         <div className="p-3">
-          {loading && (
+          {(loading || isStreaming) && !response && (
             <div className="space-y-3 py-4">
               {/* Shimmer loading animation */}
               <div className="space-y-2">
@@ -208,22 +309,38 @@ export default function AIPanel({
             </div>
           )}
 
+          {isStreaming && response && (
+            <div className="flex items-center gap-1.5 mb-3 text-[10px] text-purple-400">
+              <span className="flex gap-0.5">
+                <span className="w-1 h-1 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-1 h-1 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-1 h-1 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+              </span>
+              <span>Generating...</span>
+            </div>
+          )}
+
           {error && (
             <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-400 my-2">
               {error}
             </div>
           )}
 
-          {response && !loading && (
+          {response && (
             <div className="prose prose-invert prose-sm max-w-none text-[#e6edf3] [&_code]:bg-[#161b22] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_code]:text-purple-300 [&_code]:border [&_code]:border-[#30363d]/50 [&_pre]:bg-[#0d1117] [&_pre]:border [&_pre]:border-[#30363d] [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:my-2 [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-xs [&_p]:text-sm [&_p]:leading-relaxed [&_ul]:text-sm [&_ol]:text-sm [&_li]:text-sm [&_strong]:text-[#e6edf3] [&_a]:text-[#58a6ff] [&_a]:no-underline">
               <ReactMarkdown>{response}</ReactMarkdown>
+              {!isStreaming && !loading && (
+                <div className="border-t border-[#30363d]/50 mt-4 pt-2 text-[10px] text-[#30363d] text-right">
+                  AI-generated • {response.length} chars
+                </div>
+              )}
             </div>
           )}
 
-          {!response && !loading && !error && (
+          {!response && !loading && !isStreaming && !error && (
             <div className="flex flex-col items-center justify-center h-32 text-[#30363d] gap-2">
               <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                className="w-10 h-10 rounded-xl flex items-center justify-center animate-pulse"
                 style={{ background: 'linear-gradient(135deg, #bc8cff15, #58a6ff15)' }}
               >
                 <Sparkles className="size-5 text-[#30363d]" />
@@ -243,7 +360,7 @@ export default function AIPanel({
             onKeyDown={handleKeyDown}
             placeholder="Ask about your code..."
             rows={1}
-            disabled={loading}
+            disabled={loading || isStreaming}
             maxLength={maxChars}
             className="flex-1 bg-transparent text-sm text-[#e6edf3] outline-none placeholder-[#484f58] resize-none min-h-[28px] max-h-24 py-0.5 disabled:opacity-50"
             style={{ lineHeight: '1.5' }}
@@ -255,15 +372,26 @@ export default function AIPanel({
             )}>
               {charCount}
             </span>
-            <Button
-              size="icon"
-              className="size-8 shrink-0 hover:shadow-[0_0_12px_rgba(188,140,255,0.3)]"
-              style={{ background: 'linear-gradient(135deg, #7c3aed, #58a6ff)' }}
-              onClick={handleSubmit}
-              disabled={!question.trim() || loading}
-            >
-              <Send className="size-3.5 text-white" />
-            </Button>
+            {isStreaming ? (
+              <Button
+                size="icon"
+                className="size-8 shrink-0 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30"
+                onClick={stopStreaming}
+                aria-label="Stop generating"
+              >
+                <Square className="size-3 text-red-400" />
+              </Button>
+            ) : (
+              <Button
+                size="icon"
+                className="size-8 shrink-0 hover:shadow-[0_0_12px_rgba(188,140,255,0.3)] disabled:opacity-40 transition-all duration-300"
+                style={{ background: question.trim() ? 'linear-gradient(135deg, #7c3aed, #58a6ff)' : '#30363d' }}
+                onClick={handleSubmit}
+                disabled={!question.trim() || loading}
+              >
+                <Send className="size-3.5 text-white" />
+              </Button>
+            )}
           </div>
         </div>
       </div>

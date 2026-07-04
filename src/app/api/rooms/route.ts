@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, language = 'javascript' } = body;
+    const { name, language = 'javascript', files: customFiles } = body;
 
     if (!name) {
       return NextResponse.json({ error: 'Room name is required' }, { status: 400 });
@@ -99,7 +99,9 @@ export async function POST(request: NextRequest) {
       existing = await db.room.findUnique({ where: { inviteCode } });
     }
 
-    const files = getDefaultFiles(language);
+    const files = (Array.isArray(customFiles) && customFiles.length > 0)
+      ? JSON.stringify(customFiles)
+      : getDefaultFiles(language);
     const collaborators = JSON.stringify([payload.userId]);
 
     const room = await db.room.create({

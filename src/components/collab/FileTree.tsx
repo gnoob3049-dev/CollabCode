@@ -307,10 +307,10 @@ export default function FileTree({
                   <ContextMenuTrigger asChild>
                     <div
                       className={cn(
-                        'group flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-all duration-150 text-sm relative',
+                        'group file-tree-item flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-all duration-150 text-sm relative',
                         isActive
-                          ? 'bg-[#161b22] text-[#e6edf3]'
-                          : 'text-[#8b949e] hover:bg-[#161b22] hover:text-[#e6edf3] hover:translate-x-0.5'
+                          ? 'active bg-[#161b22] text-[#e6edf3] shadow-[inset_0_0_0_1px_rgba(35,134,54,0.15)]'
+                          : 'text-[#8b949e] hover:bg-[#161b22]/80 hover:text-[#e6edf3] hover:translate-x-0.5'
                       )}
                       onClick={() => onSelectFile(file)}
                       onDoubleClick={() => {
@@ -376,7 +376,7 @@ export default function FileTree({
 
           {files.length === 0 && !showNewFileInput && (
             <div className="px-2 py-6 text-center">
-              <File className="size-6 text-[#30363d] mx-auto mb-2" />
+              <File className="size-6 text-[#30363d] mx-auto mb-2 animate-pulse" />
               <p className="text-[#484f58] text-xs">
                 No files yet.
               </p>

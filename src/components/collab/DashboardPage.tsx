@@ -15,6 +15,9 @@ import {
   Hash,
   ArrowRight,
   Trash2,
+  ChevronDown,
+  Settings,
+  Palette,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -53,8 +56,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { AnimatePresence, motion } from "framer-motion";
 import { useStore, type Room } from "@/store/useStore";
+import { ROOM_TEMPLATES, type RoomTemplate } from "@/lib/templates";
 
 const LANGUAGES = [
   "javascript",
@@ -67,6 +84,7 @@ const LANGUAGES = [
   "java",
   "csharp",
   "cpp",
+  "sql",
 ];
 
 const LANG_COLORS: Record<string, string> = {
@@ -80,6 +98,7 @@ const LANG_COLORS: Record<string, string> = {
   java: "#b07219",
   csharp: "#178600",
   cpp: "#f34b7d",
+  sql: "#e38c00",
 };
 
 function timeAgo(dateStr?: string): string {
@@ -121,6 +140,7 @@ export default function DashboardPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [newRoomName, setNewRoomName] = useState("");
   const [newRoomLang, setNewRoomLang] = useState("javascript");
+  const [selectedTemplate, setSelectedTemplate] = useState<RoomTemplate>(ROOM_TEMPLATES[0]);
   const [creating, setCreating] = useState(false);
 
   // Join room dialog
@@ -211,12 +231,17 @@ export default function DashboardPage() {
 
     setCreating(true);
     try {
+      const templateFiles = selectedTemplate.id === "blank"
+        ? [{ name: "index.js", content: "" }]
+        : selectedTemplate.files;
+
       const res = await fetch("/api/rooms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: newRoomName.trim(),
           language: newRoomLang,
+          files: templateFiles,
         }),
         credentials: "include",
       });
@@ -232,16 +257,24 @@ export default function DashboardPage() {
       setCreateOpen(false);
       setNewRoomName("");
       setNewRoomLang("javascript");
+      setSelectedTemplate(ROOM_TEMPLATES[0]);
 
       setCurrentRoom(data.room);
       setCurrentRoomId(data.room.id);
       setLanguage(data.room.language);
-      setCurrentFileName("index.js");
+      setCurrentFileName(data.room.files?.[0]?.name || "index.js");
       setCurrentPage("editor");
     } catch {
       toast.error("Something went wrong");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleTemplateSelect = (template: RoomTemplate) => {
+    setSelectedTemplate(template);
+    if (template.language && LANGUAGES.includes(template.language)) {
+      setNewRoomLang(template.language);
     }
   };
 
@@ -328,38 +361,138 @@ export default function DashboardPage() {
 
       <div className="relative z-10 flex flex-col min-h-screen">
         {/* Top Bar */}
-        <header className="border-b border-[#30363d] px-4 sm:px-6 py-3 bg-[#0d1117]/80 backdrop-blur-sm">
+        <header className="sticky top-0 z-50 border-b-0 px-4 sm:px-6 py-3 bg-[#0d1117]/60 backdrop-blur-xl">
+          {/* Gradient bottom border line */}
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#238636]/50 to-transparent" />
           <div className="max-w-6xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#238636] glow-green">
+            <div className="flex items-center gap-2 group cursor-default">
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#238636] glow-green transition-transform duration-200 group-hover:scale-110">
                 <Code2 className="w-5 h-5 text-white" />
               </div>
-              <span className="text-lg font-bold text-[#e6edf3]">
+              <span className="text-lg font-bold text-[#e6edf3] transition-colors duration-200 group-hover:text-[#3fb950]">
                 CollabCode
               </span>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white ring-2 ${rooms.some(r => isRecent(r.lastActiveAt)) ? 'ring-[#238636] pulse-ring-green' : 'ring-[#238636]/50'} ring-offset-2 ring-offset-[#0d1117]`}
-                  style={{ backgroundColor: avatarColor }}
+            <div className="flex items-center">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="flex items-center gap-2 rounded-lg px-2 py-1.5 -mr-2 hover:bg-[#161b22] transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-[#238636]/50"
+                  >
+                    <div className="relative">
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white ring-2 ring-[#30363d] ring-offset-2 ring-offset-[#0d1117] transition-all duration-300 hover:ring-[#238636] hover:ring-offset-[#0d1117] ${rooms.some(r => isRecent(r.lastActiveAt)) ? 'ring-[#238636] pulse-ring-green' : ''}`}
+                        style={{ backgroundColor: avatarColor }}
+                      >
+                        {initial}
+                      </div>
+                      {/* Online indicator dot */}
+                      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#3fb950] rounded-full border-2 border-[#0d1117]" />
+                    </div>
+                    <span className="hidden sm:block text-sm text-[#e6edf3] font-medium">
+                      {user?.name}
+                    </span>
+                    <ChevronDown className="hidden sm:block w-3.5 h-3.5 text-[#8b949e]" />
+                  </button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent
+                  sideOffset={8}
+                  align="end"
+                  className="w-64 bg-[#161b22] border-[#30363d] text-[#e6edf3] rounded-xl p-0 overflow-hidden shadow-2xl shadow-black/40"
                 >
-                  {initial}
-                </div>
-                <span className="hidden sm:block text-sm text-[#e6edf3] font-medium">
-                  {user?.name}
-                </span>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLogout}
-                className="text-[#8b949e] hover:text-[#f85149] hover:bg-[#21262d]"
-              >
-                <LogOut className="w-4 h-4 mr-1" />
-                <span className="hidden sm:inline">Logout</span>
-              </Button>
+                  {/* Profile section header */}
+                  <div className="px-3 py-3 flex items-center gap-3 border-b border-[#30363d]">
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-base font-bold text-white flex-shrink-0"
+                      style={{ backgroundColor: avatarColor }}
+                    >
+                      {initial}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-[#e6edf3] truncate">
+                        {user?.name}
+                      </p>
+                      <p className="text-xs text-[#8b949e] truncate">
+                        {user?.email}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Menu items */}
+                  <DropdownMenuGroup className="p-1.5">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                        setSearchQuery("");
+                      }}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#e6edf3] cursor-pointer hover:bg-[#30363d] focus:bg-[#30363d] focus:text-[#e6edf3] outline-none transition-colors duration-100"
+                    >
+                      <Users className="w-4 h-4 text-[#8b949e]" />
+                      <span>My Rooms</span>
+                    </DropdownMenuItem>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <DropdownMenuItem
+                            disabled
+                            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#8b949e] cursor-not-allowed opacity-50 hover:bg-[#30363d] focus:bg-[#30363d] outline-none transition-colors duration-100"
+                          >
+                            <Settings className="w-4 h-4" />
+                            <span>Settings</span>
+                            <span className="ml-auto text-[10px] text-[#484f58] bg-[#21262d] px-1.5 py-0.5 rounded-full">
+                              Soon
+                            </span>
+                          </DropdownMenuItem>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="left"
+                        className="bg-[#161b22] border-[#30363d] text-[#e6edf3] text-xs"
+                      >
+                        Coming soon
+                      </TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <DropdownMenuItem
+                            disabled
+                            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#8b949e] cursor-not-allowed opacity-50 hover:bg-[#30363d] focus:bg-[#30363d] outline-none transition-colors duration-100"
+                          >
+                            <Palette className="w-4 h-4" />
+                            <span>Theme</span>
+                            <span className="ml-auto text-[10px] text-[#484f58] bg-[#21262d] px-1.5 py-0.5 rounded-full">
+                              Soon
+                            </span>
+                          </DropdownMenuItem>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="left"
+                        className="bg-[#161b22] border-[#30363d] text-[#e6edf3] text-xs"
+                      >
+                        Coming soon
+                      </TooltipContent>
+                    </Tooltip>
+                  </DropdownMenuGroup>
+
+                  <DropdownMenuSeparator className="bg-[#30363d] -mx-1" />
+
+                  <div className="p-1.5">
+                    <DropdownMenuItem
+                      onClick={handleLogout}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#f85149] cursor-pointer hover:bg-[#f85149]/10 focus:bg-[#f85149]/10 focus:text-[#f85149] outline-none transition-colors duration-100"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Sign Out</span>
+                    </DropdownMenuItem>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </header>
@@ -642,6 +775,35 @@ export default function DashboardPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[#e6edf3]">Template</Label>
+                <div className="max-h-[240px] overflow-y-auto rounded-md border border-[#30363d] bg-[#0d1117] p-2 custom-scrollbar">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                    {ROOM_TEMPLATES.map((template) => {
+                      const isSelected = selectedTemplate.id === template.id;
+                      return (
+                        <button
+                          key={template.id}
+                          type="button"
+                          onClick={() => handleTemplateSelect(template)}
+                          className={`
+                            flex flex-col items-center gap-2 rounded-lg p-3 text-center transition-all duration-200 cursor-pointer
+                            ${isSelected
+                              ? 'border-2 border-[#238636] shadow-[0_0_12px_rgba(35,134,54,0.3)]'
+                              : 'border border-[#30363d] hover:border-[#484f58] hover:scale-[1.02]'
+                            }
+                          `}
+                          style={{ background: '#161b22' }}
+                        >
+                          <span className="text-2xl leading-none">{template.icon}</span>
+                          <span className="text-sm font-medium text-[#e6edf3] leading-tight">{template.name}</span>
+                          <span className="text-xs text-[#8b949e] leading-tight line-clamp-2">{template.description}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
             <DialogFooter className="mt-4">

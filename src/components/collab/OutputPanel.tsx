@@ -120,10 +120,10 @@ export default function OutputPanel({
           <button
             onClick={() => setActiveTab('output')}
             className={cn(
-              'px-2.5 py-1 text-xs font-medium rounded-md transition-colors',
+              'px-2.5 py-1 text-xs font-medium rounded-md transition-all duration-200',
               activeTab === 'output'
-                ? 'bg-[#0d1117] text-[#e6edf3]'
-                : 'text-[#8b949e] hover:text-[#e6edf3]'
+                ? 'bg-[#0d1117] text-[#e6edf3] shadow-sm'
+                : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#0d1117]/50'
             )}
           >
             <span className="flex items-center gap-1.5">
@@ -134,10 +134,10 @@ export default function OutputPanel({
           <button
             onClick={() => setActiveTab('problems')}
             className={cn(
-              'px-2.5 py-1 text-xs font-medium rounded-md transition-colors',
+              'px-2.5 py-1 text-xs font-medium rounded-md transition-all duration-200',
               activeTab === 'problems'
-                ? 'bg-[#0d1117] text-[#e6edf3]'
-                : 'text-[#8b949e] hover:text-[#e6edf3]'
+                ? 'bg-[#0d1117] text-[#e6edf3] shadow-sm'
+                : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#0d1117]/50'
             )}
           >
             <span className="flex items-center gap-1.5">
@@ -237,7 +237,7 @@ export default function OutputPanel({
               </div>
             ) : (
               <div className="flex items-center justify-center py-6 text-[#30363d]">
-                <span className="flex items-center gap-2 text-xs">
+                <span className="flex items-center gap-2 text-xs terminal-cursor">
                   <Terminal className="size-4" />
                   Run your code to see output here
                 </span>

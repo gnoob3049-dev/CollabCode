@@ -168,7 +168,7 @@ export default function ChatPanel({
                 <div
                   key={msg.id || i}
                   className={cn(
-                    'flex gap-2 max-w-[88%]',
+                    'flex gap-2 max-w-[88%] chat-msg-animate',
                     isOwn ? 'self-end flex-row-reverse' : 'self-start'
                   )}
                 >
@@ -199,10 +199,10 @@ export default function ChatPanel({
                     </div>
                     <div
                       className={cn(
-                        'px-3 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap',
+                        'px-3 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap transition-colors duration-150',
                         isOwn
-                          ? 'bg-[#238636] text-white rounded-2xl rounded-br-md shadow-sm'
-                          : 'bg-[#161b22] text-[#e6edf3] rounded-2xl rounded-bl-md border border-[#30363d]/60 shadow-sm'
+                          ? 'bg-[#238636] text-white rounded-2xl rounded-br-md shadow-[0_2px_8px_rgba(35,134,54,0.2)] hover:bg-[#2ea043]'
+                          : 'bg-[#161b22] text-[#e6edf3] rounded-2xl rounded-bl-md border border-[#30363d]/60 shadow-sm hover:border-[#484f58]/60'
                       )}
                     >
                       {msg.text}
@@ -248,7 +248,7 @@ export default function ChatPanel({
 
       {/* Input */}
       <div className="p-3 border-t border-[#30363d] shrink-0">
-        <div className="flex items-end gap-2 bg-[#161b22] rounded-xl border border-[#30363d] p-2 focus-within:border-[#238636]/60 focus-within:shadow-[0_0_8px_rgba(35,134,54,0.15)] transition-all">
+        <div className="flex items-end gap-2 bg-[#161b22] rounded-xl border border-[#30363d] p-2 focus-within:border-[#238636]/60 focus-within:shadow-[0_0_12px_rgba(35,134,54,0.2)] transition-all duration-300">
           <textarea
             ref={inputRef}
             value={input}

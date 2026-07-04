@@ -17,6 +17,7 @@ import {
   Wifi,
   WifiOff,
   HelpCircle,
+  Eye,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -69,6 +70,9 @@ interface EditorTopBarProps {
   onRenameRoom: (name: string) => void;
   onOpenSettings: () => void;
   onOpenShortcuts: () => void;
+  onTogglePreview: () => void;
+  previewOpen: boolean;
+  showPreview: boolean;
   isConnected?: boolean;
 }
 
@@ -93,6 +97,9 @@ export default function EditorTopBar({
   onRenameRoom,
   onOpenSettings,
   onOpenShortcuts,
+  onTogglePreview,
+  previewOpen,
+  showPreview,
   isConnected = true,
 }: EditorTopBarProps) {
   const [isEditingName, setIsEditingName] = useState(false);
@@ -142,6 +149,7 @@ export default function EditorTopBar({
                 size="icon"
                 className="size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d] shrink-0"
                 onClick={onBack}
+                aria-label="Back to Dashboard"
               >
                 <ArrowLeft className="size-4" />
               </Button>
@@ -284,6 +292,7 @@ export default function EditorTopBar({
                 size="icon"
                 className="size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d]"
                 onClick={onShare}
+                aria-label="Share invite link"
               >
                 <Share2 className="size-4" />
               </Button>
@@ -300,6 +309,7 @@ export default function EditorTopBar({
                 className="size-8 text-[#238636] hover:text-[#3fb950] hover:bg-[#238636]/10 hover:shadow-[0_0_12px_rgba(35,134,54,0.2)]"
                 onClick={onRun}
                 disabled={isRunning}
+                aria-label="Run code"
               >
                 {isRunning ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -308,7 +318,7 @@ export default function EditorTopBar({
                 )}
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">Run code (execute current file)</TooltipContent>
+            <TooltipContent side="bottom">Run code (Ctrl+Enter)</TooltipContent>
           </Tooltip>
 
           {/* Save */}
@@ -320,6 +330,7 @@ export default function EditorTopBar({
                 className="size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d]"
                 onClick={onSave}
                 disabled={isSaving}
+                aria-label="Save room"
               >
                 {isSaving ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -328,10 +339,33 @@ export default function EditorTopBar({
                 )}
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">Save room state to server</TooltipContent>
+            <TooltipContent side="bottom">Save (Ctrl+S)</TooltipContent>
           </Tooltip>
 
           <div className="w-px h-5 bg-[#30363d] mx-1" />
+
+          {/* HTML Preview toggle */}
+          {showPreview && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    'size-8 hover:bg-[#30363d]',
+                    previewOpen
+                      ? 'text-[#e6edf3] bg-[#30363d]'
+                      : 'text-[#8b949e] hover:text-[#e6edf3]'
+                  )}
+                  onClick={onTogglePreview}
+                  aria-label="Toggle HTML preview"
+                >
+                  <Eye className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Toggle HTML Preview (Ctrl+Shift+V)</TooltipContent>
+            </Tooltip>
+          )}
 
           {/* Terminal toggle */}
           <Tooltip>
@@ -346,6 +380,7 @@ export default function EditorTopBar({
                     : 'text-[#8b949e] hover:text-[#e6edf3]'
                 )}
                 onClick={onToggleOutput}
+                aria-label="Toggle output panel"
               >
                 <Terminal className="size-4" />
               </Button>
@@ -366,6 +401,7 @@ export default function EditorTopBar({
                     : 'text-[#8b949e] hover:text-purple-400'
                 )}
                 onClick={onToggleAI}
+                aria-label="Toggle AI assistant"
               >
                 <Sparkles className="size-4" />
               </Button>
@@ -381,9 +417,10 @@ export default function EditorTopBar({
                 size="icon"
                 className="relative size-8 hover:bg-[#30363d]"
                 onClick={onToggleChat}
+                aria-label={unreadChatCount > 0 ? `Toggle chat (${unreadChatCount} unread)` : 'Toggle chat'}
               >
                 {unreadChatCount > 0 && (
-                  <Badge className="absolute -top-1 -right-1 size-4 p-0 flex items-center justify-center text-[10px] bg-[#238636] border-none glow-green">
+                  <Badge className="absolute -top-1 -right-1 size-4 p-0 flex items-center justify-center text-[10px] bg-[#238636] border-none glow-green animate-pulse">
                     {unreadChatCount > 9 ? '9+' : unreadChatCount}
                   </Badge>
                 )}
@@ -408,6 +445,7 @@ export default function EditorTopBar({
                 size="icon"
                 className="size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d]"
                 onClick={onOpenSettings}
+                aria-label="Room settings"
               >
                 <Settings className="size-4" />
               </Button>
@@ -423,11 +461,12 @@ export default function EditorTopBar({
                 size="icon"
                 className="size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d]"
                 onClick={onOpenShortcuts}
+                aria-label="Keyboard shortcuts"
               >
                 <HelpCircle className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">Keyboard Shortcuts</TooltipContent>
+            <TooltipContent side="bottom">Keyboard Shortcuts (Ctrl+/)</TooltipContent>
           </Tooltip>
 
           {/* Panel toggle */}
@@ -438,6 +477,7 @@ export default function EditorTopBar({
                 size="icon"
                 className="size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d] hidden sm:flex"
                 onClick={rightPanelOpen ? onToggleChat : onToggleAI}
+                aria-label={rightPanelOpen ? 'Close side panel' : 'Open side panel'}
               >
                 {rightPanelOpen ? (
                   <PanelRightClose className="size-4" />
@@ -447,7 +487,7 @@ export default function EditorTopBar({
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
-              {rightPanelOpen ? 'Close side panel' : 'Open side panel'}
+              {rightPanelOpen ? 'Close side panel (Ctrl+B)' : 'Open side panel (Ctrl+B)'}
             </TooltipContent>
           </Tooltip>
         </div>
