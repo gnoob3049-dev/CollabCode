@@ -128,6 +128,29 @@ function isRecent(dateStr?: string): boolean {
   return diff < 30 * 60 * 1000; // within 30 minutes
 }
 
+/* Animated stat counter with easeOutExpo */
+function AnimatedStatValue({ value }: { value: number }) {
+  const [display, setDisplay] = useState(0);
+  const hasAnimated = useRef(false);
+
+  useEffect(() => {
+    if (hasAnimated.current) return;
+    hasAnimated.current = true;
+    const startTime = performance.now();
+    const duration = 800;
+    const animate = (now: number) => {
+      const elapsed = (now - startTime) / duration;
+      const progress = Math.min(elapsed, 1);
+      const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      setDisplay(Math.round(eased * value));
+      if (progress < 1) requestAnimationFrame(animate);
+    };
+    requestAnimationFrame(animate);
+  }, [value]);
+
+  return <span className="tabular-nums">{display}</span>;
+}
+
 export default function DashboardPage() {
   const {
     user,
@@ -674,7 +697,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-lg sm:text-xl font-bold text-[#e6edf3] tabular-nums">{stat.value}</span>
+                      <span className="text-lg sm:text-xl font-bold text-[#e6edf3]"><AnimatedStatValue value={stat.value} /></span>
                       {stat.value > 0 && (
                         <TrendingUp className="w-3 h-3 text-[#3fb950] shrink-0" />
                       )}
@@ -714,7 +737,7 @@ export default function DashboardPage() {
                     placeholder="Search rooms..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full h-9 pl-8 pr-[4.5rem] bg-[#161b22] border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] text-sm input-glow-focus"
+                    className="w-full h-9 pl-8 pr-[4.5rem] bg-[#161b22] border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] text-sm input-glow-green focus:shadow-[0_0_0_3px_rgba(35,134,54,0.15)]"
                   />
                   {/* Keyboard shortcut badge */}
                   {!searchQuery && (
@@ -896,7 +919,12 @@ export default function DashboardPage() {
                   const collabCount = room.collaboratorCount ?? room.collaborators?.length ?? 1;
                   const fileCount = room.files?.length ?? 1;
                   const firstFileContent = room.files?.[0]?.content || "";
-                  const contentPreview = firstFileContent.replace(/\n/g, ' ').trim().slice(0, 60);
+                  const previewText = firstFileContent.replace(/\n/g, ' ').trim();
+                  const isTruncated = previewText.length > 60;
+                  const contentPreview = previewText.slice(0, 60);
+                  /* Color the first word (keyword) differently */
+                  const firstWord = contentPreview.split(/\s+/)[0] || "";
+                  const restText = contentPreview.slice(firstWord.length);
                   return (
                     <motion.div
                       layout
@@ -1014,8 +1042,15 @@ export default function DashboardPage() {
                         </CardDescription>
                         {/* Content preview */}
                         {contentPreview && (
-                          <p className="font-mono text-xs text-[#484f58] truncate mb-3 pl-1 border-l-2 border-[#30363d]">
-                            {contentPreview}...
+                          <p className="font-mono text-xs text-[#484f58] mb-3 pl-1 border-l-2 border-[#30363d] relative overflow-hidden whitespace-nowrap">
+                            <span className="text-[#ff7b72]">{firstWord}</span><span className="text-[#8b949e]">{restText}</span>
+                            {/* Fade-out gradient overlay */}
+                            {isTruncated && (
+                              <span className="absolute inset-y-0 right-0 w-16 pointer-events-none" style={{ background: 'linear-gradient(to right, transparent, #161b22)' }} />
+                            )}
+                            {!isTruncated && (
+                              <span className="text-[#484f58]">...</span>
+                            )}
                           </p>
                         )}
                         <div className="flex items-center justify-between text-xs">
@@ -1192,15 +1227,23 @@ export default function DashboardPage() {
                           type="button"
                           onClick={() => handleTemplateSelect(template)}
                           className={`
-                            flex flex-col items-center gap-2 rounded-lg p-3 text-center transition-all duration-200 cursor-pointer scale-in-soft
+                            flex flex-col items-center gap-2 rounded-lg p-3 text-center transition-all duration-200 cursor-pointer scale-in-soft relative
                             ${isSelected
-                              ? 'border-2 border-[#238636] shadow-[0_0_12px_rgba(35,134,54,0.3)]'
-                              : 'border border-[#30363d] hover:border-[#484f58] hover:scale-[1.02]'
+                              ? 'border-2 border-[#238636] shadow-[0_0_12px_rgba(35,134,54,0.3)] hover:-translate-y-0.5 hover:shadow-[0_0_16px_rgba(35,134,54,0.3)]'
+                              : 'border border-[#30363d] hover:border-[#484f58] hover:scale-[1.02] hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.3)]'
                             }
                           `}
                           style={{ background: '#161b22' }}
                         >
-                          <span className="text-2xl leading-none">{template.icon}</span>
+                          {/* Checkmark for selected template */}
+                          {isSelected && (
+                            <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-[#238636] flex items-center justify-center">
+                              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                          )}
+                          <span className="text-2xl leading-none transition-transform duration-300 hover:animate-[float-subtle_2s_ease-in-out_infinite]">{template.icon}</span>
                           <span className="text-sm font-medium text-[#e6edf3] leading-tight">{template.name}</span>
                           <span className="text-xs text-[#8b949e] leading-tight line-clamp-2">{template.description}</span>
                         </button>

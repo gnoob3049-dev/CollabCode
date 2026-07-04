@@ -1,15 +1,17 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, LogIn, MessageSquare, ArrowDown, SmilePlus, Pin } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { Send, LogIn, MessageSquare, ChevronDown, SmilePlus, Pin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { useStore } from '@/store/useStore';
 import type { Socket, ChatMessage as ChatMessageType, PresenceUser } from '@/store/useStore';
+import { AnimatePresence, motion } from 'framer-motion';
 
 const REACTION_EMOJIS = ['👍', '❤️', '😂', '🎉', '🚀', '👀', '💯', '🔥'];
+const SUGGESTION_CHIPS = ['Share an idea 💡', 'Ask a question ❓', 'Say hello 👋'];
 
 interface ChatPanelProps {
   roomId: string;
@@ -32,6 +34,24 @@ function fuzzyMatch(query: string, target: string): boolean {
   return qi === q.length;
 }
 
+// Relative time helper — no external library
+function relativeTime(dateStr?: string): string {
+  if (!dateStr) return '';
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diffMs = now - then;
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 10) return 'just now';
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return new Date(dateStr).toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
 export default function ChatPanel({
   roomId,
   socket,
@@ -43,6 +63,9 @@ export default function ChatPanel({
 }: ChatPanelProps) {
   const [input, setInput] = useState('');
   const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const unreadCountRef = useRef(0);
+  const prevMessagesLengthRef = useRef(0);
 
   // Typing animation for placeholder
   const PLACEHOLDERS = ['Type a message...', 'Say something...', 'Use @ to mention someone...'];
@@ -76,15 +99,21 @@ export default function ChatPanel({
     }
   }, []);
 
-  // Auto-scroll to bottom on new messages
+  // Track new messages for unread count (ref-only, no setState)
   useEffect(() => {
-    if (viewportRef.current) {
+    const newMsgCount = messages.length - prevMessagesLengthRef.current;
+    if (newMsgCount > 0 && viewportRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = viewportRef.current;
       const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
       if (isNearBottom) {
         viewportRef.current.scrollTop = viewportRef.current.scrollHeight;
+        unreadCountRef.current = 0;
+      } else {
+        const nonSystem = messages.slice(-newMsgCount).filter((m) => !m.system).length;
+        unreadCountRef.current += nonSystem;
       }
     }
+    prevMessagesLengthRef.current = messages.length;
   }, [messages]);
 
   // Listen for scroll position changes
@@ -93,6 +122,13 @@ export default function ChatPanel({
       const { scrollTop, scrollHeight, clientHeight } = viewportRef.current;
       const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
       setShowScrollBtn(!isNearBottom);
+      if (isNearBottom) {
+        unreadCountRef.current = 0;
+        setUnreadCount(0);
+      } else {
+        // Sync ref value to state for display
+        setUnreadCount(unreadCountRef.current);
+      }
     }
   }, []);
 
@@ -111,6 +147,8 @@ export default function ChatPanel({
         behavior: 'smooth',
       });
       setShowScrollBtn(false);
+      unreadCountRef.current = 0;
+      setUnreadCount(0);
     }
   }, []);
 
@@ -232,6 +270,29 @@ export default function ChatPanel({
     return names.join(', ');
   };
 
+  // Pre-compute message grouping: for each non-system message, whether it's grouped with previous
+  const messageGroups = useMemo(() => {
+    const groups: boolean[] = [];
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+      if (msg.system) {
+        groups.push(false);
+        continue;
+      }
+      if (i === 0) {
+        groups.push(false);
+        continue;
+      }
+      const prev = messages[i - 1];
+      if (prev.system || prev.senderId !== msg.senderId) {
+        groups.push(false);
+      } else {
+        groups.push(true);
+      }
+    }
+    return groups;
+  }, [messages]);
+
   return (
     <div
       className="flex flex-col h-full relative"
@@ -266,11 +327,30 @@ export default function ChatPanel({
       {/* Messages */}
       <div className="relative flex-1 min-h-0">
         <ScrollArea className="h-full" ref={scrollRef}>
-          <div className="p-3 flex flex-col gap-3">
+          <div className="p-3 flex flex-col">
             {messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-32 text-[#484f58] text-xs gap-2 glass-card rounded-xl p-6">
-                <MessageSquare className="size-6 text-[#484f58] breathe-glow" />
-                <span>No messages yet. Start the conversation!</span>
+              <div className="flex flex-col items-center justify-center py-12 px-4 gap-4">
+                <div className="relative">
+                  <MessageSquare className="size-10 text-[#484f58] breathe-glow" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-[#8b949e] mb-1">Start a conversation</p>
+                  <p className="text-xs text-[#484f58]">Chat with collaborators in real-time</p>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
+                  {SUGGESTION_CHIPS.map((chip) => (
+                    <button
+                      key={chip}
+                      onClick={() => {
+                        setInput(chip.replace(/\s*[💡❓👋]\s*$/, '').trim());
+                        setTimeout(() => inputRef.current?.focus(), 0);
+                      }}
+                      className="px-3 py-1.5 text-xs text-[#8b949e] bg-[#161b22] border border-[#30363d] rounded-full hover:bg-[#21262d] hover:text-[#e6edf3] hover:border-[#484f58] transition-all duration-200 hover:scale-105"
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -288,6 +368,7 @@ export default function ChatPanel({
               }
 
               const isOwn = user && msg.senderId === user.id;
+              const isGrouped = messageGroups[i];
               const hasReactions =
                 msg.reactions && Object.keys(msg.reactions).length > 0;
 
@@ -296,34 +377,48 @@ export default function ChatPanel({
                   key={msg.id || i}
                   className={cn(
                     'flex gap-2 max-w-[88%] chat-msg-animate group pl-2',
-                    isOwn ? 'self-end flex-row-reverse chat-msg-hover' : 'self-start chat-msg-hover chat-msg-hover-remote'
+                    isOwn ? 'self-end flex-row-reverse chat-msg-hover' : 'self-start chat-msg-hover chat-msg-hover-remote',
+                    isGrouped ? 'mt-0.5' : 'mt-3'
                   )}
                 >
-                  {/* Avatar with ring pulse on hover */}
-                  <div
-                    className="shrink-0 size-7 rounded-full flex items-center justify-center text-xs font-bold text-white mt-0.5 shadow-sm transition-all duration-200 hover:shadow-[0_0_0_2px_rgba(35,134,54,0.5),0_0_8px_rgba(35,134,54,0.2)] hover:scale-110"
-                    style={{ backgroundColor: msg.senderColor || '#484f58' }}
-                  >
-                    {msg.senderName?.charAt(0)?.toUpperCase() || '?'}
-                  </div>
+                  {/* Avatar — only show for first message in group */}
+                  {!isGrouped && (
+                    <div
+                      className="shrink-0 size-7 rounded-full flex items-center justify-center text-xs font-bold text-white mt-0.5 shadow-sm transition-all duration-200 hover:shadow-[0_0_0_2px_rgba(35,134,54,0.5),0_0_8px_rgba(35,134,54,0.2)] hover:scale-110"
+                      style={{ backgroundColor: msg.senderColor || '#484f58' }}
+                    >
+                      {msg.senderName?.charAt(0)?.toUpperCase() || '?'}
+                    </div>
+                  )}
+                  {isGrouped && <div className="shrink-0 w-7" />}
 
                   {/* Bubble */}
                   <div
                     className={cn(
                       'flex flex-col gap-0.5',
-                      isOwn ? 'items-end' : 'items-start'
+                      isOwn ? 'items-end' : 'items-start',
+                      isGrouped && isOwn && 'pr-0',
+                      isGrouped && !isOwn && 'pl-0'
                     )}
+                    style={
+                      isGrouped && !isOwn
+                        ? { borderLeft: `2px solid ${msg.senderColor || '#484f58'}33`, paddingLeft: '6px' }
+                        : undefined
+                    }
                   >
-                    <div className="flex items-center gap-2">
-                      {!isOwn && (
-                        <span className="text-[11px] font-medium text-[#8b949e]">
-                          {msg.senderName}
+                    {/* Name + time — only show for first message in group */}
+                    {!isGrouped && (
+                      <div className="flex items-center gap-2">
+                        {!isOwn && (
+                          <span className="text-[11px] font-medium text-[#8b949e]">
+                            {msg.senderName}
+                          </span>
+                        )}
+                        <span className="text-[10px] text-[#30363d] fade-in-up slide-in-right-soft">
+                          {formatTime(msg.createdAt)}
                         </span>
-                      )}
-                      <span className="text-[10px] text-[#30363d] fade-in-up slide-in-right-soft">
-                        {formatTime(msg.createdAt)}
-                      </span>
-                    </div>
+                      </div>
+                    )}
                     <div
                       className={cn(
                         'px-3 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap transition-all duration-200',
@@ -335,6 +430,11 @@ export default function ChatPanel({
                     >
                       {msg.text}
                     </div>
+
+                    {/* Relative timestamp below message */}
+                    <span className="text-[10px] text-[#484f58] mt-0.5">
+                      {relativeTime(msg.createdAt)}
+                    </span>
 
                     {/* Reactions row */}
                     {(hasReactions || !msg.system) && (
@@ -445,15 +545,26 @@ export default function ChatPanel({
           </div>
         </ScrollArea>
 
-        {/* Scroll to bottom button */}
-        {showScrollBtn && (
-          <button
-            onClick={scrollToBottom}
-            className="absolute bottom-3 left-1/2 scroll-bounce size-7 rounded-full bg-[#161b22] border border-[#30363d] flex items-center justify-center text-[#8b949e] hover:text-[#e6edf3] hover:border-[#484f58] shadow-lg transition-all"
-          >
-            <ArrowDown className="size-3.5" />
-          </button>
-        )}
+        {/* Scroll to bottom button with unread count */}
+        <AnimatePresence>
+          {showScrollBtn && (
+            <motion.button
+              initial={{ opacity: 0, y: 8, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.9 }}
+              transition={{ duration: 0.15 }}
+              onClick={scrollToBottom}
+              className="absolute bottom-3 left-1/2 -translate-x-1/2 scroll-bounce size-8 rounded-full bg-[#161b22] border border-[#30363d] flex items-center justify-center text-[#8b949e] hover:text-[#e6edf3] hover:border-[#484f58] shadow-lg transition-colors"
+            >
+              <ChevronDown className="size-4" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-[#238636] text-white text-[10px] font-bold flex items-center justify-center px-1">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Input */}

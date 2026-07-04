@@ -7,7 +7,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Bell, BellOff } from 'lucide-react';
+import { Bell, BellOff, GitBranch } from 'lucide-react';
 
 const AVATAR_COLORS = [
   '#238636', '#58a6ff', '#a371f7', '#f85149', '#d29922',
@@ -35,6 +35,8 @@ interface EditorStatusBarProps {
   tabSize: number;
   audioEnabled?: boolean;
   onToggleAudio?: () => void;
+  onGoToLine?: () => void;
+  selectionLength?: number;
 }
 
 export default function EditorStatusBar({
@@ -45,6 +47,8 @@ export default function EditorStatusBar({
   tabSize,
   audioEnabled = true,
   onToggleAudio,
+  onGoToLine,
+  selectionLength = 0,
 }: EditorStatusBarProps) {
   const displayLanguage = language.charAt(0).toUpperCase() + language.slice(1);
   const [copied, setCopied] = useState(false);
@@ -100,6 +104,20 @@ export default function EditorStatusBar({
 
       {/* Left side */}
       <div className="relative flex items-center gap-1 pl-2.5 pr-3">
+        {/* Git branch indicator */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-sm transition-colors duration-200 hover:text-[#e6edf3] hover:bg-[#21262d] cursor-default">
+              <GitBranch className="size-3" />
+              <span className="font-medium">main</span>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs bg-[#161b22]/95 backdrop-blur-sm border-[#30363d]">
+            Current branch: main
+          </TooltipContent>
+        </Tooltip>
+        <span className="text-[#30363d]">│</span>
+
         {/* File name with click-to-copy */}
         <Tooltip>
           <TooltipTrigger asChild>
@@ -119,23 +137,82 @@ export default function EditorStatusBar({
           </TooltipContent>
         </Tooltip>
         <span className="text-[#30363d]">│</span>
-        <span className="transition-colors duration-200 hover:text-[#e6edf3] cursor-default flex items-center gap-1">
+
+        {/* Language with tooltip */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="transition-colors duration-200 hover:text-[#e6edf3] cursor-default flex items-center gap-1">
               <span
                 className="inline-block w-2 h-2 rounded-full"
                 style={{ backgroundColor: LANG_COLORS[language] || '#8b949e', boxShadow: `0 0 4px ${LANG_COLORS[language] || '#8b949e'}60` }}
               />
               {displayLanguage}
             </span>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs bg-[#161b22]/95 backdrop-blur-sm border-[#30363d]">
+            Language: {displayLanguage}
+          </TooltipContent>
+        </Tooltip>
         <span className="text-[#30363d]">│</span>
-        <span className="tabular-nums">
-          Ln <span className="text-[#e6edf3]">{cursorPosition.line}</span>, Col <span className="text-[#e6edf3]">{cursorPosition.column}</span>
-        </span>
+
+        {/* Line/col — clickable to open Go to Line */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={onGoToLine}
+              className="tabular-nums hover:text-[#e6edf3] transition-colors duration-150 cursor-pointer"
+            >
+              Ln <span className="text-[#e6edf3]">{cursorPosition.line}</span>, Col <span className="text-[#e6edf3]">{cursorPosition.column}</span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs bg-[#161b22]/95 backdrop-blur-sm border-[#30363d]">
+            Go to Line (Ctrl+G)
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Selection info */}
+        {selectionLength > 0 && (
+          <>
+            <span className="text-[#30363d]">│</span>
+            <span className="text-[#d29922]">
+              Selected: {selectionLength} character{selectionLength !== 1 ? 's' : ''}
+            </span>
+          </>
+        )}
+
         <span className="text-[#30363d]">│</span>
-        <span className="transition-colors duration-200 hover:text-[#e6edf3] cursor-default">Spaces: {tabSize}</span>
+
+        {/* Tab size with tooltip */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="transition-colors duration-200 hover:text-[#e6edf3] cursor-default">Spaces: {tabSize}</span>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs bg-[#161b22]/95 backdrop-blur-sm border-[#30363d]">
+            Tab size: {tabSize} spaces
+          </TooltipContent>
+        </Tooltip>
         <span className="text-[#30363d]">│</span>
-        <span className="transition-colors duration-200 hover:text-[#e6edf3] cursor-default">UTF-8</span>
+
+        {/* Encoding with tooltip */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="transition-colors duration-200 hover:text-[#e6edf3] cursor-default">UTF-8</span>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs bg-[#161b22]/95 backdrop-blur-sm border-[#30363d]">
+            File encoding: UTF-8
+          </TooltipContent>
+        </Tooltip>
         <span className="text-[#30363d]">│</span>
-        <span className="transition-colors duration-200 hover:text-[#e6edf3] cursor-default">LF</span>
+
+        {/* Line ending with tooltip */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="transition-colors duration-200 hover:text-[#e6edf3] cursor-default">LF</span>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs bg-[#161b22]/95 backdrop-blur-sm border-[#30363d]">
+            Line ending: LF (Unix)
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Right side */}

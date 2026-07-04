@@ -1,0 +1,402 @@
+   200→   200→   - Accepts optional `files` array in request body
+   201→   201→   - If `files` is a non-empty array, uses it directly (JSON.stringify)
+   202→   202→   - Otherwise falls back to existing `getDefaultFiles(language)` function
+   203→   203→
+   204→   204→### Verification Results
+   205→   205→- ESLint: Zero errors
+   206→   206→- Dev server: Compiles successfully with no errors
+   207→   207→- No breaking changes to existing room creation flow
+   208→   208→
+   209→   209→### File Changes Summary
+   210→   210→
+   211→   211→#### New Files
+   212→   212→- `src/lib/templates.ts` — RoomTemplate interface and ROOM_TEMPLATES array (10 templates)
+   213→   213→
+   214→   214→#### Modified Files
+   215→   215→- `src/components/collab/DashboardPage.tsx` — Template grid in create dialog, auto-language fill, files in POST body
+   216→   216→- `src/app/api/rooms/route.ts` — Accept optional `files` array in POST body
+   217→   217→
+   218→   218→## Completed in This Round (User Profile Dropdown Menu)
+   219→   219→
+   220→   220→### Feature: User Profile Dropdown in Dashboard Header
+   221→   221→
+   222→   222→Replaced the simple "Logout" button in the dashboard header with a rich user profile dropdown menu using shadcn/ui `DropdownMenu` and `Tooltip` components.
+   223→   223→
+   224→   224→#### Changes to `src/components/collab/DashboardPage.tsx`:
+   225→   225→
+   226→   226→1. **New imports added**:
+   227→   227→   - `ChevronDown`, `Settings`, `Palette` from lucide-react
+   228→   228→   - `DropdownMenu`, `DropdownMenuContent`, `DropdownMenuGroup`, `DropdownMenuItem`, `DropdownMenuSeparator`, `DropdownMenuTrigger` from shadcn/ui
+   229→   229→   - `Tooltip`, `TooltipTrigger`, `TooltipContent` from shadcn/ui
+   230→   230→
+   231→   231→2. **Header enhanced**:
+   232→   232→   - **Sticky positioning**: Added `sticky top-0 z-50` for persistent header
+   233→   233→   - **Glassmorphism**: Changed from `bg-[#0d1117]/80 backdrop-blur-sm` to `bg-[#0d1117]/60 backdrop-blur-xl` for stronger blur effect
+   234→   234→   - **Gradient bottom border**: Added `h-px bg-gradient-to-r from-transparent via-[#238636]/50 to-transparent` line (matching editor topbar style)
+   235→   235→   - **Logo hover effect**: Added `group` wrapper with `group-hover:scale-110` on icon and `group-hover:text-[#3fb950]` on text
+   236→   236→
+   237→   237→3. **Profile dropdown menu**:
+   238→   238→   - **Trigger**: User avatar circle (with `avatarColor` bg, first letter of name) + user name (hidden on mobile) + ChevronDown icon
+   239→   239→   - **Avatar ring animation**: `transition-all duration-300 hover:ring-[#238636]` for subtle green ring on hover
+   240→   240→   - **Online indicator**: Small green dot (`bg-[#3fb950]`) at bottom-right of avatar with border
+   241→   241→   - **Profile section header**: Flex row with larger avatar (w-10 h-10), name, email; separated by `border-b border-[#30363d]`
+   242→   242→   - **My Rooms**: Active menu item that scrolls to top and clears search
+   243→   243→   - **Settings**: Disabled with "Soon" badge and "Coming soon" tooltip
+   244→   244→   - **Theme**: Disabled with "Soon" badge and "Coming soon" tooltip
+   245→   245→   - **Separator**: Styled `bg-[#30363d]`
+   246→   246→   - **Sign Out**: Red-themed (`text-[#f85149]`, `hover:bg-[#f85149]/10`) calls existing `handleLogout`
+   247→   247→
+   248→   248→4. **Dropdown styling**:
+   249→   249→   - Dark theme: `bg-[#161b22]`, `border-[#30363d]`, `text-[#e6edf3]`
+   250→   250→   - Menu items: `hover:bg-[#30363d]`, `rounded-lg px-3 py-2 text-sm`
+   251→   251→   - Icons: `w-4 h-4 text-[#8b949e]` for each menu item
+   252→   252→   - Shadow: `shadow-2xl shadow-black/40`
+   253→   253→   - Smooth open/close animation (via Radix defaults)
+   254→   254→   - `w-64` width, `rounded-xl`, `overflow-hidden`
+   255→   255→
+   256→   256→### Verification Results
+   257→   257→- ESLint: Zero errors
+   258→   258→- Dev server: Compiles successfully (✓ Compiled in 138ms)
+   259→   259→- No breaking changes to existing dashboard functionality
+   260→   260→- Logout functionality preserved via `handleLogout` in Sign Out menu item
+   261→   261→
+   262→   262→---
+   263→   263→Task ID: 4
+   264→   264→Agent: Main Agent + 3 Subagents (full-stack-developer)
+   265→   265→Task: QA testing, bug fixes, new features, and styling improvements (Cycle 4)
+   266→   266→
+   267→   267→Work Log:
+   268→   268→- Read worklog.md to understand project state (Cycle 3 complete, 14 files, full feature set)
+   269→   269→- Checked services: Next.js dev server running, collab service not running (known issue)
+   270→   270→- Ran ESLint: zero errors
+   271→   271→- QA tested via agent-browser: landing → register → dashboard → editor → run → output → chat → AI → settings → back to dashboard
+   272→   272→- QA results: All pages functional, code execution works, AI assistant responds, templates visible, HTML preview works
+   273→   273→- Fixed toolbar button accessibility: Added aria-labels to all 10 icon-only buttons in EditorTopBar
+   274→   274→- Added animated pulse to unread chat badge
+   275→   275→- Updated tooltip text to include keyboard shortcuts
+   276→   276→
+   277→   277→- Subagent 1: Created HTML Live Preview feature
+   278→   278→  - New file: src/components/collab/HtmlPreview.tsx (iframe with srcdoc, debounced updates, resizable, CSS auto-detection)
+   279→   279→  - Updated EditorTopBar.tsx: Added Eye icon button, showPreview/onTogglePreview/previewOpen props
+   280→   280→  - Updated EditorPage.tsx: htmlPreviewOpen state, split view layout, Ctrl+Shift+V shortcut, command palette entry
+   281→   281→
+   282→   282→- Subagent 2: Created Room Templates feature
+   283→   283→  - New file: src/lib/templates.ts (10 templates: Blank, JS/Python Hello World, React, Express, HTML/CSS, TypeScript, SQL, Rust, Go)
+   284→   284→  - Updated DashboardPage.tsx: Template grid in create dialog, auto-language-fill on template select
+   285→   285→  - Updated api/rooms/route.ts: Accept optional files array in POST body
+   286→   286→
+   287→   287→- Subagent 3: Created User Profile dropdown
+   288→   288→  - Updated DashboardPage.tsx: Replaced simple logout with DropdownMenu (profile header, My Rooms, Settings/Theme disabled, Sign Out)
+   289→   289→  - Sticky glassmorphism header with backdrop-blur, gradient border line, logo hover effect
+   290→   290→  - Avatar with online indicator dot, ring animation on hover
+   291→   291→
+   292→   292→- Implemented AI streaming responses
+   293→   293→  - Updated api/ai/assist/route.ts: Server-Sent Events streaming via z-ai-web-dev-sdk stream:true, TransformStream for SSE parsing, non-streaming fallback
+   294→   294→  - Updated AIPanel.tsx: Streaming consumption via ReadableStream reader, progressive rendering, stop button (Square icon), streaming indicator (bouncing dots), abort controller support, character count on response
+   295→   295→
+   296→   296→- Enhanced styling (globals.css): 15+ new animations/effects
+   297→   297→  - card-spring-in, stagger-children, glow-pulse-green, btn-gradient-animated
+   298→   298→  - hover-lift, file-tree-item (green left border on hover/active), chat-msg-animate
+   299→   299→  - status-shimmer, terminal-cursor (blinking ▋), bottom-sheet-enter/exit
+   300→   300→  - run-success-flash, dialog-overlay (blur+saturate), tooltip-fade
+   301→   301→
+   302→   302→- Enhanced FileTree.tsx: file-tree-item CSS class, active file shadow, animated empty state
+   303→   303→- Enhanced ChatPanel.tsx: chat-msg-animate on messages, bubble hover color transition, stronger focus shadow
+   304→   304→- Enhanced OutputPanel.tsx: Tab hover/active improvements, terminal-cursor on empty state
+   305→   305→- Enhanced EditorStatusBar.tsx: Gradient background, shimmer overlay, animated accent line (green/red), hover effects, tabular-nums, pipe dividers (│)
+   306→   306→
+   307→   307→Stage Summary:
+   308→   308→- 4 new features: HTML Live Preview, Room Templates (10 templates), User Profile Dropdown, AI Streaming
+   309→   309→- 1 bug fix: Toolbar button accessibility (aria-labels)
+   310→   310→- Major styling overhaul: 15+ new CSS animations, 5 component visual enhancements
+   311→   311→- ESLint: Zero errors throughout
+   312→   312→- Dev server: All compiles successful
+   313→   313→- QA verified: Templates dialog, HTML preview iframe, profile dropdown, streaming indicator, toolbar labels
+   314→   314→- 5 QA screenshots saved to /home/z/my-project/download/
+   315→   315→
+   316→   316→## Current Project Status Assessment (After Cycle 4)
+   317→   317→
+   318→   318→CollabCode is a mature, feature-rich real-time collaborative code editor. 18 components, 12 API routes, 1 mini-service. Features include: auth (JWT), room management with templates, Monaco editor with Y.js CRDT sync, collaborative cursors, live chat, AI assistant with streaming, code execution (JS/Python), HTML live preview, file tree with context menus, command palette, keyboard shortcuts, room settings, and a polished dark theme with extensive animations.
+   319→   319→
+   320→   320→## Completed in This Round (Cron Review Cycle 4)
+   321→   321→
+   322→   322→### Bug Fixes
+   323→   323→1. **Toolbar Button Accessibility** — Added `aria-label` attributes to all 10 icon-only buttons in EditorTopBar (Back, Share, Run, Save, Terminal, AI, Chat, Settings, Shortcuts, Panel Toggle). Updated tooltips to include shortcut keys (Ctrl+Enter, Ctrl+S, Ctrl+B, Ctrl+/). Added `animate-pulse` to unread chat badge.
+   324→   324→
+   325→   325→### New Features (4)
+   326→   326→1. **HTML Live Preview** — Split-pane iframe preview for HTML/CSS files. Features: debounced updates (500ms), CSS auto-detection (wraps CSS in HTML template), resizable via bottom-edge drag handle, refresh and open-in-new-tab buttons, sandbox attribute for security, Ctrl+Shift+V shortcut, command palette entry.
+   327→   327→2. **Room Templates** — 10 starter templates when creating rooms: Blank, Hello World JS, Hello World Python, React Component, Express API, HTML/CSS Page, TypeScript App, SQL Schema, Rust Program, Go HTTP Server. Each has emoji icon, description, and meaningful starter code. Template grid is scrollable, responsive (2→4 cols), with green glow on selection. Auto-fills language dropdown.
+   328→   328→3. **User Profile Dropdown** — Replaced simple logout button with DropdownMenu. Shows: profile header (avatar, name, email), My Rooms (scrolls to top), Settings (disabled, "Coming soon"), Theme (disabled), Sign Out. Sticky glassmorphism header with backdrop-blur-xl, gradient border line, logo hover effect. Avatar has online indicator dot and ring animation.
+   329→   329→4. **AI Streaming Responses** — Server-Sent Events streaming via z-ai-web-dev-sdk `stream:true`. TransformStream parses SSE data chunks. Progressive rendering with bouncing dots indicator. Stop button (Square icon) with AbortController. Non-streaming fallback. Character count shown after response.
+   330→   330→
+   331→   331→### Styling Improvements (15+ new CSS animations/effects)
+   332→   332→1. **globals.css** — card-spring-in (spring physics entrance), stagger-children (delayed cascade), glow-pulse-green (button hover glow), btn-gradient-animated (shifting gradient), hover-lift (smooth card lift with shadow), file-tree-item (green left border on hover/active), chat-msg-animate (slide-in from right), status-shimmer (subtle opacity pulse), terminal-cursor (blinking ▋ cursor), bottom-sheet-enter/exit (slide up/down), run-success-flash (green flash), dialog-overlay (blur + saturate), tooltip-fade, improved Monaco line highlight (green left border)
+   333→   333→2. **FileTree** — file-tree-item CSS class with animated green left border, active file shadow inset, animated pulse on empty state icon
+   334→   334→3. **ChatPanel** — chat-msg-animate on messages, bubble hover color transition (own: darker green, others: border lightens), stronger focus shadow (12px spread)
+   335→   335→4. **OutputPanel** — Tab hover/active state improvements with shadow, terminal-cursor blinking on empty output state
+   336→   336→5. **EditorStatusBar** — Gradient background (161b22→13171e), animated shimmer overlay, dynamic accent line color (green=connected, red=offline), hover effects on labels, tabular-nums for alignment, proper pipe dividers (│)
+   337→   337→
+   338→   338→### QA Testing Results (via agent-browser)
+   339→   339→- ✅ Landing page renders with animations, gradient orbs, typing effect
+   340→   340→- ✅ Registration/login works, redirects to dashboard
+   341→   341→- ✅ Dashboard: profile dropdown with avatar "C", glassmorphism header, gradient border, room cards
+   342→   342→- ✅ Create Room dialog: template grid with 10 templates visible, emoji icons, descriptions
+   343→   343→- ✅ Template selection: selected template highlighted, language auto-fills, room created with template code
+   344→   344→- ✅ Editor: toolbar buttons have proper aria-labels in accessibility tree
+   345→   345→- ✅ HTML Preview: Eye button visible for HTML files, iframe renders, refresh/close buttons work
+   346→   346→- ✅ Code execution works (JS template: `console.log('Hello, World!')` → output)
+   347→   347→- ✅ Status bar: gradient background, shimmer effect, pipe dividers
+   348→   348→- ✅ AI Panel: streaming indicator, stop button, character count
+   349→   349→- ✅ ESLint: Zero errors
+   350→   350→
+   351→   351→### QA Screenshots Saved
+   352→   352→- /home/z/my-project/download/qa-4-01-landing.png
+   353→   353→- /home/z/my-project/download/qa-4-02-dashboard-empty.png
+   354→   354→- /home/z/my-project/download/qa-4-03-editor.png
+   355→   355→- /home/z/my-project/download/qa-4-04-editor-with-code.png
+   356→   356→- /home/z/my-project/download/qa-4-05-run-output.png
+   357→   357→- /home/z/my-project/download/qa-4-06-chat.png
+   358→   358→- /home/z/my-project/download/qa-4-07-ai.png
+   359→   359→- /home/z/my-project/download/qa-4-08-ai-response.png
+   360→   360→- /home/z/my-project/download/qa-4-09-dashboard-with-room.png
+   361→   361→- /home/z/my-project/download/qa-4-10-profile-dropdown.png
+   362→   362→- /home/z/my-project/download/qa-4-11-templates.png
+   363→   363→- /home/z/my-project/download/qa-4-12-template-editor.png
+   364→   364→- /home/z/my-project/download/qa-4-13-html-preview.png
+   365→   365→
+   366→   366→## File Changes Summary
+   367→   367→
+   368→   368→### New Files
+   369→   369→- `src/components/collab/HtmlPreview.tsx` — HTML live preview with iframe, debouncing, resizing, CSS auto-detect
+   370→   370→- `src/lib/templates.ts` — 10 room templates with starter code for different languages
+   371→   371→
+   372→   372→### Modified Files
+   373→   373→- `src/app/api/ai/assist/route.ts` — Streaming SSE support with TransformStream, non-streaming fallback
+   374→   374→- `src/app/api/rooms/route.ts` — Accept optional files array in POST body for templates
+   375→   375→- `src/components/collab/EditorTopBar.tsx` — aria-labels on all buttons, Eye preview button, shortcut tooltips, animated badge
+   376→   376→- `src/components/collab/EditorPage.tsx` — HTML preview state/integration, Ctrl+Shift+V, command palette entry (from subagent)
+   377→   377→- `src/components/collab/DashboardPage.tsx` — Template grid in create dialog, profile dropdown, glassmorphism header (from subagents)
+   378→   378→- `src/components/collab/AIPanel.tsx` — Streaming consumption, stop button, streaming indicator, abort controller
+   379→   379→- `src/components/collab/FileTree.tsx` — file-tree-item CSS class, active shadow, animated empty state
+   380→   380→- `src/components/collab/ChatPanel.tsx` — chat-msg-animate, bubble hover transitions, stronger focus shadow
+   381→   381→- `src/components/collab/OutputPanel.tsx` — Tab hover/active improvements, terminal-cursor on empty state
+   382→   382→- `src/components/collab/EditorStatusBar.tsx` — Gradient bg, shimmer overlay, dynamic accent, hover effects, pipe dividers
+   383→   383→- `src/app/globals.css` — 15+ new animation/effect classes for cards, buttons, files, chat, terminal, sheets
+   384→   384→
+   385→   385→## Services Running
+   386→   386→- Next.js dev server: port 3000
+   387→   387→- CollabCode WebSocket service: port 3003 (not running this session — background process limitation)
+   388→   388→
+   389→   389→## Unresolved Issues / Risks
+   390→   390→1. **Socket.io connection shows "Offline"** — Caddy gateway may not properly proxy WebSocket for Socket.io polling transport. Chat/presence depends on this. Known issue from Cycle 3.
+   391→   391→2. **Collab service background process** — `bun --hot` cannot be backgrounded in this environment. Service works when run directly but daemonization fails.
+   392→   392→3. **Y.js Document Persistence** — In-memory on WebSocket server. Unsaved documents lost on server restart. Save button persists to DB.
+   393→   393→4. **Mobile bottom sheets** — CSS animations defined but not yet integrated into components for chat/AI panels.
+   394→   394→5. **Collaborative cursors** — Requires 2+ connected users to test visually. Implementation complete.
+   395→   395→6. **Code Execution** — Only JS and Python supported. Other languages return "Unsupported language".
+   396→   396→7. **AI streaming fallback** — If SSE parsing fails, falls back to non-streaming. Edge case handling could be improved.
+   397→   397→
+   398→   398→## Priority Recommendations for Next Phase
+   399→   399→1. **Fix Socket.io WebSocket through Caddy** — Critical for chat and presence features
+   400→   400→2. **Mobile bottom sheets** — Integrate the defined CSS animations into chat/AI panels for mobile
+   401→   401→3. **Version history** — Show document change history using Y.js UndoManager
+   402→   402→4. **Markdown preview** — Live preview for .md files in editor
+   403→   403→5. **File tree drag-and-drop** — Reorder files by dragging
+   404→   404→6. **Read-only mode** — Allow room owners to set rooms as read-only for collaborators
+   405→   405→7. **Room activity log** — Show history of who joined/left and when
+   406→   406→8. **Performance optimization** — Lazy load Monaco editor, optimize Y.js for large files
+   407→   407→9. **Multi-language code execution** — Add support for TypeScript (via ts-node), HTML (via iframe), CSS (via preview)
+   408→   408→10. **Collaborative selection highlighting** — Visual improvements to remote user selections
+   409→   409→
+   410→   410→---
+   411→   411→Task ID: 5-a
+   412→   412→Agent: full-stack-developer subagent
+   413→   413→Task: Create Editor Tabs component
+   414→   414→
+   415→   415→Work Log:
+   416→   416→- Created src/components/collab/EditorTabs.tsx with VS Code-style tab bar
+   417→   417→- Implemented file icon logic matching FileTree.tsx (FileCode, FileJson2, FileText, File by extension)
+   418→   418→- Active tab: #0d1117 bg, 2px #238636 top border, #e6edf3 text
+   419→   419→- Inactive tab: transparent bg, 1px #30363d top border, #8b949e text, hover:bg-[#161b22]/60
+   420→   420→- Tab bar: #161b22 bg, #30363d bottom border, h-9, overflow-x auto with hidden scrollbar
+   421→   421→- Close button: size-4 X icon, opacity-0 on group, group-hover:opacity-100, hover:bg-[#30363d]
+   422→   422→- Modified indicator: green dot (#238636) shown on each tab
+   423→   423→- Smooth transitions (150ms) on color and background changes
+   424→   424→- Integrated EditorTabs into EditorPage.tsx between file tree and editor area
+   425→   425→- onCloseFile guards against closing the last file with toast error
+   426→   426→- onSelectFile closes HTML preview if switching to non-HTML file
+   427→   427→- ESLint check passed with no errors
+   428→   428→- Dev server compiled successfully
+   429→   429→
+   430→   430→Stage Summary:
+   431→   431→- New EditorTabs component with VS Code-style tabs, file icons, close buttons, active/inactive styling
+   432→   432→- Integrated into editor layout above Monaco editor
+   433→   433→- Dark theme consistent with existing GitHub-dark design system
+   434→   434→
+   435→   435→---
+   436→   436→Task ID: 5-b
+   437→   437→Agent: full-stack-developer subagent
+   438→   438→Task: Create Markdown Preview feature
+   439→   439→
+   440→   440→Work Log:
+   441→   441→- Created src/components/collab/MarkdownPreview.tsx with regex-based markdown parser
+   442→   442→- Parser handles: headings (#-######), bold/italic, code blocks with language labels and copy buttons, inline code, links, images, ordered/unordered lists, blockquotes, horizontal rules, tables with alignment and striped rows
+   443→   443→- Styled container with dark theme (#0d1117 bg, #161b22 card, #30363d borders, #e6edf3 text)
+   444→   444→- Empty state with FileText icon when no content
+   445→   445→- Integrated into EditorPage.tsx: imported MarkdownPreview, added isMarkdownFile computed value
+   446→   446→- Added MarkdownPreview AnimatePresence panel after HtmlPreview in editor layout
+   447→   447→- Updated showPreview prop in EditorTopBar from isHtmlFile to isHtmlFile || isMarkdownFile
+   448→   448→- Updated Ctrl+Shift+V keyboard shortcut to work for both HTML and Markdown files
+   449→   449→- Updated command palette label from "Toggle HTML Preview" to "Toggle Preview"
+   450→   450→- Added md/mdx to getLanguageFromFilename map (maps to 'markdown')
+   451→   451→- Updated EditorTopBar tooltip and aria-label to generic "Toggle Preview"
+   452→   452→- ESLint check passed with no errors
+   453→   453→
+   454→   454→Stage Summary:
+   455→   455→- Markdown preview with styled rendering (headings, code blocks, tables, lists, blockquotes, etc.)
+   456→   456→- Reuses htmlPreviewOpen state for consistency
+   457→   457→- Ctrl+Shift+V now works for both HTML and Markdown files
+   458→   458→- Preview button appears in toolbar for both .html/.css and .md/.mdx files
+   459→   459→
+   460→   460→---
+   461→   461→Task ID: 5-c
+   462→   462→Agent: full-stack-developer subagent
+   463→   463→Task: Major styling polish and enhancements
+   464→   464→
+   465→   465→Work Log:
+   466→   466→- Enhanced KeyboardShortcutsDialog: added 8 new shortcuts (Ctrl+D with "coming soon" badge, Ctrl+Z, Ctrl+Shift+Z, Ctrl+F, Ctrl+H, Ctrl+J, Ctrl+Shift+V, Ctrl+G, Ctrl+P); widened to sm:max-w-lg; added gradient top bar (green→blue→purple); added footer with "CollabCode v1.0" and shortcut count; added hover green left-border on each row
+   467→   467→- Enhanced FileTree: replaced badge with inline "Files (N)" count; added "New File" button at bottom of list; improved empty state with animated FileCode icon in pulsing border container; added ChevronRight hover indicator that fades in on file items; added animated green dot for selected file with glow
+   468→   468→- Enhanced LandingPage: improved button hover glow effects (green box-shadow for Get Started, blue for Create Room, purple for View Demo); added "View Demo" CTA button that creates room with HTML/CSS template and opens editor; added inner glow effect + animated gradient border overlay on feature card hover
+   469→   469→- Enhanced LoginPage: added decorative semi-transparent code snippet in background with line numbers; added "Remember me" checkbox (visual); added "Forgot password?" link; improved submit button with animated gradient (green→teal) and hover glow + scale pulse
+   470→   470→- Enhanced RegisterPage: added decorative code snippet background (different code, purple tint); improved submit button with same animated gradient and hover effects
+   471→   471→- Enhanced EditorStatusBar: added collaborator avatar dots (colored circles with glow, max 5 + overflow count); added click-to-copy on file name with tooltip and "Copied!" feedback; added problems indicator ("0 errors, 0 warnings" with checkmark)
+   472→   472→- Enhanced globals.css: added shimmer-border animation (animated gradient border for buttons using mask-composite); added glow-purple and glow-purple-strong classes; added code-bg utility class; improved scrollbar to 4px width; added fade-in-up animation for page transitions
+   473→   473→
+   474→   474→Stage Summary:
+   475→   475→- 6 components enhanced with premium styling
+   476→   476→- New CSS animations and utility classes (shimmer-border, glow-purple, code-bg, fade-in-up)
+   477→   477→- Scrollbar refined to 4px for a cleaner look
+   478→   478→- ESLint: zero errors
+   479→   479→
+   480→   480→## Current Project Status Assessment (After Cycle 5)
+   481→   481→
+   482→   482→CollabCode is now at 20 components, 12 API routes, 1 mini-service, and 2 utility modules. This cycle focused on fixing a critical AI integration bug, adding 4 major new features (Editor Tabs, Markdown Preview, Find & Replace, Quick Open File), and comprehensive styling polish across 6 components. The application now has a significantly more polished and professional UI with VS Code-like editor tabs, markdown rendering, and enhanced visual effects throughout.
+   483→   483→
+   484→   484→## Completed in This Round (Cron Review Cycle 5)
+   485→   485→
+   486→   486→### Critical Bug Fixes
+   487→   487→1. **AI Panel `currentCode` Empty on Initial Load** — The `onDidChangeModelContent` callback in EditorPage.tsx only fired on user typing, not on initial content load from room data. This caused AI quick action buttons to be permanently disabled and AI questions to fail with 400 error (missing `code` field). Fixed by:
+   488→   488→   - Adding `setCurrentCode(yjsValue)` in the file rebinding effect after `editorInstance.setValue(yjsValue)`
+   489→   489→   - Adding a `setTimeout(syncCode, 100)` after the initial `onDidChangeModelContent` listener setup in `handleEditorMount`
+   490→   490→   - Verified: AI "Explain Code" button now enabled immediately, AI API returns 200
+   491→   491→
+   492→   492→2. **Browser Print Dialog on Ctrl+P** — Added keyboard interceptor for Ctrl+P (without Shift) to prevent the browser's native print dialog from opening. Ctrl+Shift+P still opens the command palette.
+   493→   493→
+   494→   494→### New Features (4)
+   495→   495→1. **Editor Tabs (VS Code-style)** — New `EditorTabs.tsx` component:
+   496→   496→   - File icon per tab (reuses FileTree icon logic: yellow=JS, blue=TS, green=Python, etc.)
+   497→   497→   - Active tab: #0d1117 bg, 2px #238636 green top border, #e6edf3 text
+   498→   498→   - Inactive tab: transparent bg, 1px #30363d border, #8b949e text, hover effect
+   499→   499→   - Close button (X) appears on tab hover with smooth opacity transition
+   500→   500→   - Modified indicator (green dot) on each tab
+   501→   501→   - Scrollable tab bar (#161b22 bg, h-9, hidden scrollbar)
+   502→   502→   - Integrated into EditorPage between file tree and Monaco editor
+   503→   503→   - Closing last tab blocked with toast error message
+   504→   504→   - Switching tabs auto-closes HTML preview if new file isn't HTML/CSS
+   505→   505→
+   506→   506→2. **Markdown Preview Panel** — New `MarkdownPreview.tsx` component:
+   507→   507→   - Regex-based markdown parser (no external deps): headings, bold, italic, code blocks with language labels, inline code, links, images, lists, blockquotes, tables (with alignment and striped rows), horizontal rules
+   508→   508→   - Styled dark theme rendering matching project palette
+   509→   509→   - Code blocks with copy button, inline code with #79c0ff coloring
+   510→   510→   - Blockquotes with #238636 left border
+   511→   511→   - Tables with #30363d borders and striped rows
+   512→   512→   - Empty state with FileText icon
+   513→   513→   - Integrated into EditorPage: works for .md and .mdx files
+   514→   514→   - Reuses `htmlPreviewOpen` state — Ctrl+Shift+V toggles preview for both HTML and Markdown
+   515→   515→   - Command palette entry updated to "Toggle Preview"
+   516→   516→   - EditorTopBar tooltip updated accordingly
+   517→   517→
+   518→   518→3. **Find & Replace** — Uses Monaco Editor's built-in actions:
+   519→   519→   - "Find in File" command (Ctrl+F) in command palette
+   520→   520→   - "Find and Replace" command (Ctrl+H) in command palette
+   521→   521→   - Monaco's native Ctrl+F/Ctrl+H pass through our keyboard handler (not intercepted)
+   522→   522→   - Search, Replace, FileSearch icons imported from lucide-react
+   523→   523→
+   524→   524→4. **Quick Open File** — Command palette entry:
+   525→   525→   - Ctrl+P shortcut (browser print dialog blocked)
+   526→   526→   - Shows prompt with comma-separated file list
+   527→   527→   - Only activates when 2+ files exist
+   528→   528→
+   529→   529→### Styling Improvements (from subagent 5-c)
+   530→   530→1. **KeyboardShortcutsDialog** — 8 new shortcuts added (Undo, Redo, Find, Replace, Toggle Terminal, Toggle Preview, Go to Line, Quick Open File, Duplicate Line with "coming soon" badge). Widened to max-w-lg. Gradient top bar (green→blue→purple). Footer with "CollabCode v1.0". Green left border on hover.
+   531→   531→
+   532→   532→2. **FileTree** — File count in header ("Files (N)"). "New File" button at bottom. Animated empty state with FileCode icon and pulsing border. ChevronRight arrow fades in on hover. Selected file has animated green dot.
+   533→   533→
+   534→   534→3. **LandingPage** — Button glow effects (green/blue/purple per button). "View Demo" CTA that creates an HTML/CSS template room. Feature cards with inner glow + animated gradient border on hover. Hero gradient border.
+   535→   535→
+   536→   536→4. **LoginPage & RegisterPage** — Decorative semi-transparent code snippets in background. "Remember me" checkbox (login). "Forgot password?" link (login). Animated green→teal gradient submit buttons with glow and scale pulse.
+   537→   537→
+   538→   538→5. **EditorStatusBar** — Collaborator avatar dots (colored circles with glow, max 5 + overflow). Click-to-copy on file name with "Copied!" tooltip. Problems indicator ("0 errors, 0 warnings" with checkmark).
+   539→   539→
+   540→   540→6. **globals.css** — shimmer-border animation, glow-purple/glow-purple-strong classes, code-bg utility, fade-in-up animation, refined 4px scrollbars.
+   541→   541→
+   542→   542→### QA Testing Results (via agent-browser)
+   543→   543→- ✅ Landing page: "View Demo" button visible, no console errors, animations working
+   544→   544→- ✅ Login page: "Remember me" checkbox, "Forgot password?" link, decorative code background
+   545→   545→- ✅ Dashboard: Room cards with all details, profile dropdown, search
+   546→   546→- ✅ Editor: Editor tabs visible (index.js, package.json) with close buttons
+   547→   547→- ✅ File tree: "New File" button visible
+   548→   548→- ✅ Status bar: "0 errors, 0 warnings", clickable filename, collaborator dots
+   549→   549→- ✅ AI Panel: Quick action buttons ENABLED (bug fixed!), Explain Code returns 200 response
+   550→   550→- ✅ Keyboard shortcuts: Enhanced dialog with gradient top bar, more shortcuts
+   551→   551→- ✅ ESLint: Zero errors
+   552→   552→- ✅ Dev server: All compiles successful
+   553→   553→
+   554→   554→### QA Screenshots Saved
+   555→   555→- /home/z/my-project/download/qa-5-01-landing.png
+   556→   556→- /home/z/my-project/download/qa-5-02-dashboard.png
+   557→   557→- /home/z/my-project/download/qa-5-03-editor.png
+   558→   558→- /home/z/my-project/download/qa-5-04-run-output.png
+   559→   559→- /home/z/my-project/download/qa-5-05-settings.png
+   560→   560→- /home/z/my-project/download/qa-5-06-shortcuts.png
+   561→   561→- /home/z/my-project/download/qa-5-07-landing-styled.png
+   562→   562→- /home/z/my-project/download/qa-5-08-dashboard-rooms.png
+   563→   563→- /home/z/my-project/download/qa-5-09-editor-tabs.png
+   564→   564→- /home/z/my-project/download/qa-5-10-ai-working.png
+   565→   565→- /home/z/my-project/download/qa-5-11-shortcuts-enhanced.png
+   566→   566→
+   567→   567→## File Changes Summary
+   568→   568→
+   569→   569→### New Files
+   570→   570→- `src/components/collab/EditorTabs.tsx` — VS Code-style editor tabs with file icons, close buttons, modified indicators
+   571→   571→- `src/components/collab/MarkdownPreview.tsx` — Markdown preview with regex parser, styled rendering, code blocks, tables
+   572→   572→
+   573→   573→### Modified Files
+   574→   574→- `src/components/collab/EditorPage.tsx` — currentCode sync fix (2 locations), EditorTabs integration, MarkdownPreview integration, Find/Replace/QuickOpen command palette entries, Ctrl+P print dialog block, isMarkdownFile computed value, updated showPreview prop
+   575→   575→- `src/components/collab/EditorTopBar.tsx` — Updated preview button tooltip/aria-label from "HTML Preview" to "Preview"
+   576→   576→- `src/components/collab/KeyboardShortcutsDialog.tsx` — 8 new shortcuts, wider dialog, gradient top bar, footer, green hover border
+   577→   577→- `src/components/collab/FileTree.tsx` — File count in header, New File button, animated empty state, hover chevron, selected file green dot
+   578→   578→- `src/components/collab/LandingPage.tsx` — Button glow effects, View Demo CTA, feature card inner glow + gradient border
+   579→   579→- `src/components/collab/LoginPage.tsx` — Decorative code background, Remember me checkbox, Forgot password link, gradient submit button
+   580→   580→- `src/components/collab/RegisterPage.tsx` — Decorative code background, gradient submit button
+   581→   581→- `src/components/collab/EditorStatusBar.tsx` — Collaborator dots, click-to-copy filename, problems indicator
+   582→   582→- `src/app/globals.css` — shimmer-border, glow-purple, code-bg, fade-in-up, refined scrollbars
+   583→   583→
+   584→   584→## Services Running
+   585→   585→- Next.js dev server: port 3000
+   586→   586→- CollabCode WebSocket service: port 3003
+   587→   587→
+   588→   588→## Unresolved Issues / Risks
+   589→   589→1. **Socket.io connection shows "Offline"** — Caddy gateway may not properly proxy WebSocket for Socket.io polling transport. Chat/presence depends on this. Known issue from Cycle 3.
+   590→   590→2. **Y.js Document Persistence** — In-memory on WebSocket server. Unsaved documents lost on server restart. Save button persists to DB.
+   591→   591→3. **Mobile bottom sheets** — CSS animations defined but not yet integrated into chat/AI panels for mobile.
+   592→   592→4. **Collaborative cursors** — Implementation complete but requires 2+ connected users to test visually.
+   593→   593→5. **Code Execution** — Only JS and Python supported. Other languages return "Unsupported language".
+   594→   594→6. **AI streaming fallback** — If SSE parsing fails, falls back to non-streaming. Edge case handling could be improved.
+   595→   595→7. **View Demo button** — Creates rooms via API but depends on existing template system (functional).
+   596→   596→
+   597→   597→## Priority Recommendations for Next Phase
+   598→   598→1. **Fix Socket.io WebSocket through Caddy** — Critical for chat and presence features to work end-to-end
+   599→   599→2. **Mobile responsive overhaul** — Bottom sheets for chat/AI on mobile, responsive file tree, touch-friendly toolbar
+
+[showing lines 200-599 of 1942; use offset=600 with limit to continue reading]

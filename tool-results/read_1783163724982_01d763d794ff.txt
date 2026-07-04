@@ -1,0 +1,1159 @@
+     1→"use client";
+     2→
+     3→import { useEffect, useState, useRef, useCallback } from "react";
+     4→import { motion, useScroll, useTransform, useInView } from "framer-motion";
+     5→import {
+     6→  Code2,
+     7→  RefreshCw,
+     8→  MousePointer,
+     9→  Code,
+    10→  MessageSquare,
+    11→  Play,
+    12→  Sparkles,
+    13→  ArrowRight,
+    14→  Github,
+    15→  Twitter,
+    16→  Globe,
+    17→  Zap,
+    18→  Shield,
+    19→  Users,
+    20→  Eye,
+    21→  MessageCircle,
+    22→  ChevronRight,
+    23→  BookOpen,
+    24→  Codepen,
+    25→  LifeBuoy,
+    26→} from "lucide-react";
+    27→import { Button } from "@/components/ui/button";
+    28→import { useStore } from "@/store/useStore";
+    29→import { ROOM_TEMPLATES } from "@/lib/templates";
+    30→
+    31→/* ------------------------------------------------------------------ */
+    32→/*  Data                                                               */
+    33→/* ------------------------------------------------------------------ */
+    34→
+    35→const codeSnippets = [
+    36→  'const result = await fetch("/api/data");',
+    37→  'function merge(left, right) {',
+    38→  "  return [...left, ...right];",
+    39→  "}",
+    40→  'export default async function Page() {',
+    41→  "  const data = await getData();",
+    42→  "  return <Dashboard data={data} />;",
+    43→  "}",
+    44→  "class EventEmitter {",
+    45→  "  #listeners = new Map();",
+    46→  "  on(event, fn) {",
+    47→  "    this.#listeners.set(event, fn);",
+    48→  "  }",
+    49→  "}",
+    50→  "const ws = new WebSocket(url);",
+    51→  "ws.onmessage = (e) => {",
+    52→  "  applyPatch(JSON.parse(e.data));",
+    53→  "};",
+    54→  "for (const [key, value] of map) {",
+    55→  "  if (predicate(value)) {",
+    56→  "    yield { key, value };",
+    57→  "  }",
+    58→  "}",
+    59→];
+    60→
+    61→type ColorTheme = "green" | "blue" | "purple" | "orange";
+    62→
+    63→const colorMap: Record<ColorTheme, { bg: string; text: string; iconHover: string; glow: string }> = {
+    64→  green: {
+    65→    bg: "bg-[#238636]/20",
+    66→    text: "text-[#238636]",
+    67→    iconHover: "text-[#3fb950]",
+    68→    glow: "hover:shadow-[0_0_24px_rgba(35,134,54,0.15)] hover:border-[#238636]/50",
+    69→  },
+    70→  blue: {
+    71→    bg: "bg-[#58a6ff]/15",
+    72→    text: "text-[#58a6ff]",
+    73→    iconHover: "text-[#79c0ff]",
+    74→    glow: "hover:shadow-[0_0_24px_rgba(88,166,255,0.15)] hover:border-[#58a6ff]/50",
+    75→  },
+    76→  purple: {
+    77→    bg: "bg-[#a371f7]/15",
+    78→    text: "text-[#a371f7]",
+    79→    iconHover: "text-[#bc8cff]",
+    80→    glow: "hover:shadow-[0_0_24px_rgba(163,113,247,0.15)] hover:border-[#a371f7]/50",
+    81→  },
+    82→  orange: {
+    83→    bg: "bg-[#f0883e]/15",
+    84→    text: "text-[#f0883e]",
+    85→    iconHover: "text-[#f4a261]",
+    86→    glow: "hover:shadow-[0_0_24px_rgba(240,136,62,0.15)] hover:border-[#f0883e]/50",
+    87→  },
+    88→};
+    89→
+    90→interface Feature {
+    91→  icon: React.ComponentType<{ className?: string }>;
+    92→  title: string;
+    93→  description: string;
+    94→  color: ColorTheme;
+    95→  animation?: "pulse" | "sparkle";
+    96→}
+    97→
+    98→const features: Feature[] = [
+    99→  {
+   100→    icon: RefreshCw,
+   101→    title: "Real-time Sync",
+   102→    description: "Every keystroke synced instantly using CRDT technology. No conflicts, no lag.",
+   103→    color: "green",
+   104→    animation: "pulse",
+   105→  },
+   106→  {
+   107→    icon: MousePointer,
+   108→    title: "Live Cursors",
+   109→    description: "See exactly where your collaborators are editing in real time.",
+   110→    color: "blue",
+   111→  },
+   112→  {
+   113→    icon: Code,
+   114→    title: "Multi-Language",
+   115→    description: "JavaScript, Python, TypeScript, and 7 more languages supported out of the box.",
+   116→    color: "purple",
+   117→  },
+   118→  {
+   119→    icon: MessageSquare,
+   120→    title: "Live Chat",
+   121→    description: "Communicate with your team without leaving the editor.",
+   122→    color: "orange",
+   123→  },
+   124→  {
+   125→    icon: Play,
+   126→    title: "Code Execution",
+   127→    description: "Run your code directly in the browser with instant output.",
+   128→    color: "green",
+   129→  },
+   130→  {
+   131→    icon: Sparkles,
+   132→    title: "AI Assistant",
+   133→    description: "Get AI-powered code explanations and suggestions as you code.",
+   134→    color: "purple",
+   135→    animation: "sparkle",
+   136→  },
+   137→];
+   138→
+   139→const testimonials = [
+   140→  {
+   141→    quote:
+   142→      "CollabCode transformed how our remote team works. Real-time sync is flawless.",
+   143→    name: "Sarah Chen",
+   144→    role: "Lead Developer",
+   145→    company: "TechFlow",
+   146→    initials: "SC",
+   147→    color: "#238636",
+   148→  },
+   149→  {
+   150→    quote:
+   151→      "The AI assistant alone saved us hours of debugging. Game changer for pair programming.",
+   152→    name: "Marcus Rodriguez",
+   153→    role: "CTO",
+   154→    company: "DevStudio",
+   155→    initials: "MR",
+   156→    color: "#58a6ff",
+   157→  },
+   158→  {
+   159→    quote:
+   160→      "We switched from VS Code Live Share and never looked back. The chat integration is perfect.",
+   161→    name: "Aisha Patel",
+   162→    role: "Full Stack Dev",
+   163→    company: "CodeCraft",
+   164→    initials: "AP",
+   165→    color: "#a371f7",
+   166→  },
+   167→];
+   168→
+   169→const stats = [
+   170→  { value: 10000, suffix: "+", label: "Developers" },
+   171→  { value: 50000, suffix: "+", label: "Sessions" },
+   172→  { value: 99.9, suffix: "%", label: "Uptime" },
+   173→  { value: 50, suffix: "+", label: "Countries" },
+   174→];
+   175→
+   176→/* ------------------------------------------------------------------ */
+   177→/*  Motion presets                                                     */
+   178→/* ------------------------------------------------------------------ */
+   179→
+   180→const prefersReducedMotion =
+   181→  typeof window !== "undefined"
+   182→    ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+   183→    : false;
+   184→
+   185→const springTransition = prefersReducedMotion
+   186→  ? { duration: 0 }
+   187→  : { type: "spring" as const, stiffness: 100, damping: 20 };
+   188→
+   189→const containerVariants = {
+   190→  hidden: { opacity: 0 },
+   191→  visible: {
+   192→    opacity: 1,
+   193→    transition: { staggerChildren: 0.1 },
+   194→  },
+   195→};
+   196→
+   197→const itemVariants = {
+   198→  hidden: { opacity: 0, y: 30 },
+   199→  visible: {
+   200→    opacity: 1,
+   201→    y: 0,
+   202→    transition: { duration: prefersReducedMotion ? 0 : 0.5, ease: "easeOut" },
+   203→  },
+   204→};
+   205→
+   206→/* ------------------------------------------------------------------ */
+   207→/*  Typing Effect                                                      */
+   208→/* ------------------------------------------------------------------ */
+   209→
+   210→function TypingEffect() {
+   211→  const [displayText, setDisplayText] = useState("");
+   212→  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+   213→  const indexRef = useRef({ char: 0, snippet: 0, deleting: false });
+   214→
+   215→  useEffect(() => {
+   216→    const idx = indexRef.current;
+   217→
+   218→    const startTyping = () => {
+   219→      tickRef.current = setInterval(() => {
+   220→        const snippet = codeSnippets[idx.snippet];
+   221→
+   222→        if (!idx.deleting) {
+   223→          if (idx.char < snippet.length) {
+   224→            idx.char++;
+   225→            setDisplayText(snippet.slice(0, idx.char));
+   226→          } else {
+   227→            clearInterval(tickRef.current!);
+   228→            tickRef.current = null;
+   229→            setTimeout(() => {
+   230→              idx.deleting = true;
+   231→              startDeleting();
+   232→            }, 2000);
+   233→          }
+   234→        }
+   235→      }, 40 + Math.random() * 60);
+   236→    };
+   237→
+   238→    const startDeleting = () => {
+   239→      tickRef.current = setInterval(() => {
+   240→        const snippet = codeSnippets[idx.snippet];
+   241→
+   242→        if (idx.char > 0) {
+   243→          idx.char--;
+   244→          setDisplayText(snippet.slice(0, idx.char));
+   245→        } else {
+   246→          clearInterval(tickRef.current!);
+   247→          tickRef.current = null;
+   248→          idx.deleting = false;
+   249→          idx.snippet = (idx.snippet + 1) % codeSnippets.length;
+   250→          setTimeout(startTyping, 400);
+   251→        }
+   252→      }, 20);
+   253→    };
+   254→
+   255→    const startTimeout = setTimeout(startTyping, 600);
+   256→
+   257→    return () => {
+   258→      clearTimeout(startTimeout);
+   259→      if (tickRef.current) clearInterval(tickRef.current);
+   260→    };
+   261→  }, []);
+   262→
+   263→  return (
+   264→    <div className="glass glow-green rounded-xl p-5 sm:p-7 font-mono text-sm sm:text-base relative overflow-hidden pulse-border-glow will-change-transform">
+   265→      <div className="absolute inset-0 bg-gradient-to-br from-[#238636]/5 to-[#58a6ff]/5 pointer-events-none" />
+   266→      <div className="relative z-10">
+   267→        <div className="flex items-center gap-2 mb-4">
+   268→          <div className="h-3 w-3 rounded-full bg-[#f85149]" />
+   269→          <div className="h-3 w-3 rounded-full bg-[#d29922]" />
+   270→          <div className="h-3 w-3 rounded-full bg-[#238636]" />
+   271→          <span className="ml-2 text-xs text-[#8b949e]">
+   272→            collabcode — session.ts
+   273→          </span>
+   274→        </div>
+   275→        <div className="min-h-[3rem] sm:min-h-[4rem]">
+   276→          <span className="text-[#8b949e] select-none">{">"} </span>
+   277→          <span className="text-[#e6edf3]">{displayText}</span>
+   278→          <span className="inline-block w-2.5 h-5 bg-[#58a6ff] animate-pulse ml-0.5 align-text-bottom" />
+   279→        </div>
+   280→      </div>
+   281→    </div>
+   282→  );
+   283→}
+   284→
+   285→/* ------------------------------------------------------------------ */
+   286→/*  Animated Counter                                                   */
+   287→/* ------------------------------------------------------------------ */
+   288→
+   289→function AnimatedCounter({
+   290→  value,
+   291→  suffix,
+   292→  duration = 2,
+   293→}: {
+   294→  value: number;
+   295→  suffix: string;
+   296→  duration?: number;
+   297→}) {
+   298→  const ref = useRef<HTMLSpanElement>(null);
+   299→  const isInView = useInView(ref, { once: true });
+   300→  const [display, setDisplay] = useState(0);
+   301→
+   302→  const hasAnimated = useRef(false);
+   303→
+   304→  useEffect(() => {
+   305→    if (!isInView || hasAnimated.current) return;
+   306→    hasAnimated.current = true;
+   307→
+   308→    const isDecimal = value % 1 !== 0;
+   309→    const startTime = performance.now();
+   310→
+   311→    const animate = (now: number) => {
+   312→      const elapsed = (now - startTime) / (duration * 1000);
+   313→      const progress = Math.min(elapsed, 1);
+   314→      // easeOutExpo
+   315→      const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+   316→      const current = eased * value;
+   317→      setDisplay(isDecimal ? Math.round(current * 10) / 10 : Math.round(current));
+   318→
+   319→      if (progress < 1) {
+   320→        requestAnimationFrame(animate);
+   321→      }
+   322→    };
+   323→
+   324→    requestAnimationFrame(animate);
+   325→  }, [isInView, value, duration]);
+   326→
+   327→  const formatted =
+   328→    value >= 1000
+   329→      ? `${Math.round(display).toLocaleString()}`
+   330→      : value % 1 !== 0
+   331→        ? display.toFixed(1)
+   332→        : `${Math.round(display)}`;
+   333→
+   334→  return (
+   335→    <span ref={ref} className="tabular-nums">
+   336→      {formatted}
+   337→      {suffix}
+   338→    </span>
+   339→  );
+   340→}
+   341→
+   342→/* ------------------------------------------------------------------ */
+   343→/*  Feature Card                                                       */
+   344→/* ------------------------------------------------------------------ */
+   345→
+   346→function FeatureCard({ feature }: { feature: Feature }) {
+   347→  const theme = colorMap[feature.color];
+   348→  const IconComp = feature.icon;
+   349→
+   350→  return (
+   351→    <motion.div
+   352→      variants={itemVariants}
+   353→      className="group relative rounded-xl border border-[#30363d] bg-[#161b22] p-5 sm:p-6 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] glass-card hover-lift will-change-transform"
+   354→      style={{
+   355→        transitionProperty: "transform, box-shadow, border-color",
+   356→      }}
+   357→      onMouseEnter={(e) => {
+   358→        (e.currentTarget as HTMLElement).style.borderColor = "";
+   359→      }}
+   360→    >
+   361→      {/* Animated shimmer border on hover */}
+   362→      <div
+   363→        className="absolute -inset-px rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none z-0"
+   364→        style={{
+   365→          background:
+   366→            "linear-gradient(135deg, rgba(35,134,54,0.4), rgba(88,166,255,0.2), rgba(163,113,247,0.3), rgba(35,134,54,0.4))",
+   367→          backgroundSize: "300% 300%",
+   368→          animation: prefersReducedMotion ? "none" : "shimmer 4s ease-in-out infinite",
+   369→          WebkitMask:
+   370→            "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+   371→          WebkitMaskComposite: "xor",
+   372→          maskComposite: "exclude",
+   373→          padding: "1px",
+   374→        }}
+   375→      />
+   376→
+   377→      {/* Inner glow effect on hover */}
+   378→      <div
+   379→        className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+   380→        style={{
+   381→          background: `radial-gradient(ellipse at 50% 0%, ${
+   382→            feature.color === "green"
+   383→              ? "rgba(35,134,54,0.06)"
+   384→              : feature.color === "blue"
+   385→                ? "rgba(88,166,255,0.06)"
+   386→                : feature.color === "purple"
+   387→                  ? "rgba(163,113,247,0.06)"
+   388→                  : "rgba(240,136,62,0.06)"
+   389→          } 0%, transparent 70%)`,
+   390→        }}
+   391→      />
+   392→
+   393→      <div className="relative z-10">
+   394→        {/* Colored icon circle */}
+   395→        <div className="flex items-center gap-3 mb-4">
+   396→          <div
+   397→            className={`flex items-center justify-center w-11 h-11 rounded-full ${theme.bg} transition-colors duration-300 ${
+   398→              feature.animation === "pulse" ? "badge-pulse" : ""
+   399→            }`}
+   400→          >
+   401→            {feature.animation === "sparkle" ? (
+   402→              <motion.div
+   403→                animate={
+   404→                  prefersReducedMotion
+   405→                    ? {}
+   406→                    : { rotate: [0, 15, -15, 10, -10, 0] }
+   407→                }
+   408→                transition={{
+   409→                  duration: 3,
+   410→                  repeat: Infinity,
+   411→                  repeatDelay: 2,
+   412→                  ease: "easeInOut",
+   413→                }}
+   414→              >
+   415→                <IconComp
+   416→                  className={`w-5 h-5 ${theme.text} group-hover:${theme.iconHover} transition-colors duration-300`}
+   417→                />
+   418→              </motion.div>
+   419→            ) : (
+   420→              <IconComp
+   421→                className={`w-5 h-5 ${theme.text} group-hover:${theme.iconHover} transition-colors duration-300`}
+   422→              />
+   423→            )}
+   424→          </div>
+   425→          <h3 className="text-base sm:text-lg font-semibold text-[#e6edf3]">
+   426→            {feature.title}
+   427→          </h3>
+   428→        </div>
+   429→
+   430→        <p
+   431→          className={`text-sm sm:text-base text-[#8b949e] leading-relaxed transition-colors duration-300 group-hover:text-[#c9d1d9]`}
+   432→        >
+   433→          {feature.description}
+   434→        </p>
+   435→
+   436→        {/* Learn more link — appears on hover */}
+   437→        <div className="mt-4 h-6 overflow-hidden">
+   438→          <span
+   439→            className={`inline-flex items-center gap-1 text-sm ${theme.text} opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0 cursor-pointer`}
+   440→          >
+   441→            Learn more
+   442→            <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform duration-300" />
+   443→          </span>
+   444→        </div>
+   445→      </div>
+   446→    </motion.div>
+   447→  );
+   448→}
+   449→
+   450→/* ------------------------------------------------------------------ */
+   451→/*  Gradient Orbs (Hero background)                                    */
+   452→/* ------------------------------------------------------------------ */
+   453→
+   454→function GradientOrbs() {
+   455→  return (
+   456→    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+   457→      {/* Green orb */}
+   458→      <motion.div
+   459→        className="absolute w-[500px] h-[500px] sm:w-[600px] sm:h-[600px] rounded-full will-change-transform"
+   460→        style={{
+   461→          top: "10%",
+   462→          left: "10%",
+   463→          background:
+   464→            "radial-gradient(circle, rgba(35,134,54,0.18) 0%, transparent 70%)",
+   465→          filter: "blur(80px)",
+   466→        }}
+   467→        animate={
+   468→          prefersReducedMotion
+   469→            ? {}
+   470→            : {
+   471→                x: [0, 30, -20, 15, 0],
+   472→                y: [0, -25, 15, -10, 0],
+   473→              }
+   474→        }
+   475→        transition={{
+   476→          duration: 18,
+   477→          repeat: Infinity,
+   478→          ease: "easeInOut",
+   479→        }}
+   480→      />
+   481→      {/* Blue orb */}
+   482→      <motion.div
+   483→        className="absolute w-[450px] h-[450px] sm:w-[550px] sm:h-[550px] rounded-full will-change-transform"
+   484→        style={{
+   485→          top: "20%",
+   486→          right: "5%",
+   487→          background:
+   488→            "radial-gradient(circle, rgba(88,166,255,0.14) 0%, transparent 70%)",
+   489→          filter: "blur(80px)",
+   490→        }}
+   491→        animate={
+   492→          prefersReducedMotion
+   493→            ? {}
+   494→            : {
+   495→                x: [0, -25, 20, -15, 0],
+   496→                y: [0, 20, -15, 25, 0],
+   497→              }
+   498→        }
+   499→        transition={{
+   500→          duration: 22,
+   501→          repeat: Infinity,
+   502→          ease: "easeInOut",
+   503→        }}
+   504→      />
+   505→      {/* Purple orb */}
+   506→      <motion.div
+   507→        className="absolute w-[400px] h-[400px] sm:w-[500px] sm:h-[500px] rounded-full will-change-transform"
+   508→        style={{
+   509→          bottom: "5%",
+   510→          left: "30%",
+   511→          background:
+   512→            "radial-gradient(circle, rgba(163,113,247,0.12) 0%, transparent 70%)",
+   513→          filter: "blur(80px)",
+   514→        }}
+   515→        animate={
+   516→          prefersReducedMotion
+   517→            ? {}
+   518→            : {
+   519→                x: [0, 20, -30, 10, 0],
+   520→                y: [0, -20, 25, -15, 0],
+   521→              }
+   522→        }
+   523→        transition={{
+   524→          duration: 20,
+   525→          repeat: Infinity,
+   526→          ease: "easeInOut",
+   527→        }}
+   528→      />
+   529→    </div>
+   530→  );
+   531→}
+   532→
+   533→/* ------------------------------------------------------------------ */
+   534→/*  Testimonial Card                                                   */
+   535→/* ------------------------------------------------------------------ */
+   536→
+   537→function TestimonialCard({
+   538→  testimonial,
+   539→  index,
+   540→}: {
+   541→  testimonial: (typeof testimonials)[number];
+   542→  index: number;
+   543→}) {
+   544→  return (
+   545→    <motion.div
+   546→      initial={{ opacity: 0, y: 30 }}
+   547→      whileInView={{ opacity: 1, y: 0 }}
+   548→      viewport={{ once: true, margin: "-50px" }}
+   549→      transition={{
+   550→        duration: prefersReducedMotion ? 0 : 0.6,
+   551→        delay: prefersReducedMotion ? 0 : index * 0.15,
+   552→        ease: "easeOut",
+   553→      }}
+   554→      className="glass-card hover-lift rounded-xl border border-[#30363d] bg-[#161b22] p-6 flex flex-col will-change-transform"
+   555→    >
+   556→      {/* Quote */}
+   557→      <p className="text-[#c9d1d9] text-sm sm:text-base leading-relaxed mb-6 flex-1">
+   558→        &ldquo;{testimonial.quote}&rdquo;
+   559→      </p>
+   560→
+   561→      {/* Author */}
+   562→      <div className="flex items-center gap-3 pt-4 border-t border-[#30363d]">
+   563→        <div
+   564→          className="flex items-center justify-center w-10 h-10 rounded-full text-white text-sm font-semibold shrink-0"
+   565→          style={{ backgroundColor: testimonial.color }}
+   566→        >
+   567→          {testimonial.initials}
+   568→        </div>
+   569→        <div className="min-w-0">
+   570→          <p className="text-sm font-semibold text-[#e6edf3] truncate">
+   571→            {testimonial.name}
+   572→          </p>
+   573→          <p className="text-xs text-[#8b949e] truncate">
+   574→            {testimonial.role} @ {testimonial.company}
+   575→          </p>
+   576→        </div>
+   577→      </div>
+   578→    </motion.div>
+   579→  );
+   580→}
+   581→
+   582→/* ------------------------------------------------------------------ */
+   583→/*  Main Landing Page                                                  */
+   584→/* ------------------------------------------------------------------ */
+   585→
+   586→export default function LandingPage() {
+   587→  const { setCurrentPage, setCurrentRoomId, isAuthenticated, setUser } =
+   588→    useStore();
+   589→  const [visibleFeatures, setVisibleFeatures] = useState(false);
+   590→  const [creatingDemo, setCreatingDemo] = useState(false);
+   591→  const featuresRef = useRef<HTMLDivElement>(null);
+   592→  const heroRef = useRef<HTMLDivElement>(null);
+   593→
+   594→  const { scrollYProgress } = useScroll({
+   595→    target: heroRef,
+   596→    offset: ["start start", "end start"],
+   597→  });
+   598→  const heroY = useTransform(scrollYProgress, [0, 1], [0, 100]);
+   599→  const heroOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
+   600→
+   601→  useEffect(() => {
+   602→    const observer = new IntersectionObserver(
+   603→      ([entry]) => {
+   604→        if (entry.isIntersecting) {
+   605→          setVisibleFeatures(true);
+   606→        }
+   607→      },
+   608→      { threshold: 0.15 }
+   609→    );
+   610→    if (featuresRef.current) observer.observe(featuresRef.current);
+   611→    return () => observer.disconnect();
+   612→  }, []);
+   613→
+   614→  const handleGetStarted = () => {
+   615→    if (isAuthenticated) {
+   616→      setCurrentPage("dashboard");
+   617→    } else {
+   618→      setCurrentPage("register");
+   619→    }
+   620→  };
+   621→
+   622→  const handleCreateRoom = () => {
+   623→    if (isAuthenticated) {
+   624→      setCurrentPage("dashboard");
+   625→    } else {
+   626→      setCurrentPage("login");
+   627→    }
+   628→  };
+   629→
+   630→  const handleViewDemo = async () => {
+   631→    if (!isAuthenticated) {
+   632→      setCurrentPage("register");
+   633→      return;
+   634→    }
+   635→
+   636→    setCreatingDemo(true);
+   637→    try {
+   638→      const htmlCssTemplate = ROOM_TEMPLATES.find((t) => t.id === "html-css");
+   639→      const templateFiles =
+   640→        htmlCssTemplate?.files || [{ name: "index.html", content: "" }];
+   641→
+   642→      const res = await fetch("/api/rooms", {
+   643→        method: "POST",
+   644→        headers: { "Content-Type": "application/json" },
+   645→        body: JSON.stringify({
+   646→          name: "Demo Room",
+   647→          language: "html",
+   648→          files: templateFiles,
+   649→        }),
+   650→        credentials: "include",
+   651→      });
+   652→
+   653→      if (!res.ok) {
+   654→        const data = await res.json();
+   655→        if (res.status === 401) {
+   656→          setUser(null);
+   657→          setCurrentPage("landing");
+   658→          return;
+   659→        }
+   660→        return;
+   661→      }
+   662→
+   663→      const data = await res.json();
+   664→      setCurrentRoomId(data.room.id);
+   665→      setCurrentPage("editor");
+   666→    } catch {
+   667→      // silently fail
+   668→    } finally {
+   669→      setCreatingDemo(false);
+   670→    }
+   671→  };
+   672→
+   673→  return (
+   674→    <div className="min-h-screen flex flex-col noise-bg relative">
+   675→      {/* Dot grid background */}
+   676→      <div className="absolute inset-0 dot-grid opacity-40 pointer-events-none z-0" />
+   677→
+   678→      <div className="relative z-10 flex flex-col min-h-screen">
+   679→        {/* ======================== Hero Section ======================== */}
+   680→        <header
+   681→          ref={heroRef}
+   682→          className="pt-16 sm:pt-24 pb-8 sm:pb-16 px-4 sm:px-6 relative overflow-hidden"
+   683→        >
+   684→          {/* 3 animated gradient orbs */}
+   685→          <GradientOrbs />
+   686→
+   687→          {/* Subtle grid pattern overlay */}
+   688→          <div
+   689→            className="absolute inset-0 pointer-events-none opacity-[0.03]"
+   690→            style={{
+   691→              backgroundImage: `linear-gradient(rgba(230,237,243,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(230,237,243,0.3) 1px, transparent 1px)`,
+   692→              backgroundSize: "48px 48px",
+   693→            }}
+   694→          />
+   695→
+   696→          <motion.div
+   697→            className="max-w-4xl mx-auto text-center relative z-10"
+   698→            variants={containerVariants}
+   699→            initial="hidden"
+   700→            animate="visible"
+   701→            style={{ y: heroY, opacity: heroOpacity, willChange: "transform, opacity" }}
+   702→          >
+   703→            <motion.div
+   704→              variants={itemVariants}
+   705→              className="flex items-center justify-center gap-3 mb-6"
+   706→            >
+   707→              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-[#238636] glow-green will-change-transform">
+   708→                <Code2 className="w-7 h-7 text-white" />
+   709→              </div>
+   710→              <span className="text-2xl sm:text-3xl font-bold text-[#e6edf3] tracking-tight">
+   711→                CollabCode
+   712→              </span>
+   713→            </motion.div>
+   714→
+   715→            <motion.h1
+   716→              variants={itemVariants}
+   717→              className="text-4xl sm:text-5xl lg:text-6xl font-bold text-[#e6edf3] mb-4 sm:mb-6 tracking-tight"
+   718→            >
+   719→              Code Together,{" "}
+   720→              <span className="gradient-text">In Real Time</span>
+   721→            </motion.h1>
+   722→
+   723→            <motion.p
+   724→              variants={itemVariants}
+   725→              className="text-lg sm:text-xl text-[#8b949e] max-w-2xl mx-auto mb-8 sm:mb-10"
+   726→            >
+   727→              A browser-based collaborative code editor. Multiple users, one
+   728→              document, zero conflicts.
+   729→            </motion.p>
+   730→
+   731→            {/* Main CTA buttons */}
+   732→            <motion.div
+   733→              variants={itemVariants}
+   734→              className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6"
+   735→            >
+   736→              {/* Get Started - glow green on hover */}
+   737→              <div
+   738→                className="relative group p-[2px] rounded-lg will-change-transform"
+   739→                style={{
+   740→                  background:
+   741→                    "linear-gradient(90deg, #238636, #58a6ff, #238636, #58a6ff)",
+   742→                  backgroundSize: "300% 100%",
+   743→                  animation: "shimmer 3s ease-in-out infinite",
+   744→                }}
+   745→              >
+   746→                <Button
+   747→                  onClick={handleGetStarted}
+   748→                  size="lg"
+   749→                  className="w-full sm:w-auto px-8 py-6 text-base font-semibold rounded-lg bg-[#238636] hover:bg-[#2ea043] text-white transition-shadow duration-300 hover:shadow-[0_0_24px_rgba(35,134,54,0.5),0_0_48px_rgba(35,134,54,0.2)] glow-btn-green btn-press"
+   750→                >
+   751→                  <span className="animated-underline">Get Started</span>
+   752→                  <ArrowRight className="ml-2 w-5 h-5" />
+   753→                </Button>
+   754→              </div>
+   755→              {/* Create a Room - subtle glow */}
+   756→              <Button
+   757→                onClick={handleCreateRoom}
+   758→                variant="outline"
+   759→                size="lg"
+   760→                className="w-full sm:w-auto px-8 py-6 text-base font-semibold rounded-lg border-[#30363d] text-[#e6edf3] hover:bg-[#21262d] transition-shadow duration-300 hover:shadow-[0_0_16px_rgba(88,166,255,0.15)]"
+   761→              >
+   762→                Create a Room
+   763→              </Button>
+   764→              {/* View Demo button - purple glow on hover */}
+   765→              <Button
+   766→                onClick={handleViewDemo}
+   767→                variant="ghost"
+   768→                size="lg"
+   769→                disabled={creatingDemo}
+   770→                className="w-full sm:w-auto px-8 py-6 text-base font-medium rounded-lg text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] transition-all duration-300 hover:shadow-[0_0_16px_rgba(163,113,247,0.15)] border border-transparent hover:border-[#a371f7]/30 hover:glow-purple btn-press"
+   771→              >
+   772→                {creatingDemo ? (
+   773→                  <span className="flex items-center gap-2">
+   774→                    <span className="size-4 border-2 border-[#8b949e]/30 border-t-[#a371f7] rounded-full animate-spin" />
+   775→                    Loading...
+   776→                  </span>
+   777→                ) : (
+   778→                  <>
+   779→                    <Eye className="mr-2 w-4 h-4" />
+   780→                    View Demo
+   781→                  </>
+   782→                )}
+   783→              </Button>
+   784→            </motion.div>
+   785→
+   786→            {/* Second CTA row — Watch Demo */}
+   787→            <motion.div
+   788→              variants={itemVariants}
+   789→              className="mb-12 sm:mb-16"
+   790→            >
+   791→              <button
+   792→                onClick={handleViewDemo}
+   793→                disabled={creatingDemo}
+   794→                className="group inline-flex items-center gap-2 text-sm text-[#8b949e] hover:text-[#e6edf3] transition-colors duration-300"
+   795→              >
+   796→                <span>Watch Demo</span>
+   797→                <motion.span
+   798→                  className="inline-flex"
+   799→                  animate={
+   800→                    prefersReducedMotion
+   801→                      ? {}
+   802→                      : { x: [0, 4, 0] }
+   803→                  }
+   804→                  transition={{
+   805→                    duration: 1.5,
+   806→                    repeat: Infinity,
+   807→                    ease: "easeInOut",
+   808→                  }}
+   809→                >
+   810→                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-[#8b949e]/40 group-hover:border-[#58a6ff]/60 transition-colors duration-300">
+   811→                    <svg
+   812→                      width="10"
+   813→                      height="12"
+   814→                      viewBox="0 0 10 12"
+   815→                      fill="none"
+   816→                      className="ml-0.5"
+   817→                    >
+   818→                      <path
+   819→                        d="M2 1L9 6L2 11V1Z"
+   820→                        fill="currentColor"
+   821→                        className="text-[#8b949e] group-hover:text-[#58a6ff] transition-colors duration-300"
+   822→                      />
+   823→                    </svg>
+   824→                  </span>
+   825→                </motion.span>
+   826→              </button>
+   827→            </motion.div>
+   828→
+   829→            {/* Typing effect */}
+   830→            <motion.div
+   831→              variants={itemVariants}
+   832→              className="max-w-2xl mx-auto relative"
+   833→            >
+   834→              <div
+   835→                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full pointer-events-none"
+   836→                style={{
+   837→                  background:
+   838→                    "radial-gradient(circle, rgba(35,134,54,0.05) 0%, transparent 70%)",
+   839→                }}
+   840→              />
+   841→              <TypingEffect key="typing" />
+   842→            </motion.div>
+   843→          </motion.div>
+   844→        </header>
+   845→
+   846→        {/* ======================== Stats Section ======================== */}
+   847→        <section className="px-4 sm:px-6 pb-12 sm:pb-16">
+   848→          <div className="max-w-4xl mx-auto">
+   849→            <p className="text-center text-xs text-[#484f58] uppercase tracking-widest mb-6 font-medium">
+   850→              Trusted by developers worldwide
+   851→            </p>
+   852→            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
+   853→              {stats.map((stat, i) => (
+   854→                <motion.div
+   855→                  key={stat.label}
+   856→                  initial={{ opacity: 0, y: 20 }}
+   857→                  animate={{ opacity: 1, y: 0 }}
+   858→                  transition={{
+   859→                    delay: 0.6 + i * 0.1,
+   860→                    duration: prefersReducedMotion ? 0 : 0.5,
+   861→                  }}
+   862→                  className="text-center will-change-transform"
+   863→                >
+   864→                  <div className="text-2xl sm:text-3xl font-bold gradient-text-animated">
+   865→                    <AnimatedCounter
+   866→                      value={stat.value}
+   867→                      suffix={stat.suffix}
+   868→                      duration={2.5}
+   869→                    />
+   870→                  </div>
+   871→                  <div className="text-xs sm:text-sm text-[#8b949e] mt-1">
+   872→                    {stat.label}
+   873→                  </div>
+   874→                </motion.div>
+   875→              ))}
+   876→            </div>
+   877→          </div>
+   878→        </section>
+   879→
+   880→        {/* ======================== Features Section ======================== */}
+   881→        <section
+   882→          ref={featuresRef}
+   883→          className="flex-1 px-4 sm:px-6 pb-16 sm:pb-24"
+   884→        >
+   885→          <div className="max-w-6xl mx-auto">
+   886→            <motion.h2
+   887→              initial={{ opacity: 0, y: 20 }}
+   888→              animate={visibleFeatures ? { opacity: 1, y: 0 } : {}}
+   889→              transition={{ duration: prefersReducedMotion ? 0 : 0.5 }}
+   890→              className="text-2xl sm:text-3xl font-bold text-center text-[#e6edf3] mb-3 sm:mb-4"
+   891→            >
+   892→              Everything you need to code together
+   893→            </motion.h2>
+   894→            <motion.p
+   895→              initial={{ opacity: 0, y: 20 }}
+   896→              animate={visibleFeatures ? { opacity: 1, y: 0 } : {}}
+   897→              transition={{
+   898→                duration: prefersReducedMotion ? 0 : 0.5,
+   899→                delay: 0.1,
+   900→              }}
+   901→              className="text-[#8b949e] text-center mb-10 sm:mb-14 text-base sm:text-lg"
+   902→            >
+   903→              Powerful features designed for seamless real-time collaboration
+   904→            </motion.p>
+   905→
+   906→            <motion.div
+   907→              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
+   908→              variants={containerVariants}
+   909→              initial="hidden"
+   910→              animate={visibleFeatures ? "visible" : "hidden"}
+   911→            >
+   912→              {features.map((feature) => (
+   913→                <FeatureCard key={feature.title} feature={feature} />
+   914→              ))}
+   915→            </motion.div>
+   916→          </div>
+   917→        </section>
+   918→
+   919→        {/* ======================== Testimonials Section ======================== */}
+   920→        <section className="px-4 sm:px-6 pb-16 sm:pb-24">
+   921→          <div className="max-w-6xl mx-auto">
+   922→            <motion.h2
+   923→              initial={{ opacity: 0, y: 20 }}
+   924→              whileInView={{ opacity: 1, y: 0 }}
+   925→              viewport={{ once: true, margin: "-60px" }}
+   926→              transition={{ duration: prefersReducedMotion ? 0 : 0.5 }}
+   927→              className="text-2xl sm:text-3xl font-bold text-center text-[#e6edf3] mb-3 sm:mb-4"
+   928→            >
+   929→              Loved by developers everywhere
+   930→            </motion.h2>
+   931→            <motion.p
+   932→              initial={{ opacity: 0, y: 20 }}
+   933→              whileInView={{ opacity: 1, y: 0 }}
+   934→              viewport={{ once: true, margin: "-60px" }}
+   935→              transition={{
+   936→                duration: prefersReducedMotion ? 0 : 0.5,
+   937→                delay: 0.1,
+   938→              }}
+   939→              className="text-[#8b949e] text-center mb-10 sm:mb-14 text-base sm:text-lg"
+   940→            >
+   941→              Hear from teams that ship better code together
+   942→            </motion.p>
+   943→
+   944→            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+   945→              {testimonials.map((t, i) => (
+   946→                <TestimonialCard key={t.name} testimonial={t} index={i} />
+   947→              ))}
+   948→            </div>
+   949→          </div>
+   950→        </section>
+   951→
+   952→        {/* ======================== Trusted by developers ======================== */}
+   953→        <section className="px-4 sm:px-6 pb-16 sm:pb-20">
+   954→          <div className="max-w-4xl mx-auto text-center border-glow-cycle rounded-2xl border border-[#30363d]/30 py-6 px-4">
+   955→            <p className="text-xs text-[#484f58] uppercase tracking-widest mb-8 font-medium">
+   956→              Trusted by developers at
+   957→            </p>
+   958→            <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12">
+   959→              {[
+   960→                { initials: "AC", name: "AlphaCorp" },
+   961→                { initials: "NT", name: "NovaTech" },
+   962→                { initials: "QD", name: "QuantumDev" },
+   963→                { initials: "SL", name: "SynthLabs" },
+   964→                { initials: "PX", name: "PixelForge" },
+   965→                { initials: "RV", name: "RiverStack" },
+   966→              ].map((company, i) => (
+   967→                <motion.div
+   968→                  key={company.name}
+   969→                  initial={{ opacity: 0, y: 10 }}
+   970→                  whileInView={{ opacity: 1, y: 0 }}
+   971→                  viewport={{ once: true }}
+   972→                  transition={{
+   973→                    delay: prefersReducedMotion ? 0 : i * 0.1,
+   974→                    duration: prefersReducedMotion ? 0 : 0.5,
+   975→                  }}
+   976→                  className="flex items-center gap-2.5 opacity-[0.35] hover:opacity-[0.6] transition-opacity duration-300 hover-glow-blue rounded-lg p-1 will-change-transform"
+   977→                >
+   978→                  <div className="w-7 h-7 rounded-lg bg-[#21262d] border border-[#30363d] flex items-center justify-center">
+   979→                    <span className="text-[10px] font-bold text-[#8b949e]">
+   980→                      {company.initials}
+   981→                    </span>
+   982→                  </div>
+   983→                  <span className="text-sm font-semibold text-[#8b949e] tracking-wide hidden sm:inline">
+   984→                    {company.name}
+   985→                  </span>
+   986→                </motion.div>
+   987→              ))}
+   988→            </div>
+   989→          </div>
+   990→        </section>
+   991→
+   992→        {/* ======================== Footer ======================== */}
+   993→        <footer className="relative py-10 sm:py-12 px-4 sm:px-6 mt-auto">
+   994→          {/* Animated gradient top border — green → blue → purple */}
+   995→          <div
+   996→            className="absolute top-0 left-0 right-0 h-px will-change-transform"
+   997→            style={{
+   998→              background:
+   999→                "linear-gradient(90deg, transparent 0%, #238636 20%, #58a6ff 50%, #a371f7 80%, transparent 100%)",
+  1000→              backgroundSize: "200% 100%",
+  1001→              animation: prefersReducedMotion
+  1002→                ? "none"
+  1003→                : "shimmer 6s ease-in-out infinite",
+  1004→            }}
+  1005→          />
+  1006→
+  1007→          <div className="max-w-6xl mx-auto pt-2">
+  1008→            {/* Made with tagline */}
+  1009→            <p className="text-center text-sm text-[#8b949e] mb-8">
+  1010→              Made with{" "}
+  1011→              <span className="text-[#238636]">&#x1f49a;</span> by developers,
+  1012→              for developers
+  1013→            </p>
+  1014→
+  1015→            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8 mb-8">
+  1016→              {/* Brand */}
+  1017→              <div className="col-span-2 sm:col-span-1">
+  1018→                <div className="flex items-center gap-2 mb-3">
+  1019→                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#238636]">
+  1020→                    <Code2 className="w-5 h-5 text-white" />
+  1021→                  </div>
+  1022→                  <span className="text-lg font-bold text-[#e6edf3]">
+  1023→                    CollabCode
+  1024→                  </span>
+  1025→                </div>
+  1026→                <p className="text-sm text-[#8b949e] leading-relaxed">
+  1027→                  Real-time collaborative code editor for teams.
+  1028→                </p>
+  1029→              </div>
+  1030→
+  1031→              {/* Product */}
+  1032→              <div>
+  1033→                <h4 className="text-sm font-semibold text-[#e6edf3] mb-3">
+  1034→                  Product
+  1035→                </h4>
+  1036→                <ul className="space-y-2">
+  1037→                  <li>
+  1038→                    <span className="inline-flex items-center gap-1.5 text-sm text-[#8b949e] hover:text-[#58a6ff] cursor-pointer transition-colors hover-underline-anim">
+  1039→                      <Zap className="w-3.5 h-3.5 opacity-60" />
+  1040→                      Features
+  1041→                    </span>
+  1042→                  </li>
+  1043→                  <li>
+  1044→                    <span className="inline-flex items-center gap-1.5 text-sm text-[#8b949e] hover:text-[#58a6ff] cursor-pointer transition-colors hover-underline-anim">
+  1045→                      <Shield className="w-3.5 h-3.5 opacity-60" />
+  1046→                      Pricing
+  1047→                    </span>
+  1048→                  </li>
+  1049→                  <li>
+  1050→                    <span className="inline-flex items-center gap-1.5 text-sm text-[#8b949e] hover:text-[#58a6ff] cursor-pointer transition-colors hover-underline-anim">
+  1051→                      <Code2 className="w-3.5 h-3.5 opacity-60" />
+  1052→                      Changelog
+  1053→                    </span>
+  1054→                  </li>
+  1055→                </ul>
+  1056→              </div>
+  1057→
+  1058→              {/* Resources */}
+  1059→              <div>
+  1060→                <h4 className="text-sm font-semibold text-[#e6edf3] mb-3">
+  1061→                  Resources
+  1062→                </h4>
+  1063→                <ul className="space-y-2">
+  1064→                  <li>
+  1065→                    <span className="inline-flex items-center gap-1.5 text-sm text-[#8b949e] hover:text-[#58a6ff] cursor-pointer transition-colors hover-underline-anim">
+  1066→                      <BookOpen className="w-3.5 h-3.5 opacity-60" />
+  1067→                      Documentation
+  1068→                    </span>
+  1069→                  </li>
+  1070→                  <li>
+  1071→                    <span className="inline-flex items-center gap-1.5 text-sm text-[#8b949e] hover:text-[#58a6ff] cursor-pointer transition-colors hover-underline-anim">
+  1072→                      <Codepen className="w-3.5 h-3.5 opacity-60" />
+  1073→                      API
+  1074→                    </span>
+  1075→                  </li>
+  1076→                  <li>
+  1077→                    <span className="inline-flex items-center gap-1.5 text-sm text-[#8b949e] hover:text-[#58a6ff] cursor-pointer transition-colors hover-underline-anim">
+  1078→                      <LifeBuoy className="w-3.5 h-3.5 opacity-60" />
+  1079→                      Support
+  1080→                    </span>
+  1081→                  </li>
+  1082→                </ul>
+  1083→              </div>
+  1084→
+  1085→              {/* Connect — social icons */}
+  1086→              <div>
+  1087→                <h4 className="text-sm font-semibold text-[#e6edf3] mb-3">
+  1088→                  Connect
+  1089→                </h4>
+  1090→                <div className="flex items-center gap-3">
+  1091→                  <a
+  1092→                    href="#"
+  1093→                    aria-label="GitHub"
+  1094→                    className="flex items-center justify-center w-9 h-9 rounded-lg bg-[#21262d] border border-[#30363d] text-[#8b949e] hover:text-[#e6edf3] hover:border-[#8b949e]/40 transition-all duration-300"
+  1095→                  >
+  1096→                    <Github className="w-4 h-4" />
+  1097→                  </a>
+  1098→                  <a
+  1099→                    href="#"
+  1100→                    aria-label="Twitter"
+  1101→                    className="flex items-center justify-center w-9 h-9 rounded-lg bg-[#21262d] border border-[#30363d] text-[#8b949e] hover:text-[#e6edf3] hover:border-[#8b949e]/40 transition-all duration-300"
+  1102→                  >
+  1103→                    <Twitter className="w-4 h-4" />
+  1104→                  </a>
+  1105→                  <a
+  1106→                    href="#"
+  1107→                    aria-label="Discord"
+  1108→                    className="flex items-center justify-center w-9 h-9 rounded-lg bg-[#21262d] border border-[#30363d] text-[#8b949e] hover:text-[#e6edf3] hover:border-[#8b949e]/40 transition-all duration-300"
+  1109→                  >
+  1110→                    <MessageCircle className="w-4 h-4" />
+  1111→                  </a>
+  1112→                </div>
+  1113→              </div>
+  1114→            </div>
+  1115→
+  1116→            <div className="border-t border-[#30363d] pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+  1117→              <p className="text-sm text-[#484f58]">
+  1118→                Built with &#x2764;&#xfe0f; using Next.js, Y.js &amp; Monaco
+  1119→                Editor
+  1120→              </p>
+  1121→              <div className="flex items-center gap-4 text-xs text-[#484f58]">
+  1122→                <span className="hover:text-[#8b949e] cursor-pointer transition-colors">
+  1123→                  Privacy
+  1124→                </span>
+  1125→                <span className="hover:text-[#8b949e] cursor-pointer transition-colors">
+  1126→                  Terms
+  1127→                </span>
+  1128→                <span className="hover:text-[#8b949e] cursor-pointer transition-colors">
+  1129→                  Security
+  1130→                </span>
+  1131→              </div>
+  1132→            </div>
+  1133→
+  1134→            {/* Built with tech stack icons */}
+  1135→            <div className="mt-6 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+  1136→              {[
+  1137→                { name: "React", color: "#61dafb" },
+  1138→                { name: "Y.js", color: "#ff8c42" },
+  1139→                { name: "Monaco", color: "#007acc" },
+  1140→                { name: "Socket.io", color: "#8b949e" },
+  1141→              ].map((tech) => (
+  1142→                <span
+  1143→                  key={tech.name}
+  1144→                  className="px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-mono border transition-colors duration-200 hover:text-[#e6edf3]"
+  1145→                  style={{
+  1146→                    borderColor: `${tech.color}40`,
+  1147→                    color: tech.color,
+  1148→                  }}
+  1149→                >
+  1150→                  {tech.name}
+  1151→                </span>
+  1152→              ))}
+  1153→            </div>
+  1154→          </div>
+  1155→        </footer>
+  1156→      </div>
+  1157→    </div>
+  1158→  );
+  1159→}

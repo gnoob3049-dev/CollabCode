@@ -89,6 +89,7 @@ interface AppState {
   setCurrentFileName: (name: string) => void;
   language: string;
   setLanguage: (lang: string) => void;
+  renameFile: (oldName: string, newName: string) => void;
 
   // Presence
   onlineUsers: PresenceUser[];
@@ -146,6 +147,24 @@ export const useStore = create<AppState>((set) => ({
   setCurrentFileName: (name) => set({ currentFileName: name }),
   language: "javascript",
   setLanguage: (lang) => set({ language: lang }),
+  renameFile: (oldName, newName) =>
+    set((state) => {
+      const room = state.currentRoom;
+      if (!room) return state;
+      if (room.files.some((f) => f.name === newName)) return state;
+      return {
+        currentRoom: {
+          ...room,
+          files: room.files.map((f) =>
+            f.name === oldName ? { ...f, name: newName } : f
+          ),
+        },
+        currentFileName:
+          state.currentFileName === oldName
+            ? newName
+            : state.currentFileName,
+      };
+    }),
 
   onlineUsers: [],
   setOnlineUsers: (users) => set({ onlineUsers: users }),

@@ -32,6 +32,7 @@ import {
   Download,
   Inbox,
   ClipboardList,
+  ArrowDown,
 } from 'lucide-react';
 import { playSound, isAudioEnabled as checkAudioEnabled, toggleAudio as doToggleAudio } from '@/lib/audio';
 import { useStore } from '@/store/useStore';
@@ -43,6 +44,7 @@ import AIPanel from './AIPanel';
 import OutputPanel from './OutputPanel';
 import RoomSettingsModal from './RoomSettingsModal';
 import KeyboardShortcutsDialog from './KeyboardShortcutsDialog';
+import GoToLineDialog from './GoToLineDialog';
 import EditorStatusBar from './EditorStatusBar';
 import EditorBreadcrumb from './EditorBreadcrumb';
 import CommandPalette, { type CommandItem, type FileItem } from './CommandPalette';
@@ -130,6 +132,7 @@ export default function EditorPage() {
   const [wordWrap, setWordWrap] = useState<'on' | 'off'>('on');
   const [minimapEnabled, setMinimapEnabled] = useState(false);
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
+  const [selectionLength, setSelectionLength] = useState(0);
   const [htmlPreviewOpen, setHtmlPreviewOpen] = useState(false);
   const [audioEnabled, setAudioEnabledState] = useState(() => {
     if (typeof window === 'undefined') return true;
@@ -139,6 +142,9 @@ export default function EditorPage() {
   audioEnabledRef.current = audioEnabled;
   const [runResultIsHtml, setRunResultIsHtml] = useState(false);
   const [runResultIsCss, setRunResultIsCss] = useState(false);
+  const [lastExecutionTime, setLastExecutionTime] = useState<number | undefined>(undefined);
+  const [mobileFileTreeOpen, setMobileFileTreeOpen] = useState(false);
+  const [goToLineOpen, setGoToLineOpen] = useState(false);
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const [versionSnapshots, setVersionSnapshots] = useState<VersionSnapshot[]>([]);
   const [activityLogOpen, setActivityLogOpen] = useState(false);
@@ -483,6 +489,31 @@ export default function EditorPage() {
       editorInstance.onDidChangeCursorPosition((e) => {
         setCursorPosition({ line: e.position.lineNumber, column: e.position.column });
       });
+
+      // Track selection length
+      editorInstance.onDidChangeCursorSelection((e) => {
+        const sel = e.selection;
+        if (sel.isEmpty()) {
+          setSelectionLength(0);
+        } else {
+          const startLine = sel.startLineNumber;
+          const endLine = sel.endLineNumber;
+          let len = 0;
+          const model = editorInstance.getModel();
+          if (model) {
+            for (let ln = startLine; ln <= endLine; ln++) {
+              const lineContent = model.getLineContent(ln);
+              let startCol = 1;
+              let endCol = lineContent.length + 1;
+              if (ln === startLine) startCol = sel.startColumn;
+              if (ln === endLine) endCol = sel.endColumn;
+              len += Math.max(0, endCol - startCol);
+              if (ln < endLine) len += 1; // newline character
+            }
+          }
+          setSelectionLength(len);
+        }
+      });
     },
     [currentFileName, user]
   );
@@ -614,6 +645,49 @@ export default function EditorPage() {
     [currentFileName, setCurrentFileName, handleCreateFile, isLockedForUser, logActivity]
   );
 
+  // Duplicate file
+  const handleDuplicateFile = useCallback(
+    (name: string) => {
+      if (isLockedForUser) {
+        toast.error('This room is in read-only mode');
+        return;
+      }
+      if (!fileListRef.current || !ydocRef.current) return;
+      const list = fileListRef.current;
+      if (!list.toArray().includes(name)) return;
+
+      // Generate duplicate name
+      const dotIdx = name.lastIndexOf('.');
+      let baseName: string;
+      let ext: string;
+      if (dotIdx !== -1) {
+        baseName = name.slice(0, dotIdx);
+        ext = name.slice(dotIdx);
+      } else {
+        baseName = name;
+        ext = '';
+      }
+      let dupName = `${baseName}(copy)${ext}`;
+      let counter = 1;
+      while (list.toArray().includes(dupName)) {
+        dupName = `${baseName}(copy ${counter})${ext}`;
+        counter++;
+      }
+
+      // Copy content
+      const content = ydocRef.current.getText(name).toString();
+      ydocRef.current.getText(dupName).insert(0, content);
+
+      // Add to file list after the original
+      const idx = list.toArray().indexOf(name);
+      list.insert(idx + 1, [dupName]);
+
+      setCurrentFileName(dupName);
+      logActivity('file_add', `duplicated file ${name} as ${dupName}`);
+    },
+    [isLockedForUser, setCurrentFileName, logActivity]
+  );
+
   // Run code
   const handleRun = useCallback(async () => {
     if (isLockedForUser) {
@@ -625,8 +699,10 @@ export default function EditorPage() {
     setOutput('');
     setRunResultIsHtml(false);
     setRunResultIsCss(false);
+    setLastExecutionTime(undefined);
     setOutputPanelOpen(true);
     playSound('run_start');
+    const startTime = performance.now();
     try {
       const ytext = ydocRef.current.getText(currentFileName);
       const code = ytext?.toString() || '';
@@ -664,6 +740,7 @@ export default function EditorPage() {
       playSound('error');
       toast.error('Failed to execute code');
     } finally {
+      setLastExecutionTime(performance.now() - startTime);
       setIsRunning(false);
     }
   }, [currentFileName, getLanguageFromFilename, setIsRunning, setOutput, setOutputPanelOpen, isLockedForUser, logActivity]);
@@ -987,6 +1064,14 @@ export default function EditorPage() {
         action: handleFormat,
       },
       {
+        id: 'go-to-line',
+        label: 'Go to Line',
+        icon: ArrowDown,
+        shortcut: ['Ctrl', 'G'],
+        category: 'Navigation',
+        action: () => setGoToLineOpen(true),
+      },
+      {
         id: 'go-to-dashboard',
         label: 'Go to Dashboard',
         icon: LayoutDashboard,
@@ -1127,6 +1212,10 @@ export default function EditorPage() {
         e.preventDefault();
         e.stopPropagation();
         setCommandPaletteOpen(true);
+      } else if (isMod && !e.shiftKey && (e.key === 'g' || e.key === 'G')) {
+        e.preventDefault();
+        e.stopPropagation();
+        setGoToLineOpen(true);
       } else if (isMod && e.key === 'b') {
         e.preventDefault();
         e.stopPropagation();
@@ -1325,6 +1414,7 @@ export default function EditorPage() {
         unreadNotificationCount={notifications.filter((n) => !n.read).length}
         onToggleWordWrap={() => setWordWrap((w) => (w === 'on' ? 'off' : 'on'))}
         wordWrap={wordWrap}
+        collaborators={onlineUsers.filter((u) => u.id !== user?.id)}
       />
 
       {/* Read-only mode banner */}
@@ -1346,6 +1436,7 @@ export default function EditorPage() {
             onSelectFile={setCurrentFileName}
             onCreateFile={handleCreateFile}
             onRenameFile={handleRenameFile}
+            onDuplicateFile={handleDuplicateFile}
             onDeleteFile={handleDeleteFile}
             collapsed={fileTreeCollapsed}
             onToggleCollapse={() => setFileTreeCollapsed(!fileTreeCollapsed)}
@@ -1388,6 +1479,10 @@ export default function EditorPage() {
                   setMobileFileTreeOpen(false);
                 }}
                 onRenameFile={handleRenameFile}
+                onDuplicateFile={(name) => {
+                  handleDuplicateFile(name);
+                  setMobileFileTreeOpen(false);
+                }}
                 onDeleteFile={(name) => {
                   handleDeleteFile(name);
                 }}
@@ -1537,6 +1632,7 @@ export default function EditorPage() {
                   onToggle={() => setOutputPanelOpen(false)}
                   isHtml={runResultIsHtml}
                   isCss={runResultIsCss}
+                  executionTime={lastExecutionTime}
                 />
               </motion.div>
             )}
@@ -1708,6 +1804,23 @@ export default function EditorPage() {
         tabSize={2}
         audioEnabled={audioEnabled}
         onToggleAudio={handleToggleAudio}
+        onGoToLine={() => setGoToLineOpen(true)}
+        selectionLength={selectionLength}
+      />
+
+      {/* Go to Line Dialog */}
+      <GoToLineDialog
+        open={goToLineOpen}
+        onClose={() => setGoToLineOpen(false)}
+        onGo={(line: number) => {
+          const ed = editorRef.current;
+          if (ed) {
+            ed.revealLineInCenter(line);
+            ed.setPosition({ lineNumber: line, column: 1 });
+            ed.focus();
+          }
+        }}
+        totalLines={editorRef.current?.getModel()?.getLineCount() || 1}
       />
 
       {/* Room Settings Modal */}

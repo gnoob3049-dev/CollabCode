@@ -28,7 +28,7 @@ export const ROOM_TEMPLATES: RoomTemplate[] = [
     files: [
       {
         name: "index.js",
-        content: `console.log('Hello, World!');\n`,
+        content: `console.log('Hello, World!');`,
       },
     ],
   },
@@ -42,7 +42,7 @@ export const ROOM_TEMPLATES: RoomTemplate[] = [
     files: [
       {
         name: "main.py",
-        content: `print("Hello, World!")\n`,
+        content: `print("Hello, World!")`,
       },
     ],
   },

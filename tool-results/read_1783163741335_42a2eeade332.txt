@@ -1,0 +1,1761 @@
+     1→     1→'use client';
+     2→     2→
+     3→     3→import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+     4→     4→import Editor, { type OnMount, type editor } from '@monaco-editor/react';
+     5→     5→import * as Y from 'yjs';
+     6→     6→import { WebsocketProvider } from 'y-websocket';
+     7→     7→import { MonacoBinding } from 'y-monaco';
+     8→     8→import { io, type Socket } from 'socket.io-client';
+     9→     9→import { motion, AnimatePresence } from 'framer-motion';
+    10→    10→import { toast } from 'sonner';
+    11→    11→import {
+    12→    12→  MessageSquare,
+    13→    13→  Sparkles,
+    14→    14→  FilePlus,
+    15→    15→  Pencil,
+    16→    16→  Trash2,
+    17→    17→  Save,
+    18→    18→  Play,
+    19→    19→  Terminal,
+    20→    20→  PanelRight,
+    21→    21→  Paintbrush,
+    22→    22→  LayoutDashboard,
+    23→    23→  Settings,
+    24→    24→  Keyboard,
+    25→    25→  WrapText,
+    26→    26→  Map,
+    27→    27→  Eye,
+    28→    28→  Search,
+    29→    29→  Replace,
+    30→    30→  FileSearch,
+    31→    31→  History,
+    32→    32→  Download,
+    33→    33→  Inbox,
+    34→    34→  ClipboardList,
+    35→    35→} from 'lucide-react';
+    36→    36→import { playSound, isAudioEnabled as checkAudioEnabled, toggleAudio as doToggleAudio } from '@/lib/audio';
+    37→    37→import { useStore } from '@/store/useStore';
+    38→    38→import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+    39→    39→import EditorTopBar from './EditorTopBar';
+    40→    40→import FileTree from './FileTree';
+    41→    41→import ChatPanel from './ChatPanel';
+    42→    42→import AIPanel from './AIPanel';
+    43→    43→import OutputPanel from './OutputPanel';
+    44→    44→import RoomSettingsModal from './RoomSettingsModal';
+    45→    45→import KeyboardShortcutsDialog from './KeyboardShortcutsDialog';
+    46→    46→import EditorStatusBar from './EditorStatusBar';
+    47→    47→import EditorBreadcrumb from './EditorBreadcrumb';
+    48→    48→import CommandPalette, { type CommandItem, type FileItem } from './CommandPalette';
+    49→    49→import HtmlPreview from './HtmlPreview';
+    50→    50→import MarkdownPreview from './MarkdownPreview';
+    51→    51→import EditorTabs from './EditorTabs';
+    52→    52→import VersionHistoryPanel, { type VersionSnapshot } from './VersionHistoryPanel';
+    53→    53→import ActivityLogPanel from './ActivityLogPanel';
+    54→    54→import NotificationsPanel from './NotificationsPanel';
+    55→    55→import type { ChatMessage, Room, ActivityLogEntry } from '@/store/useStore';
+    56→    56→import { useIsMobile } from '@/hooks/use-mobile';
+    57→    57→
+    58→    58→const LANGUAGE_MAP: Record<string, string> = {
+    59→    59→  javascript: 'javascript',
+    60→    60→  typescript: 'typescript',
+    61→    61→  python: 'python',
+    62→    62→  java: 'java',
+    63→    63→  cpp: 'cpp',
+    64→    64→  go: 'go',
+    65→    65→  html: 'html',
+    66→    66→  css: 'css',
+    67→    67→  sql: 'sql',
+    68→    68→  rust: 'rust',
+    69→    69→};
+    70→    70→
+    71→    71→function getMonacoLanguage(lang: string): string {
+    72→    72→  return LANGUAGE_MAP[lang] || 'plaintext';
+    73→    73→}
+    74→    74→
+    75→    75→export default function EditorPage() {
+    76→    76→  const {
+    77→    77→    currentRoomId,
+    78→    78→    user,
+    79→    79→    currentFileName,
+    80→    80→    setCurrentFileName,
+    81→    81→    language,
+    82→    82→    setLanguage,
+    83→    83→    onlineUsers,
+    84→    84→    setOnlineUsers,
+    85→    85→    output,
+    86→    86→    setOutput,
+    87→    87→    isRunning,
+    88→    88→    setIsRunning,
+    89→    89→    rightPanelOpen,
+    90→    90→    setRightPanelOpen,
+    91→    91→    rightPanelTab,
+    92→    92→    setRightPanelTab,
+    93→    93→    outputPanelOpen,
+    94→    94→    setOutputPanelOpen,
+    95→    95→    currentRoom,
+    96→    96→    setCurrentRoom,
+    97→    97→    setCurrentPage,
+    98→    98→    setCurrentRoomId,
+    99→    99→    chatMessages,
+   100→   100→    addChatMessage,
+   101→   101→    unreadChatCount,
+   102→   102→    incrementUnreadChatCount,
+   103→   103→    resetUnreadChatCount,
+   104→   104→    notifications,
+   105→   105→    addNotification,
+   106→   106→    markNotificationRead,
+   107→   107→    clearNotifications,
+   108→   108→  } = useStore();
+   109→   109→
+   110→   110→  const ydocRef = useRef<Y.Doc | null>(null);
+   111→   111→  const providerRef = useRef<WebsocketProvider | null>(null);
+   112→   112→  const bindingRef = useRef<MonacoBinding | null>(null);
+   113→   113→  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+   114→   114→  const monacoRef = useRef<any>(null);
+   115→   115→  const socketRef = useRef<Socket | null>(null);
+   116→   116→  const fileListRef = useRef<Y.Array<string> | null>(null);
+   117→   117→  const initDoneRef = useRef(false);
+   118→   118→
+   119→   119→  const [files, setFiles] = useState<string[]>(['index.js']);
+   120→   120→  const [fileTreeCollapsed, setFileTreeCollapsed] = useState(false);
+   121→   121→  const isMobile = useIsMobile();
+   122→   122→  const [isSaving, setIsSaving] = useState(false);
+   123→   123→  const [currentCode, setCurrentCode] = useState('');
+   124→   124→  const [connected, setConnected] = useState(false);
+   125→   125→  const [settingsOpen, setSettingsOpen] = useState(false);
+   126→   126→  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+   127→   127→  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+   128→   128→  const [commandFilter, setCommandFilter] = useState<string | null>(null);
+   129→   129→  const [fileSearchFiles, setFileSearchFiles] = useState<FileItem[] | undefined>(undefined);
+   130→   130→  const [wordWrap, setWordWrap] = useState<'on' | 'off'>('on');
+   131→   131→  const [minimapEnabled, setMinimapEnabled] = useState(false);
+   132→   132→  const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
+   133→   133→  const [htmlPreviewOpen, setHtmlPreviewOpen] = useState(false);
+   134→   134→  const [audioEnabled, setAudioEnabledState] = useState(() => {
+   135→   135→    if (typeof window === 'undefined') return true;
+   136→   136→    return checkAudioEnabled();
+   137→   137→  });
+   138→   138→  const audioEnabledRef = useRef(audioEnabled);
+   139→   139→  audioEnabledRef.current = audioEnabled;
+   140→   140→  const [runResultIsHtml, setRunResultIsHtml] = useState(false);
+   141→   141→  const [runResultIsCss, setRunResultIsCss] = useState(false);
+   142→   142→  const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+   143→   143→  const [versionSnapshots, setVersionSnapshots] = useState<VersionSnapshot[]>([]);
+   144→   144→  const [activityLogOpen, setActivityLogOpen] = useState(false);
+   145→   145→  const [notificationsOpen, setNotificationsOpen] = useState(false);
+   146→   146→  const [activities, setActivities] = useState<ActivityLogEntry[]>([]);
+   147→   147→  const undoManagerRef = useRef<Y.UndoManager | null>(null);
+   148→   148→  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+   149→   149→  const lastSnapshotContentRef = useRef<string>('');
+   150→   150→
+   151→   151→  // Get language from file extension
+   152→   152→  const getLanguageFromFilename = useCallback(
+   153→   153→    (filename: string): string => {
+   154→   154→      const ext = filename.split('.').pop()?.toLowerCase() || '';
+   155→   155→      const map: Record<string, string> = {
+   156→   156→        js: 'javascript',
+   157→   157→        jsx: 'javascript',
+   158→   158→        ts: 'typescript',
+   159→   159→        tsx: 'typescript',
+   160→   160→        py: 'python',
+   161→   161→        java: 'java',
+   162→   162→        cpp: 'cpp',
+   163→   163→        c: 'cpp',
+   164→   164→        go: 'go',
+   165→   165→        html: 'html',
+   166→   166→        css: 'css',
+   167→   167→        sql: 'sql',
+   168→   168→        rs: 'rust',
+   169→   169→        md: 'markdown',
+   170→   170→        mdx: 'markdown',
+   171→   171→      };
+   172→   172→      return map[ext] || language;
+   173→   173→    },
+   174→   174→    [language]
+   175→   175→  );
+   176→   176→
+   177→   177→  // Read-only mode computations
+   178→   178→  const isOwner = useMemo(() => currentRoom?.ownerId === user?.id, [currentRoom, user]);
+   179→   179→  const isLockedForUser = useMemo(() => (currentRoom?.isReadOnly ?? false) && !isOwner, [currentRoom, isOwner]);
+   180→   180→
+   181→   181→  // Activity logging helper
+   182→   182→  const logActivity = useCallback(
+   183→   183→    (type: ActivityLogEntry['type'], detail: string) => {
+   184→   184→      if (!user || !currentRoomId) return;
+   185→   185→      const entry: ActivityLogEntry = {
+   186→   186→        id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+   187→   187→        type,
+   188→   188→        userId: user.id,
+   189→   189→        userName: user.name,
+   190→   190→        userColor: user.avatarColor,
+   191→   191→        detail,
+   192→   192→        timestamp: new Date().toISOString(),
+   193→   193→      };
+   194→   194→      setActivities((prev) => [...prev, entry]);
+   195→   195→
+   196→   196→      // Persist to room via PATCH
+   197→   197→      fetch(`/api/rooms/${currentRoomId}`, {
+   198→   198→        method: 'PUT',
+   199→   199→        headers: { 'Content-Type': 'application/json' },
+   200→   200→        credentials: 'include',
+   201→   201→        body: JSON.stringify({
+   202→   202→          activityLog: [...(currentRoom?.activityLog || []), entry],
+   203→   203→        }),
+   204→   204→      }).catch(() => {
+   205→   205→        // Silently fail — activity log persistence is non-critical
+   206→   206→      });
+   207→   207→    },
+   208→   208→    [user, currentRoomId, currentRoom]
+   209→   209→  );
+   210→   210→
+   211→   211→  // Initialize Y.js and Socket.io
+   212→   212→  useEffect(() => {
+   213→   213→    if (!currentRoomId || !user) return;
+   214→   214→
+   215→   215→    const ydoc = new Y.Doc();
+   216→   216→    ydocRef.current = ydoc;
+   217→   217→
+   218→   218→    const fileList = ydoc.getArray<string>('fileList');
+   219→   219→    fileListRef.current = fileList;
+   220→   220→
+   221→   221→    // Connect to y-websocket provider
+   222→   222→    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+   223→   223→    const wsUrl = `${wsProtocol}//${window.location.host}/yjs?XTransformPort=3003`;
+   224→   224→    const provider = new WebsocketProvider(wsUrl, currentRoomId, ydoc, {
+   225→   225→      connect: true,
+   226→   226→    });
+   227→   227→    providerRef.current = provider;
+   228→   228→
+   229→   229→    // Fetch room data
+   230→   230→    fetch(`/api/rooms/${currentRoomId}`, {
+   231→   231→      credentials: 'include',
+   232→   232→    })
+   233→   233→      .then((res) => res.json())
+   234→   234→      .then((data) => {
+   235→   235→        if (data.room) {
+   236→   236→          setCurrentRoom(data.room);
+   237→   237→          setLanguage(data.room.language || 'javascript');
+   238→   238→          if (data.room.activityLog) {
+   239→   239→            setActivities(data.room.activityLog);
+   240→   240→          }
+   241→   241→          const roomFiles: string[] = data.room.files?.map(
+   242→   242→            (f: { name: string }) => f.name
+   243→   243→          ) || ['index.js'];
+   244→   244→
+   245→   245→          if (fileList.length === 0) {
+   246→   246→            ydoc.transact(() => {
+   247→   247→              roomFiles.forEach((name: string) => {
+   248→   248→                if (!fileList.toArray().includes(name)) {
+   249→   249→                  fileList.push([name]);
+   250→   250→                }
+   251→   251→              });
+   252→   252→              data.room.files?.forEach(
+   253→   253→                (f: { name: string; content: string }) => {
+   254→   254→                  const ytext = ydoc.getText(f.name);
+   255→   255→                  if (!ytext.toString()) {
+   256→   256→                    ytext.insert(0, f.content);
+   257→   257→                  }
+   258→   258→                }
+   259→   259→              );
+   260→   260→            });
+   261→   261→          }
+   262→   262→
+   263→   263→          // Set first file as active
+   264→   264→          if (roomFiles.length > 0 && !initDoneRef.current) {
+   265→   265→            setCurrentFileName(roomFiles[0]);
+   266→   266→            initDoneRef.current = true;
+   267→   267→          }
+   268→   268→        }
+   269→   269→      })
+   270→   270→      .catch((err) => {
+   271→   271→        console.error('Failed to fetch room:', err);
+   272→   272→        toast.error('Failed to load room');
+   273→   273→      });
+   274→   274→
+   275→   275→    // Sync file list from Y.js
+   276→   276→    const updateFiles = () => {
+   277→   277→      const arr = fileList.toArray();
+   278→   278→      setFiles(arr);
+   279→   279→    };
+   280→   280→    fileList.observe(updateFiles);
+   281→   281→    updateFiles();
+   282→   282→
+   283→   283→    // Set up UndoManager for version history tracking
+   284→   284→    const undoManager = new Y.UndoManager(ydoc.getText(currentFileName), {
+   285→   285→      trackedOrigins: new Set(['local']),
+   286→   286→    });
+   287→   287→    undoManagerRef.current = undoManager;
+   288→   288→
+   289→   289→    const createSnapshot = (type: 'edit' | 'add' | 'delete') => {
+   290→   290→      const ytext = ydoc.getText(currentFileName);
+   291→   291→      const content = ytext.toString();
+   292→   292→      // Skip if content hasn't changed since last snapshot
+   293→   293→      if (content === lastSnapshotContentRef.current) return;
+   294→   294→      lastSnapshotContentRef.current = content;
+   295→   295→
+   296→   296→      const lines = content.split('\n');
+   297→   297→      const snapshot: VersionSnapshot = {
+   298→   298→        id: `snap-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+   299→   299→        timestamp: Date.now(),
+   300→   300→        content,
+   301→   301→        type,
+   302→   302→        lineCount: lines.length,
+   303→   303→        charCount: content.length,
+   304→   304→        fileName: currentFileName,
+   305→   305→        prevContent: undefined,
+   306→   306→      };
+   307→   307→
+   308→   308→      setVersionSnapshots((prev) => {
+   309→   309→        // Update prevContent on the new snapshot to point to the last one
+   310→   310→        const lastSnap = prev.length > 0 ? prev[prev.length - 1] : null;
+   311→   311→        if (lastSnap && lastSnap.fileName === currentFileName) {
+   312→   312→          snapshot.prevContent = lastSnap.content;
+   313→   313→        }
+   314→   314→        const updated = [...prev, snapshot];
+   315→   315→        // Limit to 50 snapshots
+   316→   316→        if (updated.length > 50) {
+   317→   317→          return updated.slice(updated.length - 50);
+   318→   318→        }
+   319→   319→        return updated;
+   320→   320→      });
+   321→   321→    };
+   322→   322→
+   323→   323→    // Debounced snapshot capture on undoable changes
+   324→   324→    const handleUndoManagerChange = () => {
+   325→   325→      if (debounceTimerRef.current) {
+   326→   326→        clearTimeout(debounceTimerRef.current);
+   327→   327→      }
+   328→   328→      debounceTimerRef.current = setTimeout(() => {
+   329→   329→        createSnapshot('edit');
+   330→   330→      }, 3000);
+   331→   331→    };
+   332→   332→
+   333→   333→    undoManager.on('stack-item-added', handleUndoManagerChange);
+   334→   334→
+   335→   335→    // Initial snapshot
+   336→   336→    setTimeout(() => {
+   337→   337→      const ytext = ydoc.getText(currentFileName);
+   338→   338→      const content = ytext.toString();
+   339→   339→      if (content) {
+   340→   340→        lastSnapshotContentRef.current = content;
+   341→   341→        setVersionSnapshots([{
+   342→   342→          id: `snap-init-${Date.now()}`,
+   343→   343→          timestamp: Date.now(),
+   344→   344→          content,
+   345→   345→          type: 'add',
+   346→   346→          lineCount: content.split('\n').length,
+   347→   347→          charCount: content.length,
+   348→   348→          fileName: currentFileName,
+   349→   349→        }]);
+   350→   350→      }
+   351→   351→    }, 1000);
+   352→   352→
+   353→   353→    // Connect Socket.io
+   354→   354→    const socket = io('/?XTransformPort=3003', {
+   355→   355→      transports: ['websocket', 'polling'],
+   356→   356→      reconnection: true,
+   357→   357→      reconnectionAttempts: 5,
+   358→   358→      reconnectionDelay: 1000,
+   359→   359→    });
+   360→   360→    socketRef.current = socket;
+   361→   361→
+   362→   362→    socket.on('connect', () => {
+   363→   363→      setConnected(true);
+   364→   364→      socket.emit('join_room', {
+   365→   365→        roomId: currentRoomId,
+   366→   366→        user: { id: user.id, name: user.name, color: user.avatarColor },
+   367→   367→      });
+   368→   368→      addNotification({ type: 'success', title: 'Room joined', message: `Connected to room ${currentRoomId}` });
+   369→   369→    });
+   370→   370→
+   371→   371→    socket.on('disconnect', () => {
+   372→   372→      setConnected(false);
+   373→   373→    });
+   374→   374→
+   375→   375→    socket.on('users_update', ({ users }: { users: any[] }) => {
+   376→   376→      setOnlineUsers(users.map((u) => ({ id: u.id, name: u.name, color: u.color })));
+   377→   377→    });
+   378→   378→
+   379→   379→    socket.on('chat_message', (msg: ChatMessage) => {
+   380→   380→      addChatMessage(msg);
+   381→   381→      // Only increment unread if panel is closed or on different tab
+   382→   382→      if (!rightPanelOpen || rightPanelTab !== 'chat') {
+   383→   383→        incrementUnreadChatCount();
+   384→   384→        // Play message sound and show toast when chat is not visible
+   385→   385→        playSound('message');
+   386→   386→        const preview = msg.text.length > 50 ? msg.text.slice(0, 50) + '…' : msg.text;
+   387→   387→        toast(`${msg.senderName}: ${preview}`, {
+   388→   388→          duration: 4000,
+   389→   389→          action: {
+   390→   390→            label: 'Open chat',
+   391→   391→            onClick: () => {
+   392→   392→              setRightPanelTab('chat');
+   393→   393→              setRightPanelOpen(true);
+   394→   394→              resetUnreadChatCount();
+   395→   395→            },
+   396→   396→          },
+   397→   397→        });
+   398→   398→      }
+   399→   399→    });
+   400→   400→
+   401→   401→    socket.on('user_joined', ({ text }: { text: string }) => {
+   402→   402→      playSound('join');
+   403→   403→      addNotification({ type: 'info', title: 'Collaborator joined', message: text });
+   404→   404→      addChatMessage({
+   405→   405→        id: `sys-${Date.now()}-joined`,
+   406→   406→        roomId: currentRoomId,
+   407→   407→        senderId: 'system',
+   408→   408→        senderName: 'System',
+   409→   409→        senderColor: '#484f58',
+   410→   410→        text,
+   411→   411→        system: true,
+   412→   412→      });
+   413→   413→    });
+   414→   414→
+   415→   415→    socket.on('user_left', ({ text }: { text: string }) => {
+   416→   416→      playSound('leave');
+   417→   417→      addNotification({ type: 'warning', title: 'Collaborator left', message: text });
+   418→   418→      addChatMessage({
+   419→   419→        id: `sys-${Date.now()}-left`,
+   420→   420→        roomId: currentRoomId,
+   421→   421→        senderId: 'system',
+   422→   422→        senderName: 'System',
+   423→   423→        senderColor: '#484f58',
+   424→   424→        text,
+   425→   425→        system: true,
+   426→   426→      });
+   427→   427→    });
+   428→   428→
+   429→   429→    return () => {
+   430→   430→      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+   431→   431→      undoManager.destroy();
+   432→   432→      socket.emit('leave_room', {
+   433→   433→        roomId: currentRoomId,
+   434→   434→        user: { id: user.id, name: user.name, color: user.avatarColor },
+   435→   435→      });
+   436→   436→      socket.disconnect();
+   437→   437→      provider?.destroy();
+   438→   438→      ydoc?.destroy();
+   439→   439→      ydocRef.current = null;
+   440→   440→      providerRef.current = null;
+   441→   441→      fileListRef.current = null;
+   442→   442→      initDoneRef.current = false;
+   443→   443→    };
+   444→   444→  }, [currentRoomId]);
+   445→   445→
+   446→   446→  // Bind Monaco to Y.Text when file changes
+   447→   447→  const handleEditorMount: OnMount = useCallback(
+   448→   448→    (editorInstance, monaco) => {
+   449→   449→      editorRef.current = editorInstance;
+   450→   450→      monacoRef.current = monaco;
+   451→   451→
+   452→   452→      if (ydocRef.current && providerRef.current) {
+   453→   453→        const ytext = ydocRef.current.getText(currentFileName);
+   454→   454→        const model = editorInstance.getModel();
+   455→   455→        if (model) {
+   456→   456→          const content = ytext.toString();
+   457→   457→          editorInstance.setValue(content);
+   458→   458→          bindingRef.current?.destroy();
+   459→   459→          bindingRef.current = new MonacoBinding(
+   460→   460→            ytext,
+   461→   461→            model,
+   462→   462→            new Set([editorInstance]),
+   463→   463→            providerRef.current.awareness
+   464→   464→          );
+   465→   465→        }
+   466→   466→      }
+   467→   467→
+   468→   468→      // Set up awareness for cursor color
+   469→   469→      if (providerRef.current && user) {
+   470→   470→        providerRef.current.awareness.setLocalStateField('user', {
+   471→   471→          name: user.name,
+   472→   472→          color: user.avatarColor,
+   473→   473→        });
+   474→   474→      }
+   475→   475→
+   476→   476→      // Track current code — also sync immediately on mount
+   477→   477→      const syncCode = () => setCurrentCode(editorInstance.getValue());
+   478→   478→      editorInstance.onDidChangeModelContent(syncCode);
+   479→   479→      // Initial sync after a tick to capture content set during mount
+   480→   480→      setTimeout(syncCode, 100);
+   481→   481→
+   482→   482→      // Track cursor position
+   483→   483→      editorInstance.onDidChangeCursorPosition((e) => {
+   484→   484→        setCursorPosition({ line: e.position.lineNumber, column: e.position.column });
+   485→   485→      });
+   486→   486→    },
+   487→   487→    [currentFileName, user]
+   488→   488→  );
+   489→   489→
+   490→   490→  // Rebind when file changes
+   491→   491→  useEffect(() => {
+   492→   492→    if (!editorRef.current || !ydocRef.current || !providerRef.current) return;
+   493→   493→
+   494→   494→    const ytext = ydocRef.current.getText(currentFileName);
+   495→   495→    const content = ytext.toString();
+   496→   496→    const editorInstance = editorRef.current;
+   497→   497→    const model = editorInstance.getModel();
+   498→   498→
+   499→   499→    if (model) {
+   500→   500→      // Check if the file already has content in Yjs
+   501→   501→      const modelValue = model.getValue();
+   502→   502→      const yjsValue = ytext.toString();
+   503→   503→
+   504→   504→      if (modelValue !== yjsValue) {
+   505→   505→        editorInstance.setValue(yjsValue);
+   506→   506→        setCurrentCode(yjsValue);
+   507→   507→      }
+   508→   508→
+   509→   509→      bindingRef.current?.destroy();
+   510→   510→      bindingRef.current = new MonacoBinding(
+   511→   511→        ytext,
+   512→   512→        model,
+   513→   513→        new Set([editorInstance]),
+   514→   514→        providerRef.current.awareness
+   515→   515→      );
+   516→   516→    }
+   517→   517→  }, [currentFileName]);
+   518→   518→
+   519→   519→  // File operations
+   520→   520→  const handleCreateFile = useCallback(
+   521→   521→    (name: string) => {
+   522→   522→      if (isLockedForUser) {
+   523→   523→        toast.error('This room is in read-only mode');
+   524→   524→        return;
+   525→   525→      }
+   526→   526→      if (!fileListRef.current || !ydocRef.current) return;
+   527→   527→      const list = fileListRef.current;
+   528→   528→      if (!list.toArray().includes(name)) {
+   529→   529→        list.push([name]);
+   530→   530→        // Initialize empty content if not exists
+   531→   531→        const ytext = ydocRef.current.getText(name);
+   532→   532→        if (!ytext.toString()) {
+   533→   533→          ytext.insert(0, '');
+   534→   534→        }
+   535→   535→        setCurrentFileName(name);
+   536→   536→        logActivity('file_add', `added file ${name}`);
+   537→   537→      }
+   538→   538→    },
+   539→   539→    [isLockedForUser, logActivity]
+   540→   540→  );
+   541→   541→
+   542→   542→  const handleRenameFile = useCallback(
+   543→   543→    (oldName: string, newName: string) => {
+   544→   544→      if (!fileListRef.current || !ydocRef.current) return;
+   545→   545→      const list = fileListRef.current;
+   546→   546→      const idx = list.toArray().indexOf(oldName);
+   547→   547→      if (idx === -1) return;
+   548→   548→
+   549→   549→      // Copy content to new name
+   550→   550→      const ydoc = ydocRef.current;
+   551→   551→      const oldContent = ydoc.getText(oldName).toString();
+   552→   552→      ydoc.getText(newName).insert(0, oldContent);
+   553→   553→      ydoc.getText(oldName).delete(0, oldContent.length);
+   554→   554→
+   555→   555→      // Update file list
+   556→   556→      list.delete(idx, 1);
+   557→   557→      list.insert(idx, [newName]);
+   558→   558→
+   559→   559→      // Update current file if renamed
+   560→   560→      if (currentFileName === oldName) {
+   561→   561→        setCurrentFileName(newName);
+   562→   562→      }
+   563→   563→    },
+   564→   564→    [currentFileName, setCurrentFileName]
+   565→   565→  );
+   566→   566→
+   567→   567→  // Reorder files in Y.js
+   568→   568→  const handleReorderFiles = useCallback(
+   569→   569→    (newOrder: string[]) => {
+   570→   570→      if (!fileListRef.current || !ydocRef.current) return;
+   571→   571→      const list = fileListRef.current;
+   572→   572→      const current = list.toArray();
+   573→   573→      // Only update if order actually changed
+   574→   574→      if (JSON.stringify(current) === JSON.stringify(newOrder)) return;
+   575→   575→      ydocRef.current.transact(() => {
+   576→   576→        list.delete(0, list.length);
+   577→   577→        list.insert(0, newOrder);
+   578→   578→      });
+   579→   579→      logActivity('file_reorder', 'reordered files in the file tree');
+   580→   580→    },
+   581→   581→    [logActivity]
+   582→   582→  );
+   583→   583→
+   584→   584→  const handleDeleteFile = useCallback(
+   585→   585→    (name: string) => {
+   586→   586→      if (isLockedForUser) {
+   587→   587→        toast.error('This room is in read-only mode');
+   588→   588→        return;
+   589→   589→      }
+   590→   590→      if (!fileListRef.current || !ydocRef.current) return;
+   591→   591→      const list = fileListRef.current;
+   592→   592→      const idx = list.toArray().indexOf(name);
+   593→   593→      if (idx === -1) return;
+   594→   594→
+   595→   595→      list.delete(idx, 1);
+   596→   596→
+   597→   597→      // Delete the Y.Text content
+   598→   598→      const ytext = ydocRef.current.getText(name);
+   599→   599→      const content = ytext.toString();
+   600→   600→      ytext.delete(0, content.length);
+   601→   601→
+   602→   602→      // Select another file
+   603→   603→      if (currentFileName === name) {
+   604→   604→        const remaining = list.toArray();
+   605→   605→        if (remaining.length > 0) {
+   606→   606→          setCurrentFileName(remaining[0]);
+   607→   607→        } else {
+   608→   608→          // Create a default file
+   609→   609→          handleCreateFile('index.js');
+   610→   610→        }
+   611→   611→      }
+   612→   612→      logActivity('file_delete', `deleted file ${name}`);
+   613→   613→    },
+   614→   614→    [currentFileName, setCurrentFileName, handleCreateFile, isLockedForUser, logActivity]
+   615→   615→  );
+   616→   616→
+   617→   617→  // Run code
+   618→   618→  const handleRun = useCallback(async () => {
+   619→   619→    if (isLockedForUser) {
+   620→   620→      toast.error('This room is in read-only mode');
+   621→   621→      return;
+   622→   622→    }
+   623→   623→    if (!ydocRef.current) return;
+   624→   624→    setIsRunning(true);
+   625→   625→    setOutput('');
+   626→   626→    setRunResultIsHtml(false);
+   627→   627→    setRunResultIsCss(false);
+   628→   628→    setOutputPanelOpen(true);
+   629→   629→    playSound('run_start');
+   630→   630→    try {
+   631→   631→      const ytext = ydocRef.current.getText(currentFileName);
+   632→   632→      const code = ytext?.toString() || '';
+   633→   633→      const fileLanguage = getLanguageFromFilename(currentFileName);
+   634→   634→
+   635→   635→      const res = await fetch('/api/run', {
+   636→   636→        method: 'POST',
+   637→   637→        headers: { 'Content-Type': 'application/json' },
+   638→   638→        credentials: 'include',
+   639→   639→        body: JSON.stringify({ code, language: fileLanguage }),
+   640→   640→      });
+   641→   641→      const data = await res.json();
+   642→   642→      const hasErrors = !!data.error;
+   643→   643→      if (data.isHtml) {
+   644→   644→        setRunResultIsHtml(true);
+   645→   645→        setOutput(data.output || '');
+   646→   646→      } else if (data.isCss) {
+   647→   647→        setRunResultIsCss(true);
+   648→   648→        setOutput(data.output || 'CSS preview available in the Preview panel');
+   649→   649→      } else {
+   650→   650→        setOutput(data.output || data.error || 'No output');
+   651→   651→      }
+   652→   652→      playSound('run_complete', { hasErrors });
+   653→   653→      if (hasErrors) {
+   654→   654→        const firstLine = (data.error || 'Unknown error').split('\n')[0];
+   655→   655→        toast.error(firstLine.length > 80 ? firstLine.slice(0, 80) + '…' : firstLine);
+   656→   656→        addNotification({ type: 'error', title: 'Run error', message: firstLine.length > 120 ? firstLine.slice(0, 120) + '…' : firstLine });
+   657→   657→      } else {
+   658→   658→        toast.success('Code executed successfully');
+   659→   659→        addNotification({ type: 'success', title: 'Code ran', message: `${currentFileName} executed successfully` });
+   660→   660→      }
+   661→   661→      logActivity('run', `ran code in ${currentFileName}`);
+   662→   662→    } catch {
+   663→   663→      setOutput('Error: Failed to execute code');
+   664→   664→      playSound('error');
+   665→   665→      toast.error('Failed to execute code');
+   666→   666→    } finally {
+   667→   667→      setIsRunning(false);
+   668→   668→    }
+   669→   669→  }, [currentFileName, getLanguageFromFilename, setIsRunning, setOutput, setOutputPanelOpen, isLockedForUser, logActivity]);
+   670→   670→
+   671→   671→  // Save
+   672→   672→  const handleSave = useCallback(async () => {
+   673→   673→    if (!currentRoomId || !ydocRef.current) return;
+   674→   674→    setIsSaving(true);
+   675→   675→    try {
+   676→   676→      const fileNames = fileListRef.current?.toArray() || files;
+   677→   677→      const fileEntries = fileNames.map((name) => ({
+   678→   678→        name,
+   679→   679→        content: ydocRef.current?.getText(name)?.toString() || '',
+   680→   680→      }));
+   681→   681→      await fetch(`/api/rooms/${currentRoomId}/save`, {
+   682→   682→        method: 'POST',
+   683→   683→        headers: { 'Content-Type': 'application/json' },
+   684→   684→        credentials: 'include',
+   685→   685→        body: JSON.stringify({ files: fileEntries }),
+   686→   686→      });
+   687→   687→      playSound('save');
+   688→   688→      toast.success('Room saved');
+   689→   689→      addNotification({ type: 'success', title: 'File saved', message: 'Room saved successfully' });
+   690→   690→      logActivity('save', 'saved the document');
+   691→   691→    } catch {
+   692→   692→      playSound('error');
+   693→   693→      toast.error('Failed to save');
+   694→   694→      addNotification({ type: 'error', title: 'Save failed', message: 'Failed to save room' });
+   695→   695→    } finally {
+   696→   696→      setIsSaving(false);
+   697→   697→    }
+   698→   698→  }, [currentRoomId, files, logActivity]);
+   699→   699→
+   700→   700→  // Format Document
+   701→   701→  const handleFormat = useCallback(() => {
+   702→   702→    const editorInstance = editorRef.current;
+   703→   703→    if (!editorInstance) return;
+   704→   704→    const action = editorInstance.getAction('editor.action.formatDocument');
+   705→   705→    if (action) {
+   706→   706→      action.run();
+   707→   707→      toast.success('Document formatted');
+   708→   708→    } else {
+   709→   709→      // Fallback: simple indentation cleanup
+   710→   710→      const model = editorInstance.getModel();
+   711→   711→      if (!model) return;
+   712→   712→      const lines = model.getValue().split('\n');
+   713→   713→      let indent = 0;
+   714→   714→      const formatted = lines
+   715→   715→        .map((line) => {
+   716→   716→          const trimmed = line.trim();
+   717→   717→          if (!trimmed) return '';
+   718→   718→          // Decrease indent for closing braces/brackets
+   719→   719→          if (/^[}\])]/.test(trimmed)) indent = Math.max(0, indent - 1);
+   720→   720→          const result = '  '.repeat(indent) + trimmed;
+   721→   721→          // Increase indent for opening braces/brackets
+   722→   722→          if (/[{(\[]\s*$/.test(trimmed)) indent++;
+   723→   723→          return result;
+   724→   724→        })
+   725→   725→        .join('\n');
+   726→   726→      editorInstance.setValue(formatted);
+   727→   727→      toast.success('Document formatted');
+   728→   728→    }
+   729→   729→  }, []);
+   730→   730→
+   731→   731→  // Share
+   732→   732→  const handleShare = useCallback(() => {
+   733→   733→    if (!currentRoom) return;
+   734→   734→    const inviteLink = `${window.location.origin}?join=${currentRoom.inviteCode}`;
+   735→   735→    navigator.clipboard.writeText(inviteLink).then(
+   736→   736→      () => toast.success('Invite link copied!'),
+   737→   737→      () => toast.error('Failed to copy link')
+   738→   738→    );
+   739→   739→  }, [currentRoom]);
+   740→   740→
+   741→   741→  // Export room as ZIP
+   742→   742→  const handleExportRoom = useCallback(async () => {
+   743→   743→    if (!currentRoomId) return;
+   744→   744→    try {
+   745→   745→      const res = await fetch(`/api/rooms/${currentRoomId}/export`, {
+   746→   746→        credentials: 'include',
+   747→   747→      });
+   748→   748→      if (!res.ok) {
+   749→   749→        toast.error('Failed to export room');
+   750→   750→        return;
+   751→   751→      }
+   752→   752→      const blob = await res.blob();
+   753→   753→      const url = URL.createObjectURL(blob);
+   754→   754→      const a = document.createElement('a');
+   755→   755→      a.href = url;
+   756→   756→      a.download = `${(currentRoom?.name || 'room').replace(/[^a-zA-Z0-9_\-.]/g, '_')}.zip`;
+   757→   757→      document.body.appendChild(a);
+   758→   758→      a.click();
+   759→   759→      document.body.removeChild(a);
+   760→   760→      URL.revokeObjectURL(url);
+   761→   761→      toast.success('Room exported successfully!');
+   762→   762→      logActivity('export', 'exported room as ZIP');
+   763→   763→    } catch {
+   764→   764→      toast.error('Failed to export room');
+   765→   765→    }
+   766→   766→  }, [currentRoomId, currentRoom, logActivity]);
+   767→   767→
+   768→   768→  // Chat send
+   769→   769→  const handleSendMessage = useCallback(
+   770→   770→    (text: string) => {
+   771→   771→      if (!socketRef.current || !user || !currentRoomId) return;
+   772→   772→      const msg: ChatMessage = {
+   773→   773→        id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+   774→   774→        roomId: currentRoomId,
+   775→   775→        senderId: user.id,
+   776→   776→        senderName: user.name,
+   777→   777→        senderColor: user.avatarColor,
+   778→   778→        text,
+   779→   779→        createdAt: new Date().toISOString(),
+   780→   780→      };
+   781→   781→      socketRef.current.emit('chat_message', { roomId: currentRoomId, message: msg });
+   782→   782→    },
+   783→   783→    [user, currentRoomId]
+   784→   784→  );
+   785→   785→
+   786→   786→  // Panel toggles
+   787→   787→  const handleToggleChat = useCallback(() => {
+   788→   788→    if (rightPanelOpen && rightPanelTab === 'chat') {
+   789→   789→      setRightPanelOpen(false);
+   790→   790→    } else {
+   791→   791→      setRightPanelTab('chat');
+   792→   792→      setRightPanelOpen(true);
+   793→   793→      resetUnreadChatCount();
+   794→   794→    }
+   795→   795→  }, [rightPanelOpen, rightPanelTab, setRightPanelOpen, setRightPanelTab, resetUnreadChatCount]);
+   796→   796→
+   797→   797→  const handleToggleAI = useCallback(() => {
+   798→   798→    if (rightPanelOpen && rightPanelTab === 'ai') {
+   799→   799→      setRightPanelOpen(false);
+   800→   800→    } else {
+   801→   801→      setRightPanelTab('ai');
+   802→   802→      setRightPanelOpen(true);
+   803→   803→    }
+   804→   804→  }, [rightPanelOpen, rightPanelTab, setRightPanelOpen, setRightPanelTab]);
+   805→   805→
+   806→   806→  const handleBack = useCallback(() => {
+   807→   807→    setCurrentRoomId('');
+   808→   808→    setCurrentRoom(null);
+   809→   809→    setCurrentPage('dashboard');
+   810→   810→  }, [setCurrentRoomId, setCurrentRoom, setCurrentPage]);
+   811→   811→
+   812→   812→  // Determine if current file supports HTML preview
+   813→   813→  const isHtmlFile = useMemo(() => {
+   814→   814→    const ext = currentFileName.split('.').pop()?.toLowerCase() || '';
+   815→   815→    return ext === 'html' || ext === 'htm' || ext === 'css';
+   816→   816→  }, [currentFileName]);
+   817→   817→
+   818→   818→  // Determine if current file is a Markdown file
+   819→   819→  const isMarkdownFile = useMemo(() => {
+   820→   820→    const ext = currentFileName.split('.').pop()?.toLowerCase() || '';
+   821→   821→    return ext === 'md' || ext === 'mdx';
+   822→   822→  }, [currentFileName]);
+   823→   823→
+   824→   824→  const handleTogglePreview = useCallback(() => {
+   825→   825→    setHtmlPreviewOpen((v) => !v);
+   826→   826→  }, []);
+   827→   827→
+   828→   828→  // Version history restore
+   829→   829→  const handleVersionRestore = useCallback((snapshot: VersionSnapshot) => {
+   830→   830→    if (!ydocRef.current || !editorRef.current) return;
+   831→   831→    const ytext = ydocRef.current.getText(currentFileName);
+   832→   832→    const currentContent = ytext.toString();
+   833→   833→    ytext.delete(0, currentContent.length);
+   834→   834→    ytext.insert(0, snapshot.content);
+   835→   835→    lastSnapshotContentRef.current = snapshot.content;
+   836→   836→    setCurrentCode(snapshot.content);
+   837→   837→  }, [currentFileName]);
+   838→   838→
+   839→   839→  // Version history toggle
+   840→   840→  const handleToggleVersionHistory = useCallback(() => {
+   841→   841→    setVersionHistoryOpen((v) => !v);
+   842→   842→  }, []);
+   843→   843→
+   844→   844→  // Audio toggle
+   845→   845→  const handleToggleAudio = useCallback(() => {
+   846→   846→    const newState = doToggleAudio();
+   847→   847→    setAudioEnabledState(newState);
+   848→   848→    if (newState) {
+   849→   849→      playSound('success');
+   850→   850→      toast.success('Audio notifications enabled');
+   851→   851→    } else {
+   852→   852→      toast.info('Audio notifications disabled');
+   853→   853→    }
+   854→   854→  }, []);
+   855→   855→
+   856→   856→  const handleLanguageChange = useCallback(
+   857→   857→    (lang: string) => {
+   858→   858→      setLanguage(lang);
+   859→   859→      logActivity('language_change', `changed language to ${lang}`);
+   860→   860→    },
+   861→   861→    [setLanguage, logActivity]
+   862→   862→  );
+   863→   863→
+   864→   864→  const handleRenameRoom = useCallback(
+   865→   865→    async (name: string) => {
+   866→   866→      if (!currentRoomId) return;
+   867→   867→      try {
+   868→   868→        const res = await fetch(`/api/rooms/${currentRoomId}`, {
+   869→   869→          method: 'PUT',
+   870→   870→          headers: { 'Content-Type': 'application/json' },
+   871→   871→          credentials: 'include',
+   872→   872→          body: JSON.stringify({ name }),
+   873→   873→        });
+   874→   874→        const data = await res.json();
+   875→   875→        if (data.room) {
+   876→   876→          setCurrentRoom(data.room);
+   877→   877→        }
+   878→   878→      } catch {
+   879→   879→        toast.error('Failed to rename room');
+   880→   880→      }
+   881→   881→    },
+   882→   882→    [currentRoomId, setCurrentRoom]
+   883→   883→  );
+   884→   884→
+   885→   885→  const handleSettingsUpdate = useCallback(
+   886→   886→    (updatedRoom: Room) => {
+   887→   887→      setCurrentRoom(updatedRoom);
+   888→   888→      setLanguage(updatedRoom.language);
+   889→   889→    },
+   890→   890→    [setCurrentRoom, setLanguage]
+   891→   891→  );
+   892→   892→
+   893→   893→  // Apply word wrap, minimap, and read-only options to Monaco
+   894→   894→  useEffect(() => {
+   895→   895→    editorRef.current?.updateOptions({
+   896→   896→      wordWrap,
+   897→   897→      minimap: { enabled: minimapEnabled },
+   898→   898→      readOnly: isLockedForUser,
+   899→   899→    });
+   900→   900→  }, [wordWrap, minimapEnabled, isLockedForUser]);
+   901→   901→
+   902→   902→  // Build command palette items
+   903→   903→  const commandItems: CommandItem[] = useMemo(
+   904→   904→    () => [
+   905→   905→      {
+   906→   906→        id: 'new-file',
+   907→   907→        label: 'New File',
+   908→   908→        icon: FilePlus,
+   909→   909→        category: 'File Operations',
+   910→   910→        action: () => {
+   911→   911→          const name = window.prompt('Enter file name:', 'untitled.js');
+   912→   912→          if (name?.trim()) handleCreateFile(name.trim());
+   913→   913→        },
+   914→   914→      },
+   915→   915→      {
+   916→   916→        id: 'rename-file',
+   917→   917→        label: 'Rename File',
+   918→   918→        icon: Pencil,
+   919→   919→        category: 'File Operations',
+   920→   920→        action: () => {
+   921→   921→          const newName = window.prompt(
+   922→   922→            'Enter new name:',
+   923→   923→            currentFileName
+   924→   924→          );
+   925→   925→          if (newName?.trim() && newName.trim() !== currentFileName) {
+   926→   926→            handleRenameFile(currentFileName, newName.trim());
+   927→   927→          }
+   928→   928→        },
+   929→   929→      },
+   930→   930→      {
+   931→   931→        id: 'delete-file',
+   932→   932→        label: 'Delete Current File',
+   933→   933→        icon: Trash2,
+   934→   934→        category: 'File Operations',
+   935→   935→        action: () => {
+   936→   936→          if (files.length <= 1) {
+   937→   937→            toast.error('Cannot delete the only file');
+   938→   938→            return;
+   939→   939→          }
+   940→   940→          handleDeleteFile(currentFileName);
+   941→   941→        },
+   942→   942→      },
+   943→   943→      {
+   944→   944→        id: 'save-room',
+   945→   945→        label: 'Save Room',
+   946→   946→        icon: Save,
+   947→   947→        shortcut: ['Ctrl', 'S'],
+   948→   948→        category: 'File Operations',
+   949→   949→        action: handleSave,
+   950→   950→      },
+   951→   951→      {
+   952→   952→        id: 'export-room',
+   953→   953→        label: 'Export Room as ZIP',
+   954→   954→        icon: Download,
+   955→   955→        category: 'File Operations',
+   956→   956→        action: handleExportRoom,
+   957→   957→      },
+   958→   958→      {
+   959→   959→        id: 'run-code',
+   960→   960→        label: 'Run Code',
+   961→   961→        icon: Play,
+   962→   962→        shortcut: ['Ctrl', 'Enter'],
+   963→   963→        category: 'Editor Actions',
+   964→   964→        action: handleRun,
+   965→   965→      },
+   966→   966→      {
+   967→   967→        id: 'toggle-terminal',
+   968→   968→        label: 'Toggle Terminal',
+   969→   969→        icon: Terminal,
+   970→   970→        category: 'Editor Actions',
+   971→   971→        action: () => setOutputPanelOpen(!outputPanelOpen),
+   972→   972→      },
+   973→   973→      {
+   974→   974→        id: 'toggle-side-panel',
+   975→   975→        label: 'Toggle Side Panel',
+   976→   976→        icon: PanelRight,
+   977→   977→        shortcut: ['Ctrl', 'B'],
+   978→   978→        category: 'Editor Actions',
+   979→   979→        action: () => setRightPanelOpen(!rightPanelOpen),
+   980→   980→      },
+   981→   981→      {
+   982→   982→        id: 'format-document',
+   983→   983→        label: 'Format Document',
+   984→   984→        icon: Paintbrush,
+   985→   985→        shortcut: ['Shift', 'Alt', 'F'],
+   986→   986→        category: 'Editor Actions',
+   987→   987→        action: handleFormat,
+   988→   988→      },
+   989→   989→      {
+   990→   990→        id: 'go-to-dashboard',
+   991→   991→        label: 'Go to Dashboard',
+   992→   992→        icon: LayoutDashboard,
+   993→   993→        category: 'Navigation',
+   994→   994→        action: handleBack,
+   995→   995→      },
+   996→   996→      {
+   997→   997→        id: 'open-settings',
+   998→   998→        label: 'Open Settings',
+   999→   999→        icon: Settings,
+  1000→  1000→        category: 'Navigation',
+  1001→  1001→        action: () => setSettingsOpen(true),
+  1002→  1002→      },
+  1003→  1003→      {
+  1004→  1004→        id: 'toggle-shortcuts',
+  1005→  1005→        label: 'Toggle Keyboard Shortcuts',
+  1006→  1006→        icon: Keyboard,
+  1007→  1007→        shortcut: ['Ctrl', '/'],
+  1008→  1008→        category: 'Navigation',
+  1009→  1009→        action: () => setShortcutsOpen((v) => !v),
+  1010→  1010→      },
+  1011→  1011→      {
+  1012→  1012→        id: 'toggle-word-wrap',
+  1013→  1013→        label: 'Toggle Word Wrap',
+  1014→  1014→        icon: WrapText,
+  1015→  1015→        category: 'Editor',
+  1016→  1016→        action: () =>
+  1017→  1017→          setWordWrap((v) => (v === 'on' ? 'off' : 'on')),
+  1018→  1018→      },
+  1019→  1019→      {
+  1020→  1020→        id: 'toggle-minimap',
+  1021→  1021→        label: 'Toggle Minimap',
+  1022→  1022→        icon: Map,
+  1023→  1023→        category: 'View',
+  1024→  1024→        action: () => setMinimapEnabled((v) => !v),
+  1025→  1025→      },
+  1026→  1026→      {
+  1027→  1027→        id: 'find',
+  1028→  1028→        label: 'Find in File',
+  1029→  1029→        icon: Search,
+  1030→  1030→        shortcut: ['Ctrl', 'F'],
+  1031→  1031→        category: 'Editor Actions',
+  1032→  1032→        action: () => editorRef.current?.getAction('actions.find')?.run(),
+  1033→  1033→      },
+  1034→  1034→      {
+  1035→  1035→        id: 'replace',
+  1036→  1036→        label: 'Find and Replace',
+  1037→  1037→        icon: Replace,
+  1038→  1038→        shortcut: ['Ctrl', 'H'],
+  1039→  1039→        category: 'Editor Actions',
+  1040→  1040→        action: () => editorRef.current?.getAction('editor.action.startFindReplaceAction')?.run(),
+  1041→  1041→      },
+  1042→  1042→      {
+  1043→  1043→        id: 'quick-open-file',
+  1044→  1044→        label: 'Quick Open File',
+  1045→  1045→        icon: FileSearch,
+  1046→  1046→        shortcut: ['Ctrl', 'P'],
+  1047→  1047→        category: 'Navigation',
+  1048→  1048→        action: () => {
+  1049→  1049→          if (files.length <= 1) return;
+  1050→  1050→          setFileSearchFiles(
+  1051→  1051→            files.map((f) => ({
+  1052→  1052→              name: f,
+  1053→  1053→              action: () => setCurrentFileName(f),
+  1054→  1054→            }))
+  1055→  1055→          );
+  1056→  1056→          setCommandFilter(null);
+  1057→  1057→          setCommandPaletteOpen(true);
+  1058→  1058→        },
+  1059→  1059→      },
+  1060→  1060→      {
+  1061→  1061→        id: 'toggle-preview',
+  1062→  1062→        label: 'Toggle Preview',
+  1063→  1063→        icon: Eye,
+  1064→  1064→        shortcut: ['Ctrl', 'Shift', 'V'],
+  1065→  1065→        category: 'View',
+  1066→  1066→        action: handleTogglePreview,
+  1067→  1067→      },
+  1068→  1068→      {
+  1069→  1069→        id: 'toggle-version-history',
+  1070→  1070→        label: 'Toggle Version History',
+  1071→  1071→        icon: History,
+  1072→  1072→        shortcut: ['Ctrl', 'Shift', 'H'],
+  1073→  1073→        category: 'View',
+  1074→  1074→        action: handleToggleVersionHistory,
+  1075→  1075→      },
+  1076→  1076→      {
+  1077→  1077→        id: 'toggle-activity-log',
+  1078→  1078→        label: 'Toggle Activity Log',
+  1079→  1079→        icon: ClipboardList,
+  1080→  1080→        shortcut: ['Ctrl', 'Shift', 'A'],
+  1081→  1081→        category: 'View',
+  1082→  1082→        action: () => setActivityLogOpen((v) => !v),
+  1083→  1083→      },
+  1084→  1084→      {
+  1085→  1085→        id: 'toggle-notifications',
+  1086→  1086→        label: 'Toggle Notifications',
+  1087→  1087→        icon: Inbox,
+  1088→  1088→        shortcut: ['Ctrl', 'Shift', 'N'],
+  1089→  1089→        category: 'View',
+  1090→  1090→        action: () => setNotificationsOpen((v) => !v),
+  1091→  1091→      },
+  1092→  1092→    ],
+  1093→  1093→    [
+  1094→  1094→      handleCreateFile,
+  1095→  1095→      handleRenameFile,
+  1096→  1096→      handleDeleteFile,
+  1097→  1097→      handleSave,
+  1098→  1098→      handleRun,
+  1099→  1099→      handleFormat,
+  1100→  1100→      handleExportRoom,
+  1101→  1101→      handleBack,
+  1102→  1102→      currentFileName,
+  1103→  1103→      files.length,
+  1104→  1104→      outputPanelOpen,
+  1105→  1105→      rightPanelOpen,
+  1106→  1106→      htmlPreviewOpen,
+  1107→  1107→      handleToggleVersionHistory,
+  1108→  1108→    ]
+  1109→  1109→  );
+  1110→  1110→
+  1111→  1111→  // Keyboard shortcuts — capture phase to intercept before Monaco
+  1112→  1112→  useEffect(() => {
+  1113→  1113→    const handleKeyDown = (e: KeyboardEvent) => {
+  1114→  1114→      // When command palette is open, let it handle everything
+  1115→  1115→      if (commandPaletteOpen) return;
+  1116→  1116→
+  1117→  1117→      const isMod = e.metaKey || e.ctrlKey;
+  1118→  1118→      if (isMod && e.key === 's') {
+  1119→  1119→        e.preventDefault();
+  1120→  1120→        e.stopPropagation();
+  1121→  1121→        handleSave();
+  1122→  1122→      } else if (isMod && e.key === 'Enter') {
+  1123→  1123→        e.preventDefault();
+  1124→  1124→        e.stopPropagation();
+  1125→  1125→        handleRun();
+  1126→  1126→      } else if (isMod && e.shiftKey && (e.key === 'P' || e.key === 'p')) {
+  1127→  1127→        e.preventDefault();
+  1128→  1128→        e.stopPropagation();
+  1129→  1129→        setCommandPaletteOpen(true);
+  1130→  1130→      } else if (isMod && e.key === 'b') {
+  1131→  1131→        e.preventDefault();
+  1132→  1132→        e.stopPropagation();
+  1133→  1133→        setRightPanelOpen(!rightPanelOpen);
+  1134→  1134→      } else if (isMod && !e.shiftKey && (e.key === 'p' || e.key === 'P')) {
+  1135→  1135→        // Ctrl+P: Open file search in command palette
+  1136→  1136→        e.preventDefault();
+  1137→  1137→        e.stopPropagation();
+  1138→  1138→        if (files.length > 1) {
+  1139→  1139→          setFileSearchFiles(
+  1140→  1140→            files.map((f) => ({
+  1141→  1141→              name: f,
+  1142→  1142→              action: () => setCurrentFileName(f),
+  1143→  1143→            }))
+  1144→  1144→          );
+  1145→  1145→          setCommandFilter(null);
+  1146→  1146→          setCommandPaletteOpen(true);
+  1147→  1147→        }
+  1148→  1148→      } else if (isMod && e.key === '/') {
+  1149→  1149→        e.preventDefault();
+  1150→  1150→        e.stopPropagation();
+  1151→  1151→        setShortcutsOpen(true);
+  1152→  1152→      } else if (isMod && e.shiftKey && (e.key === 'V' || e.key === 'v')) {
+  1153→  1153→        e.preventDefault();
+  1154→  1154→        e.stopPropagation();
+  1155→  1155→        if (isHtmlFile || isMarkdownFile) handleTogglePreview();
+  1156→  1156→      } else if (isMod && e.shiftKey && (e.key === 'H' || e.key === 'h')) {
+  1157→  1157→        e.preventDefault();
+  1158→  1158→        e.stopPropagation();
+  1159→  1159→        handleToggleVersionHistory();
+  1160→  1160→      } else if (isMod && e.shiftKey && (e.key === 'N' || e.key === 'n')) {
+  1161→  1161→        e.preventDefault();
+  1162→  1162→        e.stopPropagation();
+  1163→  1163→        setNotificationsOpen((v) => !v);
+  1164→  1164→      } else if (e.shiftKey && e.altKey && (e.key === 'f' || e.key === 'F')) {
+  1165→  1165→        e.preventDefault();
+  1166→  1166→        e.stopPropagation();
+  1167→  1167→        handleFormat();
+  1168→  1168→      } else if (e.altKey && (e.key === 'z' || e.key === 'Z')) {
+  1169→  1169→        e.preventDefault();
+  1170→  1170→        e.stopPropagation();
+  1171→  1171→        setWordWrap((v) => (v === 'on' ? 'off' : 'on'));
+  1172→  1172→      } else if (e.key === 'Escape') {
+  1173→  1173→        e.preventDefault();
+  1174→  1174→        e.stopPropagation();
+  1175→  1175→        setRightPanelOpen(false);
+  1176→  1176→        setOutputPanelOpen(false);
+  1177→  1177→        setHtmlPreviewOpen(false);
+  1178→  1178→        setVersionHistoryOpen(false);
+  1179→  1179→        setNotificationsOpen(false);
+  1180→  1180→      }
+  1181→  1181→    };
+  1182→  1182→    window.addEventListener('keydown', handleKeyDown, true);
+  1183→  1183→    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  1184→  1184→  }, [handleSave, handleRun, handleFormat, rightPanelOpen, commandPaletteOpen, isHtmlFile, isMarkdownFile, handleTogglePreview, handleToggleVersionHistory, files, setCurrentFileName]);
+  1185→  1185→
+  1186→  1186→  // Remote cursor decorations: CSS for y-monaco's built-in selection highlighting
+  1187→  1187→  // + name labels for each remote user's cursor position
+  1188→  1188→  useEffect(() => {
+  1189→  1189→    const provider = providerRef.current;
+  1190→  1190→    const editorInstance = editorRef.current;
+  1191→  1191→    if (!provider || !editorInstance) return;
+  1192→  1192→
+  1193→  1193→    const awareness = provider.awareness;
+  1194→  1194→    let labelDecorations: string[] = [];
+  1195→  1195→    const styleEl = document.createElement('style');
+  1196→  1196→    styleEl.dataset.collabCursor = 'true';
+  1197→  1197→    document.head.appendChild(styleEl);
+  1198→  1198→
+  1199→  1199→    const updateRemoteCursors = () => {
+  1200→  1200→      const states = awareness.getStates();
+  1201→  1201→      const localClientId = awareness.clientID;
+  1202→  1202→      let css = '';
+  1203→  1203→      const newLabelDecorations: editor.IModelDeltaDecoration[] = [];
+  1204→  1204→      const model = editorInstance.getModel();
+  1205→  1205→
+  1206→  1206→      states.forEach((state: any, clientId: number) => {
+  1207→  1207→        if (clientId === localClientId) return;
+  1208→  1208→
+  1209→  1209→        const user = state.user as { name?: string; color?: string } | undefined;
+  1210→  1210→        const name = user?.name || 'Anonymous';
+  1211→  1211→        const color = user?.color || '#8b949e';
+  1212→  1212→        const safeId = clientId.toString().replace(/[^a-z0-9]/gi, '');
+  1213→  1213→
+  1214→  1214→        // Inject CSS for y-monaco's built-in selection/cursor decoration classes
+  1215→  1215→        css += `.yRemoteSelection-${safeId} { background-color: ${color}33 !important; }\n`;
+  1216→  1216→        css += `.yRemoteSelectionHead-${safeId} { border-left: 2px solid ${color} !important; }\n`;
+  1217→  1217→
+  1218→  1218→        if (!model) return;
+  1219→  1219→
+  1220→  1220→        // Resolve cursor line from awareness state
+  1221→  1221→        let cursorLine: number | null = null;
+  1222→  1222→
+  1223→  1223→        // Method 1: y-monaco sets 'selection' with Y.RelativePositions
+  1224→  1224→        if (state.selection?.head != null && ydocRef.current) {
+  1225→  1225→          const ytext = ydocRef.current.getText(currentFileName);
+  1226→  1226→          if (ytext) {
+  1227→  1227→            const headAbs = Y.createAbsolutePositionFromRelativePosition(
+  1228→  1228→              state.selection.head,
+  1229→  1229→              ytext.doc
+  1230→  1230→            );
+  1231→  1231→            if (headAbs !== null && headAbs.type === ytext) {
+  1232→  1232→              cursorLine = model.getPositionAt(headAbs.index).lineNumber;
+  1233→  1233→            }
+  1234→  1234→          }
+  1235→  1235→        }
+  1236→  1236→
+  1237→  1237→        // Method 2: fallback to 'cursor' field with { line, column }
+  1238→  1238→        if (cursorLine === null && state.cursor?.line != null) {
+  1239→  1239→          cursorLine = state.cursor.line;
+  1240→  1240→        }
+  1241→  1241→
+  1242→  1242→        // Add name label decoration at the cursor line
+  1243→  1243→        if (cursorLine !== null) {
+  1244→  1244→          const safeLine = Math.max(1, cursorLine);
+  1245→  1245→          css += `.cc-label-${safeId} { background: ${color}; color: #fff; font-size: 11px; padding: 1px 6px; border-radius: 3px 3px 3px 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; line-height: 16px; display: inline-block; margin-left: 4px; vertical-align: middle; pointer-events: none; }\n`;
+  1246→  1246→
+  1247→  1247→          newLabelDecorations.push({
+  1248→  1248→            range: {
+  1249→  1249→              startLineNumber: safeLine,
+  1250→  1250→              startColumn: 1,
+  1251→  1251→              endLineNumber: safeLine,
+  1252→  1252→              endColumn: 1,
+  1253→  1253→            },
+  1254→  1254→            options: {
+  1255→  1255→              isWholeLine: true,
+  1256→  1256→              after: {
+  1257→  1257→                content: `  ${name} `,
+  1258→  1258→                inlineClassName: `cc-label-${safeId}`,
+  1259→  1259→              },
+  1260→  1260→            },
+  1261→  1261→          });
+  1262→  1262→        }
+  1263→  1263→      });
+  1264→  1264→
+  1265→  1265→      styleEl.textContent = css;
+  1266→  1266→      labelDecorations = editorInstance.deltaDecorations(
+  1267→  1267→        labelDecorations,
+  1268→  1268→        newLabelDecorations
+  1269→  1269→      );
+  1270→  1270→    };
+  1271→  1271→
+  1272→  1272→    awareness.on('change', updateRemoteCursors);
+  1273→  1273→    updateRemoteCursors();
+  1274→  1274→
+  1275→  1275→    return () => {
+  1276→  1276→      awareness.off('change', updateRemoteCursors);
+  1277→  1277→      editorInstance.deltaDecorations(labelDecorations, []);
+  1278→  1278→      if (styleEl.parentNode) {
+  1279→  1279→        document.head.removeChild(styleEl);
+  1280→  1280→      }
+  1281→  1281→    };
+  1282→  1282→  }, [currentFileName]);
+  1283→  1283→
+  1284→  1284→  return (
+  1285→  1285→    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#0d1117]">
+  1286→  1286→      {/* Top bar */}
+  1287→  1287→      <EditorTopBar
+  1288→  1288→        room={currentRoom}
+  1289→  1289→        user={user}
+  1290→  1290→        onlineUsers={onlineUsers}
+  1291→  1291→        language={language}
+  1292→  1292→        onLanguageChange={handleLanguageChange}
+  1293→  1293→        onRun={handleRun}
+  1294→  1294→        onSave={handleSave}
+  1295→  1295→        onFormat={handleFormat}
+  1296→  1296→        onShare={handleShare}
+  1297→  1297→        onToggleChat={handleToggleChat}
+  1298→  1298→        onToggleAI={handleToggleAI}
+  1299→  1299→        onToggleOutput={() => setOutputPanelOpen(!outputPanelOpen)}
+  1300→  1300→        onBack={handleBack}
+  1301→  1301→        onOpenSettings={() => setSettingsOpen(true)}
+  1302→  1302→        onOpenShortcuts={() => setShortcutsOpen(true)}
+  1303→  1303→        onTogglePreview={handleTogglePreview}
+  1304→  1304→        previewOpen={htmlPreviewOpen}
+  1305→  1305→        showPreview={isHtmlFile || isMarkdownFile}
+  1306→  1306→        rightPanelOpen={rightPanelOpen}
+  1307→  1307→        outputPanelOpen={outputPanelOpen}
+  1308→  1308→        unreadChatCount={unreadChatCount}
+  1309→  1309→        isRunning={isRunning}
+  1310→  1310→        isSaving={isSaving}
+  1311→  1311→        onRenameRoom={handleRenameRoom}
+  1312→  1312→        isConnected={connected}
+  1313→  1313→        audioEnabled={audioEnabled}
+  1314→  1314→        onToggleAudio={handleToggleAudio}
+  1315→  1315→        onToggleHistory={handleToggleVersionHistory}
+  1316→  1316→        historyOpen={versionHistoryOpen}
+  1317→  1317→        isReadOnly={currentRoom?.isReadOnly ?? false}
+  1318→  1318→        isOwner={isOwner}
+  1319→  1319→        onExport={handleExportRoom}
+  1320→  1320→        onToggleMobileFileTree={() => setMobileFileTreeOpen((v) => !v)}
+  1321→  1321→        onToggleActivityLog={() => setActivityLogOpen((v) => !v)}
+  1322→  1322→        activityLogOpen={activityLogOpen}
+  1323→  1323→        onToggleNotifications={() => setNotificationsOpen((v) => !v)}
+  1324→  1324→        notificationsOpen={notificationsOpen}
+  1325→  1325→        unreadNotificationCount={notifications.filter((n) => !n.read).length}
+  1326→  1326→        onToggleWordWrap={() => setWordWrap((w) => (w === 'on' ? 'off' : 'on'))}
+  1327→  1327→        wordWrap={wordWrap}
+  1328→  1328→      />
+  1329→  1329→
+  1330→  1330→      {/* Read-only mode banner */}
+  1331→  1331→      {isLockedForUser && (
+  1332→  1332→        <div className="flex items-center gap-2 px-4 py-1.5 bg-[#f0883e]/10 border-b border-[#f0883e]/30 shrink-0">
+  1333→  1333→          <span className="text-xs text-[#f0883e] font-medium">
+  1334→  1334→            🔒 This room is in read-only mode
+  1335→  1335→          </span>
+  1336→  1336→        </div>
+  1337→  1337→      )}
+  1338→  1338→
+  1339→  1339→      {/* Main content area */}
+  1340→  1340→      <div className="flex flex-1 min-h-0">
+  1341→  1341→        {/* File Tree - desktop */}
+  1342→  1342→        {!isMobile && (
+  1343→  1343→          <FileTree
+  1344→  1344→            files={files}
+  1345→  1345→            currentFile={currentFileName}
+  1346→  1346→            onSelectFile={setCurrentFileName}
+  1347→  1347→            onCreateFile={handleCreateFile}
+  1348→  1348→            onRenameFile={handleRenameFile}
+  1349→  1349→            onDeleteFile={handleDeleteFile}
+  1350→  1350→            collapsed={fileTreeCollapsed}
+  1351→  1351→            onToggleCollapse={() => setFileTreeCollapsed(!fileTreeCollapsed)}
+  1352→  1352→            isReadOnly={isLockedForUser}
+  1353→  1353→            onReorderFiles={handleReorderFiles}
+  1354→  1354→          />
+  1355→  1355→        )}
+  1356→  1356→        {/* Mobile File Tree overlay */}
+  1357→  1357→        {isMobile && mobileFileTreeOpen && (
+  1358→  1358→          <>
+  1359→  1359→            {/* Backdrop */}
+  1360→  1360→            <motion.div
+  1361→  1361→              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+  1362→  1362→              initial={{ opacity: 0 }}
+  1363→  1363→              animate={{ opacity: 1 }}
+  1364→  1364→              exit={{ opacity: 0 }}
+  1365→  1365→              transition={{ duration: 0.15 }}
+  1366→  1366→              onClick={() => setMobileFileTreeOpen(false)}
+  1367→  1367→            />
+  1368→  1368→            <motion.div
+  1369→  1369→              className="fixed top-12 left-0 right-0 z-50 max-h-[50vh] overflow-hidden rounded-b-2xl bg-[#0d1117] border-b border-x border-[#30363d] shadow-2xl"
+  1370→  1370→              initial={{ y: '-100%', opacity: 0 }}
+  1371→  1371→              animate={{ y: 0, opacity: 1 }}
+  1372→  1372→              exit={{ y: '-100%', opacity: 0 }}
+  1373→  1373→              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+  1374→  1374→            >
+  1375→  1375→              {/* Drag handle */}
+  1376→  1376→              <div className="flex justify-center pt-2 pb-1">
+  1377→  1377→                <div className="w-10 h-1 rounded-full bg-[#30363d]" />
+  1378→  1378→              </div>
+  1379→  1379→              <FileTree
+  1380→  1380→                files={files}
+  1381→  1381→                currentFile={currentFileName}
+  1382→  1382→                onSelectFile={(name) => {
+  1383→  1383→                  setCurrentFileName(name);
+  1384→  1384→                  setMobileFileTreeOpen(false);
+  1385→  1385→                }}
+  1386→  1386→                onCreateFile={(name) => {
+  1387→  1387→                  handleCreateFile(name);
+  1388→  1388→                  setMobileFileTreeOpen(false);
+  1389→  1389→                }}
+  1390→  1390→                onRenameFile={handleRenameFile}
+  1391→  1391→                onDeleteFile={(name) => {
+  1392→  1392→                  handleDeleteFile(name);
+  1393→  1393→                }}
+  1394→  1394→                collapsed={false}
+  1395→  1395→                onToggleCollapse={() => setMobileFileTreeOpen(false)}
+  1396→  1396→                isReadOnly={isLockedForUser}
+  1397→  1397→                onReorderFiles={handleReorderFiles}
+  1398→  1398→              />
+  1399→  1399→            </motion.div>
+  1400→  1400→          </>
+  1401→  1401→        )}
+  1402→  1402→
+  1403→  1403→
+  1404→  1404→        <div className="flex flex-col flex-1 min-w-0">
+  1405→  1405→          {/* Editor Tabs */}
+  1406→  1406→          <EditorTabs
+  1407→  1407→            files={files}
+  1408→  1408→            activeFile={currentFileName}
+  1409→  1409→            onSelectFile={(name) => {
+  1410→  1410→              setCurrentFileName(name);
+  1411→  1411→              // If HTML preview is open and new file isn't HTML, close it
+  1412→  1412→              const ext = name.split('.').pop()?.toLowerCase() || '';
+  1413→  1413→              if (htmlPreviewOpen && !['html', 'htm', 'css'].includes(ext)) {
+  1414→  1414→                setHtmlPreviewOpen(false);
+  1415→  1415→              }
+  1416→  1416→            }}
+  1417→  1417→            onCloseFile={(name) => {
+  1418→  1418→              if (files.length <= 1) {
+  1419→  1419→                toast.error('Cannot close the only file');
+  1420→  1420→                return;
+  1421→  1421→              }
+  1422→  1422→              handleDeleteFile(name);
+  1423→  1423→            }}
+  1424→  1424→          />
+  1425→  1425→          {/* Editor Breadcrumb */}
+  1426→  1426→          <EditorBreadcrumb
+  1427→  1427→            roomName={currentRoom?.name || 'Untitled'}
+  1428→  1428→            fileName={currentFileName}
+  1429→  1429→            language={language}
+  1430→  1430→            onBack={handleBack}
+  1431→  1431→          />
+  1432→  1432→          {/* Editor + Preview horizontal split */}
+  1433→  1433→          <div className="flex flex-1 min-h-0">
+  1434→  1434→            {/* Monaco Editor */}
+  1435→  1435→            <div className="flex-1 min-h-0 min-w-0">
+  1436→  1436→              <Editor
+  1437→  1437→                height="100%"
+  1438→  1438→                language={getMonacoLanguage(language)}
+  1439→  1439→                theme="vs-dark"
+  1440→  1440→                onMount={handleEditorMount}
+  1441→  1441→                loading={
+  1442→  1442→                  <div className="flex items-center justify-center h-full bg-[#161b22]">
+  1443→  1443→                    <div className="flex flex-col items-center gap-3 text-[#8b949e]">
+  1444→  1444→                      <div className="size-6 border-2 border-[#30363d] border-t-[#238636] rounded-full animate-spin" />
+  1445→  1445→                      <span className="text-sm">Loading editor...</span>
+  1446→  1446→                    </div>
+  1447→  1447→                  </div>
+  1448→  1448→                }
+  1449→  1449→                options={{
+  1450→  1450→                  fontSize: 13,
+  1451→  1451→                  fontFamily: "'Geist Mono', 'Fira Code', 'Cascadia Code', monospace",
+  1452→  1452→                  fontLigatures: true,
+  1453→  1453→                  minimap: { enabled: minimapEnabled },
+  1454→  1454→                  lineNumbers: 'on',
+  1455→  1455→                  scrollBeyondLastLine: false,
+  1456→  1456→                  renderLineHighlight: 'line',
+  1457→  1457→                  padding: { top: 12, bottom: 12 },
+  1458→  1458→                  smoothScrolling: true,
+  1459→  1459→                  cursorBlinking: 'smooth',
+  1460→  1460→                  cursorSmoothCaretAnimation: 'on',
+  1461→  1461→                  bracketPairColorization: { enabled: true },
+  1462→  1462→                  automaticLayout: true,
+  1463→  1463→                  tabSize: 2,
+  1464→  1464→                  wordWrap: wordWrap,
+  1465→  1465→                  suggestOnTriggerCharacters: true,
+  1466→  1466→                  quickSuggestions: true,
+  1467→  1467→                  parameterHints: { enabled: true },
+  1468→  1468→                  overviewRulerBorder: false,
+  1469→  1469→                  readOnly: isLockedForUser,
+  1470→  1470→                  scrollbar: {
+  1471→  1471→                    verticalScrollbarSize: 8,
+  1472→  1472→                    horizontalScrollbarSize: 8,
+  1473→  1473→                    verticalSliderSize: 8,
+  1474→  1474→                    horizontalSliderSize: 8,
+  1475→  1475→                  },
+  1476→  1476→                  backgroundColor: '#161b22',
+  1477→  1477→                }}
+  1478→  1478→              />
+  1479→  1479→            </div>
+  1480→  1480→
+  1481→  1481→            {/* HTML Preview Panel */}
+  1482→  1482→            <AnimatePresence initial={false}>
+  1483→  1483→              {htmlPreviewOpen && isHtmlFile && (
+  1484→  1484→                <motion.div
+  1485→  1485→                  key="html-preview"
+  1486→  1486→                  initial={{ width: 0, opacity: 0 }}
+  1487→  1487→                  animate={{ width: '50%', opacity: 1 }}
+  1488→  1488→                  exit={{ width: 0, opacity: 0 }}
+  1489→  1489→                  transition={{ type: 'tween', duration: 0.2 }}
+  1490→  1490→                  className="overflow-hidden shrink-0"
+  1491→  1491→                >
+  1492→  1492→                  <HtmlPreview
+  1493→  1493→                    code={currentCode}
+  1494→  1494→                    visible={htmlPreviewOpen}
+  1495→  1495→                    onClose={() => setHtmlPreviewOpen(false)}
+  1496→  1496→                  />
+  1497→  1497→                </motion.div>
+  1498→  1498→              )}
+  1499→  1499→            </AnimatePresence>
+  1500→  1500→
+  1501→  1501→            {/* Markdown Preview Panel */}
+  1502→  1502→            <AnimatePresence initial={false}>
+  1503→  1503→              {htmlPreviewOpen && isMarkdownFile && (
+  1504→  1504→                <motion.div
+  1505→  1505→                  key="markdown-preview"
+  1506→  1506→                  initial={{ width: 0, opacity: 0 }}
+  1507→  1507→                  animate={{ width: '50%', opacity: 1 }}
+  1508→  1508→                  exit={{ width: 0, opacity: 0 }}
+  1509→  1509→                  transition={{ type: 'tween', duration: 0.2 }}
+  1510→  1510→                  className="overflow-hidden shrink-0"
+  1511→  1511→                >
+  1512→  1512→                  <MarkdownPreview
+  1513→  1513→                    code={currentCode}
+  1514→  1514→                    visible={htmlPreviewOpen}
+  1515→  1515→                    onClose={() => setHtmlPreviewOpen(false)}
+  1516→  1516→                  />
+  1517→  1517→                </motion.div>
+  1518→  1518→              )}
+  1519→  1519→            </AnimatePresence>
+  1520→  1520→          </div>
+  1521→  1521→
+  1522→  1522→          {/* Output Panel */}
+  1523→  1523→          <AnimatePresence initial={false}>
+  1524→  1524→            {outputPanelOpen && (
+  1525→  1525→              <motion.div
+  1526→  1526→                initial={{ height: 0 }}
+  1527→  1527→                animate={{ height: 200 }}
+  1528→  1528→                exit={{ height: 0 }}
+  1529→  1529→                transition={{ type: 'tween', duration: 0.2 }}
+  1530→  1530→                className="overflow-hidden border-t border-[#30363d] shrink-0"
+  1531→  1531→              >
+  1532→  1532→                <OutputPanel
+  1533→  1533→                  output={output}
+  1534→  1534→                  isRunning={isRunning}
+  1535→  1535→                  onClear={() => { setOutput(''); setRunResultIsHtml(false); setRunResultIsCss(false); }}
+  1536→  1536→                  onClose={() => setOutputPanelOpen(false)}
+  1537→  1537→                  onToggle={() => setOutputPanelOpen(false)}
+  1538→  1538→                  isHtml={runResultIsHtml}
+  1539→  1539→                  isCss={runResultIsCss}
+  1540→  1540→                />
+  1541→  1541→              </motion.div>
+  1542→  1542→            )}
+  1543→  1543→          </AnimatePresence>
+  1544→  1544→        </div>
+  1545→  1545→
+  1546→  1546→        {/* Right Panel — Desktop sidebar */}
+  1547→  1547→        {!isMobile && (
+  1548→  1548→          <AnimatePresence initial={false}>
+  1549→  1549→            {rightPanelOpen && (
+  1550→  1550→              <motion.div
+  1551→  1551→                key="right-panel"
+  1552→  1552→                initial={{ width: 0, opacity: 0 }}
+  1553→  1553→                animate={{ width: 320, opacity: 1 }}
+  1554→  1554→                exit={{ width: 0, opacity: 0 }}
+  1555→  1555→                transition={{ type: 'tween', duration: 0.2 }}
+  1556→  1556→                className="border-l border-[#30363d] overflow-hidden shrink-0"
+  1557→  1557→              >
+  1558→  1558→                <div className="w-80 h-full" style={{ width: '320px' }}>
+  1559→  1559→                  <Tabs
+  1560→  1560→                    value={rightPanelTab}
+  1561→  1561→                    onValueChange={(v) => {
+  1562→  1562→                      setRightPanelTab(v as 'chat' | 'ai');
+  1563→  1563→                      if (v === 'chat') resetUnreadChatCount();
+  1564→  1564→                    }}
+  1565→  1565→                    className="h-full flex flex-col"
+  1566→  1566→                  >
+  1567→  1567→                    <div className="px-2 pt-2 shrink-0">
+  1568→  1568→                      <TabsList className="w-full bg-[#161b22] border border-[#30363d] h-8">
+  1569→  1569→                        <TabsTrigger
+  1570→  1570→                          value="chat"
+  1571→  1571→                          className="text-xs data-[state=active]:bg-[#0d1117] data-[state=active]:text-[#e6edf3] h-6 flex-1 gap-1.5"
+  1572→  1572→                        >
+  1573→  1573→                          <MessageSquare className="size-3" />
+  1574→  1574→                          Chat
+  1575→  1575→                        </TabsTrigger>
+  1576→  1576→                        <TabsTrigger
+  1577→  1577→                          value="ai"
+  1578→  1578→                          className="text-xs data-[state=active]:bg-[#0d1117] data-[state=active]:text-purple-400 h-6 flex-1 gap-1.5"
+  1579→  1579→                        >
+  1580→  1580→                          <Sparkles className="size-3" />
+  1581→  1581→                          AI Assist
+  1582→  1582→                        </TabsTrigger>
+  1583→  1583→                      </TabsList>
+  1584→  1584→                    </div>
+  1585→  1585→
+  1586→  1586→                    <TabsContent value="chat" className="flex-1 mt-0 min-h-0">
+  1587→  1587→                      <ChatPanel
+  1588→  1588→                        roomId={currentRoomId}
+  1589→  1589→                        socket={socketRef.current}
+  1590→  1590→                        user={user}
+  1591→  1591→                        messages={chatMessages}
+  1592→  1592→                        onSendMessage={handleSendMessage}
+  1593→  1593→                        onlineUsers={onlineUsers}
+  1594→  1594→                      />
+  1595→  1595→                    </TabsContent>
+  1596→  1596→
+  1597→  1597→                    <TabsContent value="ai" className="flex-1 mt-0 min-h-0">
+  1598→  1598→                      <AIPanel
+  1599→  1599→                        currentCode={currentCode}
+  1600→  1600→                        language={language}
+  1601→  1601→                        currentFileName={currentFileName}
+  1602→  1602→                      />
+  1603→  1603→                    </TabsContent>
+  1604→  1604→                  </Tabs>
+  1605→  1605→                </div>
+  1606→  1606→              </motion.div>
+  1607→  1607→            )}
+  1608→  1608→          </AnimatePresence>
+  1609→  1609→        )}
+  1610→  1610→
+  1611→  1611→        {/* Right Panel — Mobile bottom sheet */}
+  1612→  1612→        {isMobile && (
+  1613→  1613→          <AnimatePresence>
+  1614→  1614→            {rightPanelOpen && (
+  1615→  1615→              <>
+  1616→  1616→                {/* Backdrop overlay */}
+  1617→  1617→                <motion.div
+  1618→  1618→                  className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+  1619→  1619→                  initial={{ opacity: 0 }}
+  1620→  1620→                  animate={{ opacity: 1 }}
+  1621→  1621→                  exit={{ opacity: 0 }}
+  1622→  1622→                  transition={{ duration: 0.15 }}
+  1623→  1623→                  onClick={() => setRightPanelOpen(false)}
+  1624→  1624→                />
+  1625→  1625→                <motion.div
+  1626→  1626→                  className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-[#161b22] border-t border-[#30363d] shadow-2xl"
+  1627→  1627→                  initial={{ y: '100%' }}
+  1628→  1628→                  animate={{ y: 0 }}
+  1629→  1629→                  exit={{ y: '100%' }}
+  1630→  1630→                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+  1631→  1631→                  style={{ height: '70vh', maxHeight: '70vh' }}
+  1632→  1632→                >
+  1633→  1633→                  {/* Drag handle bar */}
+  1634→  1634→                  <div className="flex justify-center pt-2 pb-1">
+  1635→  1635→                    <div className="w-10 h-1 rounded-full bg-[#30363d]" />
+  1636→  1636→                  </div>
+  1637→  1637→                  {/* Panel content */}
+  1638→  1638→                  <div className="flex-1 overflow-hidden h-[calc(70vh-20px)]">
+  1639→  1639→                    <Tabs
+  1640→  1640→                      value={rightPanelTab}
+  1641→  1641→                      onValueChange={(v) => {
+  1642→  1642→                        setRightPanelTab(v as 'chat' | 'ai');
+  1643→  1643→                        if (v === 'chat') resetUnreadChatCount();
+  1644→  1644→                      }}
+  1645→  1645→                      className="h-full flex flex-col"
+  1646→  1646→                    >
+  1647→  1647→                      <div className="px-2 pt-1 shrink-0">
+  1648→  1648→                        <TabsList className="w-full bg-[#0d1117] border border-[#30363d] h-8">
+  1649→  1649→                          <TabsTrigger
+  1650→  1650→                            value="chat"
+  1651→  1651→                            className="text-xs data-[state=active]:bg-[#161b22] data-[state=active]:text-[#e6edf3] h-6 flex-1 gap-1.5"
+  1652→  1652→                          >
+  1653→  1653→                            <MessageSquare className="size-3" />
+  1654→  1654→                            Chat
+  1655→  1655→                          </TabsTrigger>
+  1656→  1656→                          <TabsTrigger
+  1657→  1657→                            value="ai"
+  1658→  1658→                            className="text-xs data-[state=active]:bg-[#161b22] data-[state=active]:text-purple-400 h-6 flex-1 gap-1.5"
+  1659→  1659→                          >
+  1660→  1660→                            <Sparkles className="size-3" />
+  1661→  1661→                            AI Assist
+  1662→  1662→                          </TabsTrigger>
+  1663→  1663→                        </TabsList>
+  1664→  1664→                      </div>
+  1665→  1665→
+  1666→  1666→                      <TabsContent value="chat" className="flex-1 mt-0 min-h-0">
+  1667→  1667→                        <ChatPanel
+  1668→  1668→                          roomId={currentRoomId}
+  1669→  1669→                          socket={socketRef.current}
+  1670→  1670→                          user={user}
+  1671→  1671→                          messages={chatMessages}
+  1672→  1672→                          onSendMessage={handleSendMessage}
+  1673→  1673→                          onlineUsers={onlineUsers}
+  1674→  1674→                        />
+  1675→  1675→                      </TabsContent>
+  1676→  1676→
+  1677→  1677→                      <TabsContent value="ai" className="flex-1 mt-0 min-h-0">
+  1678→  1678→                        <AIPanel
+  1679→  1679→                          currentCode={currentCode}
+  1680→  1680→                          language={language}
+  1681→  1681→                          currentFileName={currentFileName}
+  1682→  1682→                        />
+  1683→  1683→                      </TabsContent>
+  1684→  1684→                    </Tabs>
+  1685→  1685→                  </div>
+  1686→  1686→                </motion.div>
+  1687→  1687→              </>
+  1688→  1688→            )}
+  1689→  1689→          </AnimatePresence>
+  1690→  1690→        )}
+  1691→  1691→
+  1692→  1692→        {/* Version History Panel */}
+  1693→  1693→        <VersionHistoryPanel
+  1694→  1694→          isOpen={versionHistoryOpen}
+  1695→  1695→          onClose={() => setVersionHistoryOpen(false)}
+  1696→  1696→          snapshots={versionSnapshots}
+  1697→  1697→          onRestore={handleVersionRestore}
+  1698→  1698→          currentFileName={currentFileName}
+  1699→  1699→        />
+  1700→  1700→      </div>
+  1701→  1701→
+  1702→  1702→      {/* Status Bar */}
+  1703→  1703→      <EditorStatusBar
+  1704→  1704→        fileName={currentFileName}
+  1705→  1705→        language={language}
+  1706→  1706→        cursorPosition={cursorPosition}
+  1707→  1707→        connected={connected}
+  1708→  1708→        tabSize={2}
+  1709→  1709→        audioEnabled={audioEnabled}
+  1710→  1710→        onToggleAudio={handleToggleAudio}
+  1711→  1711→      />
+  1712→  1712→
+  1713→  1713→      {/* Room Settings Modal */}
+  1714→  1714→      <RoomSettingsModal
+  1715→  1715→        room={currentRoom}
+  1716→  1716→        user={user}
+  1717→  1717→        onlineUsers={onlineUsers}
+  1718→  1718→        open={settingsOpen}
+  1719→  1719→        onClose={() => setSettingsOpen(false)}
+  1720→  1720→        onUpdate={handleSettingsUpdate}
+  1721→  1721→      />
+  1722→  1722→
+  1723→  1723→      {/* Keyboard Shortcuts Dialog */}
+  1724→  1724→      <KeyboardShortcutsDialog
+  1725→  1725→        open={shortcutsOpen}
+  1726→  1726→        onOpenChange={setShortcutsOpen}
+  1727→  1727→      />
+  1728→  1728→
+  1729→  1729→      {/* Command Palette */}
+  1730→  1730→      <CommandPalette
+  1731→  1731→        open={commandPaletteOpen}
+  1732→  1732→        onClose={() => {
+  1733→  1733→          setCommandPaletteOpen(false);
+  1734→  1734→          setCommandFilter(null);
+  1735→  1735→          setFileSearchFiles(undefined);
+  1736→  1736→        }}
+  1737→  1737→        commands={commandItems}
+  1738→  1738→        commandFilter={commandFilter}
+  1739→  1739→        files={fileSearchFiles}
+  1740→  1740→      />
+  1741→  1741→
+  1742→  1742→      {/* Activity Log Panel */}
+  1743→  1743→      <ActivityLogPanel
+  1744→  1744→        isOpen={activityLogOpen}
+  1745→  1745→        onClose={() => setActivityLogOpen(false)}
+  1746→  1746→        activities={activities}
+  1747→  1747→      />
+  1748→  1748→
+  1749→  1749→      {/* Notifications Panel */}
+  1750→  1750→      <NotificationsPanel
+  1751→  1751→        isOpen={notificationsOpen}
+  1752→  1752→        onClose={() => setNotificationsOpen(false)}
+  1753→  1753→        notifications={notifications}
+  1754→  1754→        unreadCount={notifications.filter((n) => !n.read).length}
+  1755→  1755→        onMarkRead={markNotificationRead}
+  1756→  1756→        onMarkAllRead={() => notifications.forEach((n) => { if (!n.read) markNotificationRead(n.id); })}
+  1757→  1757→        onClearAll={clearNotifications}
+  1758→  1758→      />
+  1759→  1759→    </div>
+  1760→  1760→  );
+  1761→  1761→}

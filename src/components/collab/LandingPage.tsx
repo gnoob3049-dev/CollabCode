@@ -29,6 +29,40 @@ import { useStore } from "@/store/useStore";
 import { ROOM_TEMPLATES } from "@/lib/templates";
 
 /* ------------------------------------------------------------------ */
+/*  Star Field Data (pre-computed positions)                            */
+/* ------------------------------------------------------------------ */
+
+const stars = Array.from({ length: 25 }, (_, i) => ({
+  id: i,
+  top: `${(i * 37 + 13) % 100}%`,
+  left: `${(i * 53 + 7) % 100}%`,
+  size: (i % 3 === 0) ? 2 : 1,
+  duration: 3 + (i % 6),
+  delay: (i * 0.4) % 5,
+}));
+
+/* ------------------------------------------------------------------ */
+/*  Ripple helper                                                       */
+/* ------------------------------------------------------------------ */
+
+function createRipple(e: React.MouseEvent<HTMLElement>) {
+  const btn = e.currentTarget;
+  const rect = btn.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const size = Math.max(rect.width, rect.height);
+
+  const circle = document.createElement("span");
+  circle.className = "ripple-circle";
+  circle.style.width = circle.style.height = `${size * 2}px`;
+  circle.style.left = `${x - size}px`;
+  circle.style.top = `${y - size}px`;
+  btn.appendChild(circle);
+
+  setTimeout(() => circle.remove(), 350);
+}
+
+/* ------------------------------------------------------------------ */
 /*  Data                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -340,20 +374,42 @@ function AnimatedCounter({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Feature Card                                                       */
+/*  Feature Card (with parallax tilt)                                  */
 /* ------------------------------------------------------------------ */
 
 function FeatureCard({ feature }: { feature: Feature }) {
   const theme = colorMap[feature.color];
   const IconComp = feature.icon;
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const card = cardRef.current;
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    const rotateY = x * 6;  /* max ~3deg */
+    const rotateX = -y * 6;
+    card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(10px)`;
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    const card = cardRef.current;
+    if (!card) return;
+    card.style.transform = "perspective(800px) rotateX(0deg) rotateY(0deg) translateZ(0px)";
+  }, []);
 
   return (
     <motion.div
+      ref={cardRef}
       variants={itemVariants}
-      className="group relative rounded-xl border border-[#30363d] bg-[#161b22] p-5 sm:p-6 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] glass-card hover-lift will-change-transform"
+      className="group relative rounded-xl border border-[#30363d] bg-[#161b22] p-5 sm:p-6 will-change-transform"
       style={{
-        transitionProperty: "transform, box-shadow, border-color",
+        transitionProperty: "transform 0.15s ease-out, box-shadow, border-color",
+        transformStyle: "preserve-3d",
       }}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
       onMouseEnter={(e) => {
         (e.currentTarget as HTMLElement).style.borderColor = "";
       }}
@@ -684,6 +740,25 @@ export default function LandingPage() {
           {/* 3 animated gradient orbs */}
           <GradientOrbs />
 
+          {/* Star field — twinkling dots */}
+          <div className="absolute inset-0 pointer-events-none z-0" aria-hidden="true">
+            {stars.map((star) => (
+              <span
+                key={star.id}
+                className="absolute rounded-full bg-white"
+                style={{
+                  top: star.top,
+                  left: star.left,
+                  width: star.size,
+                  height: star.size,
+                  animation: prefersReducedMotion
+                    ? "none"
+                    : `twinkle ${star.duration}s ease-in-out ${star.delay}s infinite`,
+                }}
+              />
+            ))}
+          </div>
+
           {/* Subtle grid pattern overlay */}
           <div
             className="absolute inset-0 pointer-events-none opacity-[0.03]"
@@ -746,7 +821,8 @@ export default function LandingPage() {
                 <Button
                   onClick={handleGetStarted}
                   size="lg"
-                  className="w-full sm:w-auto px-8 py-6 text-base font-semibold rounded-lg bg-[#238636] hover:bg-[#2ea043] text-white transition-shadow duration-300 hover:shadow-[0_0_24px_rgba(35,134,54,0.5),0_0_48px_rgba(35,134,54,0.2)] glow-btn-green btn-press"
+                  className="w-full sm:w-auto px-8 py-6 text-base font-semibold rounded-lg bg-[#238636] hover:bg-[#2ea043] text-white transition-shadow duration-300 hover:shadow-[0_0_24px_rgba(35,134,54,0.5),0_0_48px_rgba(35,134,54,0.2)] glow-btn-green btn-press ripple-effect"
+                  onMouseDown={createRipple}
                 >
                   <span className="animated-underline">Get Started</span>
                   <ArrowRight className="ml-2 w-5 h-5" />
@@ -757,7 +833,8 @@ export default function LandingPage() {
                 onClick={handleCreateRoom}
                 variant="outline"
                 size="lg"
-                className="w-full sm:w-auto px-8 py-6 text-base font-semibold rounded-lg border-[#30363d] text-[#e6edf3] hover:bg-[#21262d] transition-shadow duration-300 hover:shadow-[0_0_16px_rgba(88,166,255,0.15)]"
+                className="w-full sm:w-auto px-8 py-6 text-base font-semibold rounded-lg border-[#30363d] text-[#e6edf3] hover:bg-[#21262d] transition-shadow duration-300 hover:shadow-[0_0_16px_rgba(88,166,255,0.15)] ripple-effect"
+                onMouseDown={createRipple}
               >
                 Create a Room
               </Button>
@@ -1000,7 +1077,7 @@ export default function LandingPage() {
               backgroundSize: "200% 100%",
               animation: prefersReducedMotion
                 ? "none"
-                : "shimmer 6s ease-in-out infinite",
+                : "shimmer 4s ease infinite",
             }}
           />
 

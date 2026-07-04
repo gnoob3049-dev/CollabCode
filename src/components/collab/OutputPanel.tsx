@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import {
   Terminal,
   AlertTriangle,
@@ -12,10 +12,84 @@ import {
   ExternalLink,
   Info,
   Trash2,
+  Timer,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+
+// ANSI color code parser — returns React nodes
+function parseAnsi(text: string): ReactNode[] {
+  const ANSI_RE = /\x1b\[([0-9;]*)m/g;
+  const nodes: ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  // Color map for basic ANSI codes
+  const colorMap: Record<number, string> = {
+    0: '',     // reset
+    1: '',     // bold
+    31: '#f85149', // red
+    32: '#3fb950', // green
+    33: '#d29922', // yellow
+    36: '#58a6ff', // cyan
+  };
+
+  let currentBold = false;
+  let currentColor = '';
+
+  while ((match = ANSI_RE.exec(text)) !== null) {
+    // Push text before this code
+    if (match.index > lastIndex) {
+      const segment = text.slice(lastIndex, match.index);
+      nodes.push(
+        <span
+          key={`t-${lastIndex}`}
+          style={{
+            color: currentColor || undefined,
+            fontWeight: currentBold ? 'bold' : undefined,
+          }}
+        >
+          {segment}
+        </span>
+      );
+    }
+
+    // Parse the code
+    const code = match[1];
+    if (code === '0') {
+      currentBold = false;
+      currentColor = '';
+    } else if (code === '1') {
+      currentBold = true;
+    } else {
+      const num = parseInt(code, 10);
+      if (colorMap[num]) {
+        currentColor = colorMap[num];
+      }
+    }
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Remaining text
+  if (lastIndex < text.length) {
+    const segment = text.slice(lastIndex);
+    nodes.push(
+      <span
+        key={`t-${lastIndex}`}
+        style={{
+          color: currentColor || undefined,
+          fontWeight: currentBold ? 'bold' : undefined,
+        }}
+      >
+        {segment}
+      </span>
+    );
+  }
+
+  return nodes.length > 0 ? nodes : [text];
+}
 
 interface OutputPanelProps {
   output: string;
@@ -25,6 +99,7 @@ interface OutputPanelProps {
   onToggle: () => void;
   isHtml?: boolean;
   isCss?: boolean;
+  executionTime?: number;
 }
 
 export default function OutputPanel({
@@ -35,9 +110,11 @@ export default function OutputPanel({
   onToggle,
   isHtml = false,
   isCss = false,
+  executionTime,
 }: OutputPanelProps) {
   const [activeTab, setActiveTab] = useState<'output' | 'problems'>('output');
   const [copied, setCopied] = useState(false);
+  const [clearConfirm, setClearConfirm] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const isDraggingRef = useRef(false);
@@ -45,6 +122,7 @@ export default function OutputPanel({
   const startHeightRef = useRef(0);
   const panelRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Generate a blob URL for the HTML iframe
   const htmlBlobUrl = useMemo(() => {
@@ -59,6 +137,13 @@ export default function OutputPanel({
       if (htmlBlobUrl) URL.revokeObjectURL(htmlBlobUrl);
     };
   }, [htmlBlobUrl]);
+
+  // Cleanup clear timer on unmount
+  useEffect(() => {
+    return () => {
+      if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
+    };
+  }, []);
 
   // Get viewport ref
   useEffect(() => {
@@ -78,11 +163,33 @@ export default function OutputPanel({
 
   const handleCopy = useCallback(() => {
     if (output) {
-      navigator.clipboard.writeText(output);
+      // Copy with line numbers
+      const lines = output.split('\n');
+      const numbered = lines.map((line, i) => `${String(i + 1).padStart(4, ' ')}  ${line}`).join('\n');
+      navigator.clipboard.writeText(numbered);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
   }, [output]);
+
+  const handleClear = useCallback(() => {
+    if (!clearConfirm) {
+      // First click — enter confirmation state
+      setClearConfirm(true);
+      clearTimerRef.current = setTimeout(() => {
+        setClearConfirm(false);
+        clearTimerRef.current = null;
+      }, 2000);
+    } else {
+      // Second click — actually clear
+      if (clearTimerRef.current) {
+        clearTimeout(clearTimerRef.current);
+        clearTimerRef.current = null;
+      }
+      setClearConfirm(false);
+      onClear();
+    }
+  }, [clearConfirm, onClear]);
 
   // Preview in browser: open HTML in a new tab
   const handlePreviewInBrowser = useCallback(() => {
@@ -132,6 +239,16 @@ export default function OutputPanel({
 
   // Parse output lines for coloring
   const lines = output.split('\n');
+
+  // Execution time display
+  const executionTimeDisplay = useMemo(() => {
+    if (executionTime === undefined || executionTime === null || isRunning) return null;
+    const ms = Math.round(executionTime);
+    let color = '#3fb950'; // green
+    if (ms >= 2000) color = '#f85149'; // red
+    else if (ms >= 500) color = '#d29922'; // yellow
+    return { ms, color };
+  }, [executionTime, isRunning]);
 
   return (
     <div
@@ -203,6 +320,19 @@ export default function OutputPanel({
             )}
           </div>
 
+          {/* Execution time */}
+          {executionTimeDisplay && output && (
+            <TooltipWrapper label="Execution time">
+              <span
+                className="flex items-center gap-1 text-[10px] font-medium mr-1.5 px-1.5 py-0.5 rounded"
+                style={{ color: executionTimeDisplay.color }}
+              >
+                <Timer className="size-3" />
+                {executionTimeDisplay.ms}ms
+              </span>
+            </TooltipWrapper>
+          )}
+
           {/* Preview in browser (HTML only) */}
           {isHtml && htmlBlobUrl && (
             <TooltipWrapper label="Preview in browser">
@@ -218,51 +348,55 @@ export default function OutputPanel({
           )}
 
           {/* Copy */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-6 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d]"
-            onClick={handleCopy}
-            disabled={!output}
-          >
-            {copied ? (
-              <Check className="size-3 text-[#238636]" />
-            ) : (
-              <Copy className="size-3" />
-            )}
-          </Button>
+          <TooltipWrapper label={copied ? 'Copied with line numbers!' : 'Copy with line numbers'}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-6 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d]"
+              onClick={handleCopy}
+              disabled={!output}
+            >
+              {copied ? (
+                <Check className="size-3 text-[#238636]" />
+              ) : (
+                <Copy className="size-3" />
+              )}
+            </Button>
+          </TooltipWrapper>
 
-          {/* Clear */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-6 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d]"
-            onClick={onClear}
-            disabled={!output}
-          >
-            <X className="size-3" />
-          </Button>
-
-          {/* Clear output (Trash2) */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-6 text-[#8b949e] hover:text-[#f85149] hover:bg-[#f85149]/10"
-            onClick={onClear}
-            disabled={!output}
-          >
-            <Trash2 className="size-3" />
-          </Button>
+          {/* Clear with confirmation state */}
+          <TooltipWrapper label={clearConfirm ? 'Click again to confirm' : 'Clear output'}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                'size-6 transition-colors duration-200',
+                clearConfirm
+                  ? 'text-[#f85149] hover:text-[#f85149] hover:bg-[#f85149]/10'
+                  : 'text-[#8b949e] hover:text-[#f85149] hover:bg-[#f85149]/10'
+              )}
+              onClick={handleClear}
+              disabled={!output}
+            >
+              {clearConfirm ? (
+                <span className="text-[9px] font-bold leading-none">✓</span>
+              ) : (
+                <Trash2 className="size-3" />
+              )}
+            </Button>
+          </TooltipWrapper>
 
           {/* Close */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-6 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d]"
-            onClick={onClose}
-          >
-            <X className="size-3.5" />
-          </Button>
+          <TooltipWrapper label="Close panel">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-6 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d]"
+              onClick={onClose}
+            >
+              <X className="size-3.5" />
+            </Button>
+          </TooltipWrapper>
         </div>
       </div>
 
@@ -309,6 +443,8 @@ export default function OutputPanel({
                   {lines.map((line, i) => {
                     const isError = line.toLowerCase().includes('error') || line.toLowerCase().includes('exception');
                     const isWarning = line.toLowerCase().includes('warning') || line.toLowerCase().includes('warn');
+                    // Check if line contains ANSI codes
+                    const hasAnsi = /\x1b\[[0-9;]*m/.test(line);
                     return (
                       <div
                         key={i}
@@ -323,7 +459,11 @@ export default function OutputPanel({
                         <span className="inline-block w-6 text-right mr-3 text-[#30363d] select-none shrink-0">
                           {i + 1}
                         </span>
-                        {line || '\u00A0'}
+                        {hasAnsi && !isError && !isWarning ? (
+                          <span>{parseAnsi(line)}</span>
+                        ) : (
+                          <span>{line || '\u00A0'}</span>
+                        )}
                       </div>
                     );
                   })}

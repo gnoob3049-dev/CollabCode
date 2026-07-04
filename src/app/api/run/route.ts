@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { exec } from 'child_process';
+import { writeFileSync, mkdtempSync, rmSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
 import { getCurrentUser } from '@/lib/auth';
 
 const FORBIDDEN_PATTERNS = [
@@ -167,26 +170,25 @@ export async function POST(request: NextRequest) {
       }
 
       return new Promise<NextResponse>((resolve) => {
-        const command = `node -e ${JSON.stringify(code)}`;
-        exec(command, { timeout: 5000, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
-          if (error && !stdout && !stderr) {
-            resolve(
-              NextResponse.json({
-                output: '',
-                error: error.message,
-                exitCode: error.code ?? 1,
-              })
-            );
-            return;
-          }
-          resolve(
-            NextResponse.json({
-              output: stdout || '',
-              error: stderr || null,
-              exitCode: error?.code ?? 0,
-            })
-          );
-        });
+        // Write code to a temp file to avoid shell escaping issues with node -e
+        let tmpDir: string | null = null;
+        try {
+          tmpDir = mkdtempSync(join(tmpdir(), 'collabcode-'));
+          const tmpFile = join(tmpDir, 'code.js');
+          writeFileSync(tmpFile, code, 'utf-8');
+          const command = `node "${tmpFile}"`;
+          exec(command, { timeout: 5000, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
+            if (tmpDir) { try { rmSync(tmpDir, { recursive: true, force: true }); } catch {} }
+            if (error && !stdout && !stderr) {
+              resolve(NextResponse.json({ output: '', error: error.message, exitCode: error.code ?? 1 }));
+              return;
+            }
+            resolve(NextResponse.json({ output: stdout || '', error: stderr || null, exitCode: error?.code ?? 0 }));
+          });
+        } catch (writeErr) {
+          if (tmpDir) { try { rmSync(tmpDir, { recursive: true, force: true }); } catch {} }
+          resolve(NextResponse.json({ output: '', error: 'Failed to write temp file', exitCode: 1 }));
+        }
       });
     }
 
@@ -202,26 +204,24 @@ export async function POST(request: NextRequest) {
       const jsCode = stripTypescriptTypes(code);
 
       return new Promise<NextResponse>((resolve) => {
-        const command = `node -e ${JSON.stringify(jsCode)}`;
-        exec(command, { timeout: 5000, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
-          if (error && !stdout && !stderr) {
-            resolve(
-              NextResponse.json({
-                output: '',
-                error: error.message,
-                exitCode: error.code ?? 1,
-              })
-            );
-            return;
-          }
-          resolve(
-            NextResponse.json({
-              output: stdout || '',
-              error: stderr || null,
-              exitCode: error?.code ?? 0,
-            })
-          );
-        });
+        let tmpDir: string | null = null;
+        try {
+          tmpDir = mkdtempSync(join(tmpdir(), 'collabcode-'));
+          const tmpFile = join(tmpDir, 'code.js');
+          writeFileSync(tmpFile, jsCode, 'utf-8');
+          const command = `node "${tmpFile}"`;
+          exec(command, { timeout: 5000, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
+            if (tmpDir) { try { rmSync(tmpDir, { recursive: true, force: true }); } catch {} }
+            if (error && !stdout && !stderr) {
+              resolve(NextResponse.json({ output: '', error: error.message, exitCode: error.code ?? 1 }));
+              return;
+            }
+            resolve(NextResponse.json({ output: stdout || '', error: stderr || null, exitCode: error?.code ?? 0 }));
+          });
+        } catch (writeErr) {
+          if (tmpDir) { try { rmSync(tmpDir, { recursive: true, force: true }); } catch {} }
+          resolve(NextResponse.json({ output: '', error: 'Failed to write temp file', exitCode: 1 }));
+        }
       });
     }
 
@@ -235,26 +235,25 @@ export async function POST(request: NextRequest) {
       }
 
       return new Promise<NextResponse>((resolve) => {
-        const command = `python3 -c ${JSON.stringify(code)}`;
-        exec(command, { timeout: 5000, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
-          if (error && !stdout && !stderr) {
-            resolve(
-              NextResponse.json({
-                output: '',
-                error: error.message,
-                exitCode: error.code ?? 1,
-              })
-            );
-            return;
-          }
-          resolve(
-            NextResponse.json({
-              output: stdout || '',
-              error: stderr || null,
-              exitCode: error?.code ?? 0,
-            })
-          );
-        });
+        // Write code to a temp file to avoid shell escaping issues
+        let tmpDir: string | null = null;
+        try {
+          tmpDir = mkdtempSync(join(tmpdir(), 'collabcode-'));
+          const tmpFile = join(tmpDir, 'code.py');
+          writeFileSync(tmpFile, code, 'utf-8');
+          const command = `python3 "${tmpFile}"`;
+          exec(command, { timeout: 5000, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
+            if (tmpDir) { try { rmSync(tmpDir, { recursive: true, force: true }); } catch {} }
+            if (error && !stdout && !stderr) {
+              resolve(NextResponse.json({ output: '', error: error.message, exitCode: error.code ?? 1 }));
+              return;
+            }
+            resolve(NextResponse.json({ output: stdout || '', error: stderr || null, exitCode: error?.code ?? 0 }));
+          });
+        } catch (writeErr) {
+          if (tmpDir) { try { rmSync(tmpDir, { recursive: true, force: true }); } catch {} }
+          resolve(NextResponse.json({ output: '', error: 'Failed to write temp file', exitCode: 1 }));
+        }
       });
     }
 

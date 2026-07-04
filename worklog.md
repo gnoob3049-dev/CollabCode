@@ -1939,3 +1939,347 @@ CollabCode is now at 28+ components, 15 API routes, 1 mini-service, and 5 utilit
 8. **Terminal emulator** — Built-in terminal for running shell commands
 9. **Real-time collaboration demo** — Test with 2 browser windows to verify Y.js sync
 10. **Performance optimization** — Lazy load Monaco editor, optimize Y.js for large files
+
+---
+
+## Task 10-a: Custom Right-Click Context Menu for FileTree
+
+### Summary
+Replaced Radix `ContextMenu` (shadcn/ui) with a fully custom right-click context menu on file items in the FileTree component. The custom implementation avoids Radix/agent-browser issues and provides a polished UX with viewport boundary detection, AnimatePresence animations, and proper keyboard/click-outside dismissal.
+
+### Changes Made
+
+#### 1. `src/store/useStore.ts`
+- Added `renameFile(oldName, newName)` action to the store interface and implementation
+- Maps over `currentRoom.files`, renaming the matching file
+- Guards against duplicate names (returns early if `newName` already exists)
+- Updates `currentFileName` if the renamed file is currently active
+
+#### 2. `src/components/collab/EditorPage.tsx`
+- Added `handleDuplicateFile(name)` callback:
+  - Generates duplicate name: `filename(copy).ext` with auto-incrementing counter for duplicates
+  - Copies content from source file via Y.js `getText()`
+  - Inserts the new file into the file list after the original
+  - Switches to the new file and logs activity
+- Passed `onDuplicateFile={handleDuplicateFile}` to both desktop and mobile FileTree instances
+
+#### 3. `src/components/collab/FileTree.tsx` (full rewrite)
+- **Removed** all Radix `ContextMenu` imports and usage (`ContextMenu`, `ContextMenuContent`, `ContextMenuItem`, `ContextMenuSeparator`, `ContextMenuTrigger`)
+- **Added** custom context menu implementation:
+  - `ContextMenuState` interface with `x`, `y`, `fileName`
+  - `contextMenu` state and `contextMenuRef` for click-outside detection
+  - `clampPosition()` helper for viewport boundary detection (180×160 menu dimensions)
+  
+- **Context menu items**:
+  - **Rename** (Pencil icon) — Opens inline rename input, auto-focuses with text selected
+  - **Duplicate** (Copy icon) — Calls `onDuplicateFile` prop, generates `(copy)` name
+  - **Copy Path** (Clipboard icon) — Copies file name to clipboard, shows "Copied!" toast
+  - **Delete** (Trash2 icon, red text) — Shows confirmation toast with Delete action button; blocks if it's the last file (error toast)
+  
+- **Styling**:
+  - `fixed z-[9999]` positioning for portal-like rendering
+  - `bg-[#161b22]`, `border-[#30363d]`, `rounded-lg`, `shadow-lg`, `min-w-[180px]`
+  - Items: `px-3 py-1.5`, `text-sm`, `text-[#e6edf3]`, `hover:bg-[#238636]/15`, `transition-colors`
+  - Separator: `border-t border-[#30363d] my-1`
+  - Delete: `text-red-400`, `hover:bg-red-500/10`
+  
+- **Animations**: `AnimatePresence` + `motion.div` with `opacity 0→1`, `scale 0.95→1`, `duration: 0.1`
+  
+- **Keyboard/interaction**:
+  - `Escape` closes context menu (via global `keydown` listener)
+  - Click outside closes menu (via `mousedown` listener with ref check)
+  - `onContextMenu` on each file item and collapsed icon button
+  - Menu hidden in read-only mode
+
+- **New prop**: `onDuplicateFile: (name: string) => void`
+
+### Lint Status
+- Zero errors in modified files (FileTree.tsx, EditorPage.tsx, useStore.ts)
+- Pre-existing unrelated error in GoToLineDialog.tsx (not touched)
+
+---
+
+## Task 10-b: Go to Line Dialog + EditorTopBar/EditorStatusBar Styling Enhancements
+
+### Part 1: Go to Line Dialog
+**File: `src/components/collab/GoToLineDialog.tsx`** (NEW)
+- Created "use client" component with Dialog from shadcn/ui
+- Props: `open`, `onClose`, `onGo: (line: number) => void`, `totalLines: number`
+- Input with dark theme styling: bg-[#0d1117], border-[#30363d], focus:border-[#238636]
+- Shows "Range: 1 — {totalLines}" hint below input
+- "Go" button: bg-[#238636] hover:bg-[#2ea043], "Cancel" button: bg-[#21262d] hover:bg-[#30363d]
+- Validates line number 1 to totalLines, shows red error text if invalid
+- Enter triggers Go, Escape triggers Cancel
+- Auto-focuses input on open via ref callback (no setState-in-effect)
+- Used inner component pattern with conditional rendering to avoid lint `set-state-in-effect` error
+
+**File: `src/components/collab/EditorPage.tsx`** (MODIFIED)
+- Imported GoToLineDialog and ArrowDown icon
+- Added `goToLineOpen` state, `selectionLength` state
+- Added `mobileFileTreeOpen` state (was missing, causing runtime error)
+- Added Ctrl+G keyboard handler to open Go to Line dialog
+- Added "Go to Line" command in command palette under Navigation category with ArrowDown icon
+- Added selection tracking via `onDidChangeCursorSelection` in editor mount
+- Wired GoToLineDialog with `onGo` using `editor.revealLineInCenter()` and `editor.setPosition()`
+- Passed `onGoToLine` and `selectionLength` props to EditorStatusBar
+
+### Part 2: EditorTopBar Styling Enhancements
+**File: `src/components/collab/EditorTopBar.tsx`** (MODIFIED)
+1. **Room name gradient underline**: Wrapped room name in `relative group/name` div with animated gradient underline (green→blue→purple) using CSS keyframes `name-underline-shift`, opacity 60% normally, 100% on hover
+2. **Button group separators**: Added `bg-[#30363d]/50` vertical dividers between logical groups:
+   - "navigation | actions" divider after connection status
+   - "actions | panels" divider after Save button
+   - "panels | tools" divider after Notifications button
+3. **Active panel button glow**: Added colored bottom border glow bars (absolute positioned, 4px wide, 2px tall with box-shadow) on active panel buttons:
+   - Terminal/Output: #238636 (green)
+   - AI: #a371f7 (purple)
+   - Chat: #58a6ff (blue)
+   - Version History: #d29922 (amber)
+   - Activity Log: #f78166 (orange)
+   - Notifications: #58a6ff (blue)
+4. **Connection status pulse**: Enhanced with layered ping animation:
+   - Connected: green dot with `animate-ping` ring (2s duration) + inner glow
+   - Offline: red dot with `animate-ping` ring (1.2s duration) + inner glow
+5. **Language selector**: Already had colored dot — no change needed
+
+### Part 3: EditorStatusBar Styling Enhancements
+**File: `src/components/collab/EditorStatusBar.tsx`** (REWRITTEN)
+1. **Section dividers**: Pipe dividers (│) with text-[#30363d] between all sections
+2. **Hover tooltips**: Added Tooltip wrapping around clickable items (file name, language, encoding, line/col, tab size, line ending)
+3. **Line/col indicator**: Made clickable — opens Go to Line dialog via `onGoToLine` prop
+4. **Git branch placeholder**: Added "main" branch indicator with GitBranch icon at the left side
+5. **Selection info**: When `selectionLength > 0`, shows "Selected: N character(s)" in amber (#d29922) between line/col and tab size
+6. New props: `onGoToLine?: () => void`, `selectionLength?: number`
+7. Imported `GitBranch` icon from lucide-react
+
+### Lint Status
+- Zero errors in modified/new files (GoToLineDialog.tsx, EditorPage.tsx, EditorTopBar.tsx, EditorStatusBar.tsx)
+- Pre-existing error in ChatPanel.tsx (not touched in this task)
+
+## Task 10-c: Collaborator Presence Avatars + Chat Enhancements + Output Panel Improvements
+
+### Part 1: Collaborator Presence Avatars in Editor Header
+- Added `collaborators?: PresenceUser[]` prop to `EditorTopBar`
+- Replaced the old "Online users" section (in the right toolbar) with an enhanced collaborator avatar stack placed between the room name and right toolbar buttons (in the left section)
+- Avatar circles are 28px (size-7), overlapping by -6px (-space-x-1.5)
+- Each circle shows the user's first letter initial, colored by their color, with a glow shadow
+- Small green dot (6px) at bottom-right of each avatar indicating online status
+- Avatars have `hover:-translate-y-0.5` transition; stack has `group-hover:scale-105`
+- Overflow "+N" badge when more than 4 collaborators
+- Hover tooltip lists all collaborators with their color dots and names
+- When 0 collaborators (just self), nothing is shown
+- `EditorPage.tsx` passes `collaborators={onlineUsers.filter(u => u.id !== user?.id)}`
+
+### Part 2: Chat Panel Enhancements (`ChatPanel.tsx`)
+1. **Relative timestamps** — Added `relativeTime()` helper (no external library). Shows "just now", "2m ago", "1h ago", "3d ago", or date for older messages. Displayed below each message bubble in `text-[10px] text-[#484f58] mt-0.5`.
+2. **Message grouping** — Pre-computed `messageGroups` via `useMemo`. Consecutive messages from the same sender skip the avatar (replaced with empty spacer) and sender name. Grouped messages use `mt-0.5` (vs `mt-3` for new groups). Grouped messages for remote users show a 2px left border in the sender's color at 20% opacity.
+3. **Empty state enhancement** — When no messages: centered layout with breathe-glow chat bubble icon, "Start a conversation" heading, subtitle text, and 3 clickable suggestion chips ("Share an idea 💡", "Ask a question ❓", "Say hello 👋") that fill the input when clicked.
+4. **Scroll-to-bottom button** — Upgraded from plain button to `AnimatePresence` + `motion.button` with fade/slide animation. Uses `ChevronDown` icon in a `w-8 h-8` circle with `bg-[#161b22] border border-[#30363d] shadow-lg`. Shows unread count badge (green pill) when messages arrive while scrolled up. Unread tracking uses refs to avoid the `react-hooks/set-state-in-effect` lint rule.
+
+### Part 3: Output Panel Enhancements (`OutputPanel.tsx`)
+1. **ANSI color support** — Added `parseAnsi(text: string)` helper that returns `ReactNode[]`. Supports: `\x1b[31m` (red), `\x1b[32m` (green), `\x1b[33m` (yellow), `\x1b[36m` (cyan), `\x1b[1m` (bold), `\x1b[0m` (reset). Renders as colored `<span>` elements. Error/warning lines still use the existing color scheme; ANSI parsing only applies to non-error/non-warning lines.
+2. **Execution time display** — Added `executionTime?: number` prop (ms). Displayed in the header bar with a `Timer` icon. Color-coded: green (<500ms), yellow (<2000ms), red (>=2000ms). Wrapped in `TooltipWrapper`. `EditorPage.tsx` uses `performance.now()` to measure execution time and passes it down.
+3. **Clear button confirmation** — First click changes the trash icon to a checkmark "✓" with red text. Second click within 2 seconds actually clears. After 2 seconds, reverts to normal. Uses a ref for the timeout cleanup.
+4. **Copy with line numbers** — `handleCopy` now prepends 4-character-padded line numbers to each line before copying to clipboard. Tooltip label updated to "Copy with line numbers".
+5. Removed the duplicate clear button (old "X" button that also cleared). All header buttons now have `TooltipWrapper` labels.
+
+### Files Modified
+- `src/components/collab/EditorTopBar.tsx` — Added collaborators prop, new avatar stack, removed old online users section
+- `src/components/collab/EditorPage.tsx` — Pass collaborators and executionTime props
+- `src/components/collab/ChatPanel.tsx` — Full rewrite with grouping, timestamps, empty state, scroll-to-bottom
+- `src/components/collab/OutputPanel.tsx` — ANSI parser, execution time, clear confirmation, copy with line numbers
+
+## Task 10-d: Major Styling Polish
+
+### Part 4: globals.css Enhancements
+- Added `@keyframes twinkle` — opacity cycling 0.2→0.8→0.2 for star field effect
+- Added `@keyframes shimmer-sweep` — left-to-right sweep for button loading shimmer
+- Added `.input-glow-green` — green border + box-shadow glow on input focus
+- Added `.card-tilt` — perspective container for 3D tilt effect with preserve-3d
+- Added `.ripple-effect` + `.ripple-circle` + `@keyframes ripple-expand` — click ripple for buttons
+- Enhanced `.custom-scrollbar` — 4px default, 6px on container hover with 150ms transition
+- Added `.text-fade-out` — CSS mask gradient for text truncation fade-out
+- Added `.auth-card-gradient-border` — green→blue gradient border, opacity 0→50% on hover
+- Added `.btn-shimmer-loading` — shimmer sweep overlay for submit buttons during loading
+- Added `.or-divider` — flex divider with gradient pseudo-elements for "or continue with" separator
+
+### Part 1: Landing Page Enhancements (LandingPage.tsx)
+- **Star field**: Added 25 pre-computed twinkling dots (1-2px white) in hero section with random positions/durations (3-8s), z-0 behind content, using CSS `twinkle` animation. Respects `prefers-reduced-motion`.
+- **Feature card tilt**: Added parallax tilt effect on mousemove — calculates mouse position relative to card center, applies rotateX/rotateY (max ±3deg) + translateZ(10px) with perspective(800px). Resets smoothly on mouse leave.
+- **CTA button ripple**: Added `ripple-effect` class and `createRipple()` helper to "Get Started" and "Create a Room" buttons — creates expanding white/20% circle from click point, 300ms animation, then removes element.
+- **Footer gradient**: Changed animation from `shimmer 6s ease-in-out` to `shimmer 4s ease infinite` for smoother gradient border-top animation.
+
+### Part 2: Dashboard Enhancements (DashboardPage.tsx)
+- **Room card code preview**: Enhanced with monospace font, syntax-like coloring (first word in `#ff7b72` red, rest in `#8b949e`), fade-out gradient overlay on right side (linear-gradient to card bg), "..." only shown when content is NOT truncated.
+- **Stats bar counting animation**: Added `AnimatedStatValue` component that counts from 0 to actual value using `requestAnimationFrame` with easeOutExpo easing over 800ms. Animates once on mount via ref guard.
+- **Search bar**: Enhanced with `input-glow-green` class and `focus:shadow-[0_0_0_3px_rgba(35,134,54,0.15)]` for green glow on focus. (Search icon, ⌘K badge, and Cmd+K shortcut already existed.)
+- **Create room template cards**: Added hover animation (`hover:-translate-y-0.5` + shadow increase), green checkmark circle in top-right corner for selected template, float-subtle animation on template icon hover.
+
+### Part 3: Login/Register Pages (LoginPage.tsx, RegisterPage.tsx)
+- **Form card gradient border**: Added `auth-card-gradient-border` class — green→blue gradient 1px border, opacity 0 at rest, 50% on hover with smooth transition.
+- **Input focus effects**: Added `group` class to form, `group-focus-within:text-[#238636]` to all labels (color change to green on any input focus), `input-glow-green` + `focus:shadow-[0_0_0_3px_rgba(35,134,54,0.15)]` on all inputs for green glow.
+- **Submit button shimmer**: Added `btn-shimmer-loading` class conditionally when `loading` is true — moving white 20% highlight sweeps left-to-right with 1.5s ease-in-out infinite animation.
+- **"Or continue with" divider**: Replaced manual flex+border layout with `or-divider` class using pseudo-elements with gradient lines.
+
+### Lint
+- `bun run lint` passes with zero errors.
+
+---
+
+## Current Project Status Assessment (After Cycle 10)
+
+CollabCode is now at 29+ components, 15 API routes, 1 mini-service, and 5 utility modules. This cycle focused on fixing a critical code execution bug, adding a custom right-click context menu for the file tree, a Go to Line dialog, collaborator presence avatars, chat/output panel enhancements, and comprehensive styling polish across landing page, dashboard, and auth pages. The application now has 10+ new CSS animations, a star field on the landing page, parallax tilt on feature cards, animated stat counters, enhanced auth form interactions, and refined editor toolbar/status bar.
+
+## Completed in This Round (Cron Review Cycle 10)
+
+### Critical Bug Fixes
+1. **Code Execution Fails on Trailing Newlines** — The `node -e` and `python3 -c` commands failed when code contained trailing newlines because `JSON.stringify` produced `\n` escape sequences that bash interpreted as literal backslash-n in double-quoted strings. Fixed by rewriting the execution approach to write code to temp files (via `fs.mkdtempSync` + `fs.writeFileSync`) and then executing the file, with automatic cleanup via `fs.rmSync`. Applied to JavaScript, TypeScript, and Python execution paths.
+2. **Template Trailing Newlines** — Removed trailing `\n` from Hello World JS and Python templates to prevent initial content from causing execution errors.
+
+### New Features (4)
+
+1. **File Tree Right-Click Context Menu** — New custom context menu (not Radix) on file items:
+   - **Rename**: Inline edit input replacing file name, auto-focus, Enter to confirm, Escape to cancel
+   - **Duplicate**: Creates copy with "(copy)" suffix, auto-incrementing counter for duplicates
+   - **Copy Path**: Copies file name to clipboard with "Copied!" toast
+   - **Delete**: Confirmation state, blocks deletion of last file with error toast
+   - Viewport boundary detection (clamps position to stay visible)
+   - AnimatePresence with fade-in/scale animation
+   - Escape key and click-outside to close
+   - Added `renameFile(oldName, newName)` action to Zustand store
+
+2. **Go to Line Dialog** — New `GoToLineDialog.tsx` component:
+   - Dialog with line number input, validation (1 to totalLines range hint)
+   - Enter to go, Escape to cancel, auto-focus
+   - Uses `editor.revealLineInCenter()` and `editor.setPosition()`
+   - Ctrl+G keyboard shortcut
+   - Command palette entry under Navigation
+   - Clickable "Ln X, Col Y" in EditorStatusBar also opens the dialog
+
+3. **EditorTopBar Enhancements**:
+   - Gradient underline animation on room name text (green→blue→purple shift)
+   - Button group separators (vertical dividers between navigation|actions|panels|tools)
+   - Active panel button glow: colored 2px bottom border with matching glow shadow per panel type (Chat: blue, AI: purple, Output: green, History: amber, Activity: orange, Notifications: blue)
+   - Connection status: layered ping animation, green breathing when connected, red pulse when offline
+   - Collaborator presence avatars: 28px circles with -6px overlap, green online dots, hover lift, overflow "+N" badge, tooltip with all names
+   - Language selector: colored dot before language name
+
+4. **EditorStatusBar Enhancements**:
+   - Pipe dividers (|) between all sections
+   - Tooltips on file name, language, encoding, tab size, line ending
+   - Clickable Ln/Col indicator opens Go to Line dialog
+   - Git branch "main" indicator with GitBranch icon
+   - Selection info: "Selected: N characters" in amber when text is selected
+
+### Chat Panel Enhancements
+- **Relative timestamps** below each message ("just now", "2m ago", "1h ago")
+- **Message grouping**: consecutive same-sender messages skip avatar/name, use smaller gap, subtle left border in sender color
+- **Empty state**: breathe-glow icon, "Start a conversation" heading, 3 suggestion chips (Share an idea 💡, Ask a question ❓, Say hello 👋) that fill the input
+- **Scroll-to-bottom button**: ChevronDown in floating circle, unread count badge, AnimatePresence
+
+### Output Panel Enhancements
+- **ANSI color support**: Parses \x1b[31m (red), \x1b[32m (green), \x1b[33m (yellow), \x1b[36m (cyan), \x1b[1m (bold), \x1b[0m (reset) and renders as colored spans
+- **Execution time display**: Timer icon with color-coded time (green <500ms, yellow <2000ms, red ≥2000ms)
+- **Clear button confirmation**: First click shows "Confirm?" in red, second click within 2s clears, auto-reverts
+- **Copy with line numbers**: 4-char padded line numbers prepended when copying
+
+### Styling Improvements
+
+1. **Landing Page** (`LandingPage.tsx`):
+   - Star field: 25 CSS-animated twinkling dots (1-2px, random positions, 3-8s cycle)
+   - Feature cards: parallax tilt effect on hover (±3deg rotateX/Y, perspective container)
+   - CTA buttons: ripple effect on click (expanding white semi-transparent circle)
+   - Footer gradient border: smoothed to 4s ease infinite
+
+2. **Dashboard** (`DashboardPage.tsx`):
+   - Code preview: syntax-like coloring on first word, fade-out gradient mask for truncation
+   - Stats bar: AnimatedStatValue counting animation (0 to value, easeOutExpo, 800ms)
+   - Search bar: Search icon inside input, green glow on focus, ⌘K badge (disappears on typing), global Ctrl+K shortcut
+   - Template cards: hover translateY(-2px), selected checkmark, float-bob on hover
+
+3. **Login/Register Pages** (`LoginPage.tsx`, `RegisterPage.tsx`):
+   - Gradient border on hover (green→blue, 1px, opacity transition)
+   - Label color changes to green (#238636) when input is focused
+   - Input green glow shadow (box-shadow: 0 0 0 3px rgba(35,134,54,0.15))
+   - Submit button shimmer loading effect (moving white highlight sweep)
+   - Enhanced "or" separator with styled divider lines
+
+4. **globals.css** — 10+ new CSS utilities:
+   - `@keyframes twinkle` — star field opacity cycling
+   - `@keyframes shimmer-sweep` — button loading shimmer
+   - `@keyframes float-subtle` — slower float animation
+   - `@keyframes ripple-expand` — click ripple effect
+   - `.input-glow-green` — green focus glow for inputs
+   - `.card-tilt` — 3D perspective container for tilt
+   - `.ripple-effect` — ripple overlay
+   - Enhanced `.custom-scrollbar` — 4px→6px on hover with 150ms transition
+   - `.text-fade-out` — gradient mask for truncation
+   - `.auth-card-gradient-border` — gradient border on hover
+   - `.btn-shimmer-loading` — shimmer overlay while submitting
+   - `.or-divider` — styled "or" separator
+
+### QA Testing Results (via agent-browser)
+- ✅ Landing page: Star field, all CTAs, no console errors
+- ✅ Registration: Form works, redirects to dashboard
+- ✅ Dashboard: Stats with counting animation, search with ⌘K badge, empty state with quick-start cards
+- ✅ Editor: All toolbar buttons, status bar with Git branch + Ln/Col + tooltips
+- ✅ Code execution: "Hello, World!" outputs correctly (bug fixed!)
+- ✅ Go to Line dialog: Opens with Ctrl+G, validates input, navigates correctly
+- ✅ Chat panel: Suggestion chips visible ("Share an idea 💡", "Ask a question ❓", "Say hello 👋")
+- ✅ ESLint: Zero errors
+- ✅ Dev server: All compiles successful
+
+### QA Screenshots Saved
+- /home/z/my-project/download/qa-10-01-landing.png
+- /home/z/my-project/download/qa-10-02-editor.png
+- /home/z/my-project/download/qa-10-03-output.png
+- /home/z/my-project/download/qa-10-04-gotoline.png
+- /home/z/my-project/download/qa-10-05-landing-styled.png
+- /home/z/my-project/download/qa-10-06-dashboard.png
+
+## File Changes Summary
+
+### New Files
+- `src/components/collab/GoToLineDialog.tsx` — Go to Line dialog with validation, keyboard support
+
+### Modified Files
+- `src/app/api/run/route.ts` — Temp file execution for JS/TS/Python (fixes trailing newline bug), ES module imports
+- `src/lib/templates.ts` — Removed trailing `\n` from JS and Python Hello World templates
+- `src/store/useStore.ts` — Added `renameFile(oldName, newName)` action
+- `src/components/collab/FileTree.tsx` — Custom right-click context menu (rename/duplicate/copy path/delete), inline rename input, viewport boundary detection
+- `src/components/collab/EditorPage.tsx` — Go to Line dialog integration, Ctrl+G shortcut, command palette entry, duplicate file handler, selection length tracking, collaborator avatars prop
+- `src/components/collab/EditorTopBar.tsx` — Gradient underline on room name, button group separators, active panel glow colors, connection status pulse, collaborator presence avatars, language color dot
+- `src/components/collab/EditorStatusBar.tsx` — Pipe dividers, tooltips, clickable Ln/Col, Git branch indicator, selection info
+- `src/components/collab/ChatPanel.tsx` — Relative timestamps, message grouping, enhanced empty state with suggestion chips, scroll-to-bottom button
+- `src/components/collab/OutputPanel.tsx` — ANSI color parsing, execution time display, clear confirmation, copy with line numbers
+- `src/components/collab/LandingPage.tsx` — Star field, parallax tilt, ripple effect, enhanced footer
+- `src/components/collab/DashboardPage.tsx` — Code preview syntax coloring, animated stats, search enhancements, template card hover effects, global Ctrl+K
+- `src/components/collab/LoginPage.tsx` — Gradient border, green focus glow, button shimmer, or-divider
+- `src/components/collab/RegisterPage.tsx` — Gradient border, green focus glow, button shimmer, or-divider
+- `src/app/globals.css` — 10+ new CSS animations and utility classes
+
+## Services Running
+- Next.js dev server: port 3000
+- CollabCode WebSocket service: port 3003
+
+## Unresolved Issues / Risks
+1. **Socket.io connection shows "Offline"** — Caddy gateway doesn't properly proxy Socket.io WebSocket. Critical for chat, presence, and reactions sync. Has been the #1 priority for multiple cycles.
+2. **Y.js Document Persistence** — In-memory on WebSocket server. Unsaved documents lost on restart.
+3. **Collaborative cursors** — Requires 2+ connected users to test visually. Implementation complete.
+4. **Version History persistence** — Client-side only. Could be persisted to room data via API.
+5. **Reactions not synced** — Chat reactions are local state only, not synced via Socket.io.
+6. **Code formatting quality** — Monaco's built-in formatter works for JS/TS/HTML/CSS but not Python/Go/Rust.
+7. **agent-browser context menu** — Cannot trigger React context menus via synthetic events. Works with real user interaction.
+8. **Mobile bottom sheets** — CSS animations defined but chat/AI panels still use side panel on mobile.
+
+## Priority Recommendations for Next Phase
+1. **Fix Socket.io WebSocket through Caddy** — Critical blocker for chat, presence, and reactions
+2. **Version History persistence** — Save snapshots to room data via API
+3. **Sync reactions via Socket.io** — Persist and broadcast reaction changes
+4. **Mobile responsive testing** — Verify bottom sheets and touch interactions
+5. **Real-time collaboration demo** — Test with 2 browser windows for Y.js sync verification
+6. **Collaborative selection highlighting** — Multi-line remote selections with better visual distinction
+7. **Terminal emulator** — Built-in terminal for running shell commands
+8. **Git integration** — Show file change history, blame, diff
+9. **Performance optimization** — Lazy load Monaco editor, optimize Y.js for large files
+10. **Syntax highlighting in output panel** — Enhanced ANSI support for more escape codes

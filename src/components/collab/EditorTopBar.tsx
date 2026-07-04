@@ -108,6 +108,7 @@ interface EditorTopBarProps {
   activityLogOpen?: boolean;
   onToggleWordWrap?: () => void;
   wordWrap?: 'on' | 'off';
+  collaborators?: PresenceUser[];
 }
 
 export default function EditorTopBar({
@@ -151,6 +152,7 @@ export default function EditorTopBar({
   activityLogOpen = false,
   onToggleWordWrap,
   wordWrap = 'on',
+  collaborators,
 }: EditorTopBarProps) {
   const isLockedForUser = isReadOnly && !isOwner;
   const [isEditingName, setIsEditingName] = useState(false);
@@ -242,15 +244,69 @@ export default function EditorTopBar({
                 className="bg-[#0d1117] text-sm font-semibold text-[#e6edf3] outline-none px-2 py-0.5 rounded border border-[#238636] max-w-[200px]"
               />
             ) : (
-              <button
-                className="text-sm font-semibold text-[#e6edf3] truncate hover:text-white transition-colors"
-                onDoubleClick={startEditing}
-                title="Double-click to rename"
-              >
-                {room?.name || 'Untitled'}
-              </button>
+              <div className="relative group/name">
+                <button
+                  className="text-sm font-semibold text-[#e6edf3] truncate hover:text-white transition-colors"
+                  onDoubleClick={startEditing}
+                  title="Double-click to rename"
+                >
+                  {room?.name || 'Untitled'}
+                </button>
+                {/* Gradient underline animation */}
+                <div
+                  className="absolute -bottom-0.5 left-0 right-0 h-[2px] rounded-full opacity-60 group-hover/name:opacity-100 transition-opacity duration-300"
+                  style={{
+                    background: 'linear-gradient(90deg, #238636, #58a6ff, #a371f7, #238636)',
+                    backgroundSize: '300% 100%',
+                    animation: 'name-underline-shift 4s ease infinite',
+                  }}
+                />
+              </div>
             )}
           </div>
+
+          {/* Collaborator avatar stack */}
+          {collaborators && collaborators.length > 0 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="group flex items-center ml-1 cursor-default">
+                  <div className="flex -space-x-1.5 transition-transform duration-200 group-hover:scale-105">
+                    {collaborators.slice(0, 4).map((c) => (
+                      <div
+                        key={c.id}
+                        className="relative size-7 rounded-full flex items-center justify-center text-xs font-bold text-white ring-2 ring-[#13171e] transition-transform duration-200 hover:-translate-y-0.5"
+                        style={{ backgroundColor: c.color, boxShadow: `0 0 8px ${c.color}30` }}
+                      >
+                        {c.name.charAt(0).toUpperCase()}
+                        <span className="absolute -bottom-px -right-px size-[6px] rounded-full bg-[#238636] ring-1 ring-[#13171e]" />
+                      </div>
+                    ))}
+                    {collaborators.length > 4 && (
+                      <div className="relative size-7 rounded-full flex items-center justify-center text-[10px] font-semibold text-[#8b949e] ring-2 ring-[#13171e] bg-[#30363d] transition-transform duration-200 hover:-translate-y-0.5">
+                        +{collaborators.length - 4}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-[200px]">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] text-[#8b949e] font-medium mb-0.5">
+                    {collaborators.length} collaborator{collaborators.length !== 1 ? 's' : ''}
+                  </span>
+                  {collaborators.map((c) => (
+                    <div key={c.id} className="flex items-center gap-2">
+                      <span
+                        className="size-3 rounded-full shrink-0"
+                        style={{ backgroundColor: c.color }}
+                      />
+                      <span className="text-xs text-[#e6edf3]">{c.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
 
         {/* Center - Language selector (hidden on mobile) */}
@@ -307,7 +363,7 @@ export default function EditorTopBar({
 
         {/* Right section */}
         <div className="flex items-center gap-0.5 md:gap-1 shrink-0">
-          {/* Connection status indicator */}
+          {/* Connection status indicator with enhanced pulse */}
           <div className="hidden sm:flex items-center mr-1">
             {isConnected ? (
               <Tooltip>
@@ -315,7 +371,10 @@ export default function EditorTopBar({
                   <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#238636]/10">
                     <Wifi className="size-3 text-[#238636]" />
                     <span className="text-[10px] text-[#238636] font-medium">Live</span>
-                    <span className="size-1.5 rounded-full bg-[#238636] pulse-dot float-subtle" />
+                    <span className="relative flex items-center justify-center">
+                      <span className="absolute size-3 rounded-full bg-[#238636]/40 animate-ping" style={{ animationDuration: '2s' }} />
+                      <span className="relative size-1.5 rounded-full bg-[#238636]" style={{ boxShadow: '0 0 6px #23863680' }} />
+                    </span>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">Connected to room</TooltipContent>
@@ -326,6 +385,10 @@ export default function EditorTopBar({
                   <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#f85149]/10">
                     <WifiOff className="size-3 text-[#f85149]" />
                     <span className="text-[10px] text-[#f85149] font-medium">Offline</span>
+                    <span className="relative flex items-center justify-center">
+                      <span className="absolute size-3 rounded-full bg-[#f85149]/50 animate-ping" style={{ animationDuration: '1.2s' }} />
+                      <span className="relative size-1.5 rounded-full bg-[#f85149]" style={{ boxShadow: '0 0 6px #f8514980' }} />
+                    </span>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">Disconnected from room</TooltipContent>
@@ -333,41 +396,8 @@ export default function EditorTopBar({
             )}
           </div>
 
-          {/* Online users */}
-          <div className="hidden sm:flex items-center mr-1">
-            <div className="flex -space-x-1.5">
-              {onlineUsers.slice(0, 4).map((u) => (
-                <Tooltip key={u.id}>
-                  <TooltipTrigger asChild>
-                    <div
-                      className="size-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white ring-2 ring-[#13171e]"
-                      style={{ backgroundColor: u.color, boxShadow: `0 0 6px ${u.color}40` }}
-                    >
-                      {u.name.charAt(0).toUpperCase()}
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">{u.name}</TooltipContent>
-                </Tooltip>
-              ))}
-              {onlineUsers.length > 4 && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="size-6 rounded-full flex items-center justify-center text-[10px] font-medium text-[#8b949e] ring-2 ring-[#13171e] bg-[#30363d]">
-                      +{onlineUsers.length - 4}
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    {onlineUsers
-                      .slice(4)
-                      .map((u) => u.name)
-                      .join(', ')}
-                  </TooltipContent>
-                </Tooltip>
-              )}
-            </div>
-          </div>
-
-          <div className="w-px h-5 bg-[#30363d] mx-1 hidden sm:block" />
+          {/* Divider: navigation | actions */}
+          <div className="w-px h-5 bg-[#30363d]/50 mx-1 hidden sm:block" />
 
           {/* Mobile file tree toggle */}
           {onToggleMobileFileTree && (
@@ -445,7 +475,8 @@ export default function EditorTopBar({
             <TooltipContent side="bottom">Save (Ctrl+S)</TooltipContent>
           </Tooltip>
 
-          <div className="w-px h-4 md:h-5 bg-[#30363d] mx-0.5 md:mx-1" />
+          {/* Divider: actions | panels */}
+          <div className="w-px h-4 md:h-5 bg-[#30363d]/50 mx-0.5 md:mx-1" />
 
           {/* HTML Preview toggle — desktop only */}
           {showPreview && (
@@ -477,7 +508,7 @@ export default function EditorTopBar({
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  'size-7 md:size-8 hover:bg-[#30363d]',
+                  'size-7 md:size-8 hover:bg-[#30363d] relative',
                   outputPanelOpen
                     ? 'text-[#e6edf3] bg-[#30363d]'
                     : 'text-[#8b949e] hover:text-[#e6edf3]'
@@ -486,6 +517,9 @@ export default function EditorTopBar({
                 aria-label="Toggle output panel"
               >
                 <Terminal className="size-3.5 md:size-4" />
+                {outputPanelOpen && (
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-[2px] rounded-full" style={{ backgroundColor: '#238636', boxShadow: '0 0 6px #23863680' }} />
+                )}
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">Terminal</TooltipContent>
@@ -498,7 +532,7 @@ export default function EditorTopBar({
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  'size-7 md:size-8 hover:bg-[#30363d]',
+                  'size-7 md:size-8 hover:bg-[#30363d] relative',
                   rightPanelOpen
                     ? 'text-purple-400 bg-purple-500/10'
                     : 'text-[#8b949e] hover:text-purple-400'
@@ -507,6 +541,9 @@ export default function EditorTopBar({
                 aria-label="Toggle AI assistant"
               >
                 <Sparkles className="size-3.5 md:size-4" />
+                {rightPanelOpen && (
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-[2px] rounded-full" style={{ backgroundColor: '#a371f7', boxShadow: '0 0 6px #a371f780' }} />
+                )}
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">AI</TooltipContent>
@@ -535,6 +572,9 @@ export default function EditorTopBar({
                       : 'text-[#8b949e]'
                   )}
                 />
+                {rightPanelOpen && (
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-[2px] rounded-full" style={{ backgroundColor: '#58a6ff', boxShadow: '0 0 6px #58a6ff80' }} />
+                )}
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">Chat</TooltipContent>
@@ -570,7 +610,7 @@ export default function EditorTopBar({
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  'hidden sm:flex size-8 hover:bg-[#30363d]',
+                  'hidden sm:flex size-8 hover:bg-[#30363d] relative',
                   historyOpen
                     ? 'text-[#58a6ff] bg-[#58a6ff]/10'
                     : 'text-[#8b949e] hover:text-[#e6edf3]'
@@ -579,6 +619,9 @@ export default function EditorTopBar({
                 aria-label="Version History"
               >
                 <History className="size-4" />
+                {historyOpen && (
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-[2px] rounded-full" style={{ backgroundColor: '#d29922', boxShadow: '0 0 6px #d2992280' }} />
+                )}
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">History (Ctrl+Shift+H)</TooltipContent>
@@ -591,7 +634,7 @@ export default function EditorTopBar({
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  'hidden sm:flex size-8 hover:bg-[#30363d] press-effect',
+                  'hidden sm:flex size-8 hover:bg-[#30363d] press-effect relative',
                   activityLogOpen
                     ? 'text-[#f0883e] bg-[#f0883e]/10'
                     : 'text-[#8b949e] hover:text-[#e6edf3]'
@@ -600,6 +643,9 @@ export default function EditorTopBar({
                 aria-label="Activity Log"
               >
                 <ClipboardList className="size-4" />
+                {activityLogOpen && (
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-[2px] rounded-full" style={{ backgroundColor: '#f78166', boxShadow: '0 0 6px #f7816680' }} />
+                )}
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">Activity Log</TooltipContent>
@@ -644,10 +690,16 @@ export default function EditorTopBar({
                   </Badge>
                 )}
                 <Inbox className="size-4" />
+                {notificationsOpen && (
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-[2px] rounded-full" style={{ backgroundColor: '#58a6ff', boxShadow: '0 0 6px #58a6ff80' }} />
+                )}
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">Notifications</TooltipContent>
           </Tooltip>
+
+          {/* Divider: panels | tools */}
+          <div className="w-px h-4 md:h-5 bg-[#30363d]/50 mx-0.5 md:mx-1 hidden sm:block" />
 
           {/* Settings — desktop only */}
           <Tooltip>
@@ -758,6 +810,15 @@ export default function EditorTopBar({
           opacity: 0.5,
         }}
       />
+
+      {/* Name underline animation keyframes */}
+      <style>{`
+        @keyframes name-underline-shift {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+      `}</style>
     </div>
   );
 }

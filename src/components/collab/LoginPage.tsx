@@ -113,7 +113,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <Card className={`w-full max-w-md glass relative z-10 overflow-hidden transition-shadow duration-500 scale-in-soft ${formFocused ? 'glow-green-strong' : 'glow-green'} shimmer-border`}>
+      <Card className={`w-full max-w-md glass relative z-10 overflow-hidden transition-shadow duration-500 scale-in-soft auth-card-gradient-border ${formFocused ? 'glow-green-strong' : 'glow-green'} shimmer-border`}>
         {/* Subtle top gradient accent */}
         <div
           className="absolute top-0 left-0 right-0 h-[2px]"
@@ -135,9 +135,9 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4" onFocus={() => setFormFocused(true)} onBlur={() => setFormFocused(false)}>
+          <form onSubmit={handleSubmit} className="space-y-4 group" onFocus={() => setFormFocused(true)} onBlur={() => setFormFocused(false)}>
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-[#e6edf3]">
+              <Label htmlFor="email" className="text-[#e6edf3] group-focus-within:text-[#238636] transition-colors duration-200">
                 Email
               </Label>
               <Input
@@ -146,13 +146,13 @@ export default function LoginPage() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-[#0d1117]/80 border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#238636] focus:ring-1 focus:ring-[#238636]/30 transition-all input-focus-line input-glow-focus"
+                className="bg-[#0d1117]/80 border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#238636] focus:ring-1 focus:ring-[#238636]/30 transition-all input-focus-line input-glow-green focus:shadow-[0_0_0_3px_rgba(35,134,54,0.15)]"
                 autoComplete="email"
               />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-[#e6edf3]">
+                <Label htmlFor="password" className="text-[#e6edf3] group-focus-within:text-[#238636] transition-colors duration-200">
                   Password
                 </Label>
                 <a
@@ -170,7 +170,7 @@ export default function LoginPage() {
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-[#0d1117]/80 border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#238636] focus:ring-1 focus:ring-[#238636]/30 transition-all pr-10 input-focus-line input-glow-focus"
+                  className="bg-[#0d1117]/80 border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#238636] focus:ring-1 focus:ring-[#238636]/30 transition-all pr-10 input-focus-line input-glow-green focus:shadow-[0_0_0_3px_rgba(35,134,54,0.15)]"
                   autoComplete="current-password"
                 />
                 <button
@@ -200,7 +200,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full py-5 text-base font-semibold rounded-lg text-white transition-all duration-300 hover:shadow-[0_0_24px_rgba(35,134,54,0.5),0_0_48px_rgba(35,134,54,0.2)] hover:scale-[1.02] active:scale-[0.98] btn-press hover-glow-green btn-gradient-animated"
+              className={`w-full py-5 text-base font-semibold rounded-lg text-white transition-all duration-300 hover:shadow-[0_0_24px_rgba(35,134,54,0.5),0_0_48px_rgba(35,134,54,0.2)] hover:scale-[1.02] active:scale-[0.98] btn-press hover-glow-green btn-gradient-animated ${loading ? 'btn-shimmer-loading' : ''}`}
               style={{
                 background: "linear-gradient(135deg, #238636 0%, #1a7f37 50%, #0d7a4e 100%)",
                 backgroundSize: "200% 200%",
@@ -219,10 +219,8 @@ export default function LoginPage() {
           </form>
 
           {/* Separator */}
-          <div className="flex items-center gap-3 my-4 px-1">
-            <div className="flex-1 h-px bg-[#30363d]" />
+          <div className="or-divider my-4 px-1">
             <span className="text-xs text-[#484f58]">or continue with</span>
-            <div className="flex-1 h-px bg-[#30363d]" />
           </div>
         </CardContent>
         <CardFooter className="justify-center pb-5">
