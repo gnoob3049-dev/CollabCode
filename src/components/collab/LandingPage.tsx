@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import {
   Code2,
   RefreshCw,
@@ -11,6 +11,12 @@ import {
   Play,
   Sparkles,
   ArrowRight,
+  Github,
+  Twitter,
+  Globe,
+  Zap,
+  Shield,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStore } from "@/store/useStore";
@@ -75,6 +81,13 @@ const features = [
   },
 ];
 
+const stats = [
+  { value: "10,000+", label: "Lines Synced" },
+  { value: "500+", label: "Rooms Created" },
+  { value: "99.9%", label: "Uptime" },
+  { value: "<50ms", label: "Latency" },
+];
+
 function TypingEffect() {
   const [displayText, setDisplayText] = useState("");
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -92,7 +105,6 @@ function TypingEffect() {
             idx.char++;
             setDisplayText(snippet.slice(0, idx.char));
           } else {
-            // Finished typing - pause, then switch to deleting
             clearInterval(tickRef.current!);
             tickRef.current = null;
             setTimeout(() => {
@@ -112,7 +124,6 @@ function TypingEffect() {
           idx.char--;
           setDisplayText(snippet.slice(0, idx.char));
         } else {
-          // Finished deleting - move to next snippet
           clearInterval(tickRef.current!);
           tickRef.current = null;
           idx.deleting = false;
@@ -131,19 +142,22 @@ function TypingEffect() {
   }, []);
 
   return (
-    <div className="rounded-lg border border-[#30363d] bg-[#161b22] p-4 sm:p-6 font-mono text-sm sm:text-base">
-      <div className="flex items-center gap-2 mb-4">
-        <div className="h-3 w-3 rounded-full bg-[#f85149]" />
-        <div className="h-3 w-3 rounded-full bg-[#d29922]" />
-        <div className="h-3 w-3 rounded-full bg-[#238636]" />
-        <span className="ml-2 text-xs text-[#8b949e]">
-          collabcode — session.ts
-        </span>
-      </div>
-      <div className="min-h-[3rem] sm:min-h-[4rem]">
-        <span className="text-[#8b949e] select-none">{">"} </span>
-        <span className="text-[#e6edf3]">{displayText}</span>
-        <span className="inline-block w-2.5 h-5 bg-[#58a6ff] animate-pulse ml-0.5 align-text-bottom" />
+    <div className="glass glow-green rounded-xl p-5 sm:p-7 font-mono text-sm sm:text-base relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-[#238636]/5 to-[#58a6ff]/5 pointer-events-none" />
+      <div className="relative z-10">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="h-3 w-3 rounded-full bg-[#f85149]" />
+          <div className="h-3 w-3 rounded-full bg-[#d29922]" />
+          <div className="h-3 w-3 rounded-full bg-[#238636]" />
+          <span className="ml-2 text-xs text-[#8b949e]">
+            collabcode — session.ts
+          </span>
+        </div>
+        <div className="min-h-[3rem] sm:min-h-[4rem]">
+          <span className="text-[#8b949e] select-none">{">"} </span>
+          <span className="text-[#e6edf3]">{displayText}</span>
+          <span className="inline-block w-2.5 h-5 bg-[#58a6ff] animate-pulse ml-0.5 align-text-bottom" />
+        </div>
       </div>
     </div>
   );
@@ -170,6 +184,14 @@ export default function LandingPage() {
   const { setCurrentPage, isAuthenticated } = useStore();
   const [visibleFeatures, setVisibleFeatures] = useState(false);
   const featuresRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
+
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
+  const heroY = useTransform(scrollYProgress, [0, 1], [0, 100]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -201,134 +223,233 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "#0d1117" }}>
-      {/* Hero Section */}
-      <header className="pt-16 sm:pt-24 pb-8 sm:pb-16 px-4 sm:px-6">
-        <motion.div
-          className="max-w-4xl mx-auto text-center"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <motion.div
-            variants={itemVariants}
-            className="flex items-center justify-center gap-3 mb-6"
-          >
-            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-[#238636]">
-              <Code2 className="w-7 h-7 text-white" />
-            </div>
-            <span className="text-2xl sm:text-3xl font-bold text-[#e6edf3] tracking-tight">
-              CollabCode
-            </span>
-          </motion.div>
+    <div className="min-h-screen flex flex-col noise-bg relative">
+      {/* Dot grid background */}
+      <div className="absolute inset-0 dot-grid opacity-40 pointer-events-none z-0" />
 
-          <motion.h1
-            variants={itemVariants}
-            className="text-4xl sm:text-5xl lg:text-6xl font-bold text-[#e6edf3] mb-4 sm:mb-6 tracking-tight"
-          >
-            Code Together,{" "}
-            <span className="text-[#238636]">In Real Time</span>
-          </motion.h1>
-
-          <motion.p
-            variants={itemVariants}
-            className="text-lg sm:text-xl text-[#8b949e] max-w-2xl mx-auto mb-8 sm:mb-10"
-          >
-            A browser-based collaborative code editor. Multiple users, one
-            document, zero conflicts.
-          </motion.p>
+      <div className="relative z-10 flex flex-col min-h-screen">
+        {/* Hero Section */}
+        <header ref={heroRef} className="pt-16 sm:pt-24 pb-8 sm:pb-16 px-4 sm:px-6 relative overflow-hidden">
+          {/* Animated gradient orb behind hero text */}
+          <div className="absolute top-1/2 left-1/2 w-[600px] h-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full animate-orb pointer-events-none"
+            style={{
+              background: "radial-gradient(circle, rgba(35, 134, 54, 0.15) 0%, rgba(88, 166, 255, 0.08) 40%, transparent 70%)",
+              filter: "blur(60px)",
+            }}
+          />
 
           <motion.div
-            variants={itemVariants}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12 sm:mb-16"
-          >
-            <Button
-              onClick={handleGetStarted}
-              size="lg"
-              className="w-full sm:w-auto px-8 py-6 text-base font-semibold rounded-lg bg-[#238636] hover:bg-[#2ea043] text-white transition-colors"
-            >
-              Get Started
-              <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
-            <Button
-              onClick={handleCreateRoom}
-              variant="outline"
-              size="lg"
-              className="w-full sm:w-auto px-8 py-6 text-base font-semibold rounded-lg border-[#30363d] text-[#e6edf3] hover:bg-[#21262d] transition-colors"
-            >
-              Create a Room
-            </Button>
-          </motion.div>
-
-          <motion.div
-            variants={itemVariants}
-            className="max-w-2xl mx-auto"
-          >
-            <TypingEffect />
-          </motion.div>
-        </motion.div>
-      </header>
-
-      {/* Features Section */}
-      <section
-        ref={featuresRef}
-        className="flex-1 px-4 sm:px-6 pb-16 sm:pb-24"
-      >
-        <div className="max-w-6xl mx-auto">
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            animate={visibleFeatures ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.5 }}
-            className="text-2xl sm:text-3xl font-bold text-center text-[#e6edf3] mb-3 sm:mb-4"
-          >
-            Everything you need to code together
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={visibleFeatures ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-[#8b949e] text-center mb-10 sm:mb-14 text-base sm:text-lg"
-          >
-            Powerful features designed for seamless real-time collaboration
-          </motion.p>
-
-          <motion.div
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
+            className="max-w-4xl mx-auto text-center relative z-10"
             variants={containerVariants}
             initial="hidden"
-            animate={visibleFeatures ? "visible" : "hidden"}
+            animate="visible"
+            style={{ y: heroY, opacity: heroOpacity }}
           >
-            {features.map((feature) => (
-              <motion.div
-                key={feature.title}
-                variants={itemVariants}
-                className="group rounded-xl border border-[#30363d] bg-[#161b22] p-5 sm:p-6 hover:border-[#484f58] transition-colors"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#21262d] group-hover:bg-[#238636]/20 transition-colors">
-                    <feature.icon className="w-5 h-5 text-[#238636]" />
-                  </div>
-                  <h3 className="text-base sm:text-lg font-semibold text-[#e6edf3]">
-                    {feature.title}
-                  </h3>
-                </div>
-                <p className="text-sm sm:text-base text-[#8b949e] leading-relaxed">
-                  {feature.description}
-                </p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
+            <motion.div
+              variants={itemVariants}
+              className="flex items-center justify-center gap-3 mb-6"
+            >
+              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-[#238636] glow-green">
+                <Code2 className="w-7 h-7 text-white" />
+              </div>
+              <span className="text-2xl sm:text-3xl font-bold text-[#e6edf3] tracking-tight">
+                CollabCode
+              </span>
+            </motion.div>
 
-      {/* Footer */}
-      <footer className="border-t border-[#30363d] py-6 sm:py-8 px-4 sm:px-6">
-        <div className="max-w-6xl mx-auto text-center">
-          <p className="text-sm text-[#8b949e]">
-            Built with ❤️ using Next.js, Y.js &amp; Monaco Editor
-          </p>
-        </div>
-      </footer>
+            <motion.h1
+              variants={itemVariants}
+              className="text-4xl sm:text-5xl lg:text-6xl font-bold text-[#e6edf3] mb-4 sm:mb-6 tracking-tight"
+            >
+              Code Together,{" "}
+              <span className="gradient-text">In Real Time</span>
+            </motion.h1>
+
+            <motion.p
+              variants={itemVariants}
+              className="text-lg sm:text-xl text-[#8b949e] max-w-2xl mx-auto mb-8 sm:mb-10"
+            >
+              A browser-based collaborative code editor. Multiple users, one
+              document, zero conflicts.
+            </motion.p>
+
+            <motion.div
+              variants={itemVariants}
+              className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12 sm:mb-16"
+            >
+              {/* Animated gradient border button */}
+              <div className="relative group p-[2px] rounded-lg bg-gradient-to-r from-[#238636] via-[#58a6ff] to-[#238636] bg-[length:200%_100%] animate-[gradient-rotate_3s_linear_infinite]"
+                style={{
+                  animation: "shimmer 3s ease-in-out infinite",
+                  backgroundSize: "200% 100%",
+                  background: "linear-gradient(90deg, #238636, #58a6ff, #238636, #58a6ff)",
+                  backgroundSize: "300% 100%",
+                }}
+              >
+                <Button
+                  onClick={handleGetStarted}
+                  size="lg"
+                  className="w-full sm:w-auto px-8 py-6 text-base font-semibold rounded-lg bg-[#238636] hover:bg-[#2ea043] text-white"
+                >
+                  Get Started
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+              </div>
+              <Button
+                onClick={handleCreateRoom}
+                variant="outline"
+                size="lg"
+                className="w-full sm:w-auto px-8 py-6 text-base font-semibold rounded-lg border-[#30363d] text-[#e6edf3] hover:bg-[#21262d]"
+              >
+                Create a Room
+              </Button>
+            </motion.div>
+
+            <motion.div
+              variants={itemVariants}
+              className="max-w-2xl mx-auto"
+            >
+              <TypingEffect />
+            </motion.div>
+          </motion.div>
+        </header>
+
+        {/* Trusted by / Stats section */}
+        <section className="px-4 sm:px-6 pb-12 sm:pb-16">
+          <div className="max-w-4xl mx-auto">
+            <p className="text-center text-xs text-[#484f58] uppercase tracking-widest mb-6 font-medium">
+              Trusted by developers worldwide
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
+              {stats.map((stat, i) => (
+                <motion.div
+                  key={stat.label}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 + i * 0.1, duration: 0.5 }}
+                  className="text-center"
+                >
+                  <div className="text-2xl sm:text-3xl font-bold gradient-text">{stat.value}</div>
+                  <div className="text-xs sm:text-sm text-[#8b949e] mt-1">{stat.label}</div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Features Section */}
+        <section
+          ref={featuresRef}
+          className="flex-1 px-4 sm:px-6 pb-16 sm:pb-24"
+        >
+          <div className="max-w-6xl mx-auto">
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              animate={visibleFeatures ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.5 }}
+              className="text-2xl sm:text-3xl font-bold text-center text-[#e6edf3] mb-3 sm:mb-4"
+            >
+              Everything you need to code together
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={visibleFeatures ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="text-[#8b949e] text-center mb-10 sm:mb-14 text-base sm:text-lg"
+            >
+              Powerful features designed for seamless real-time collaboration
+            </motion.p>
+
+            <motion.div
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
+              variants={containerVariants}
+              initial="hidden"
+              animate={visibleFeatures ? "visible" : "hidden"}
+            >
+              {features.map((feature) => (
+                <motion.div
+                  key={feature.title}
+                  variants={itemVariants}
+                  className="group rounded-xl border border-[#30363d] bg-[#161b22] p-5 sm:p-6 hover:border-[#238636]/50 hover:shadow-[0_0_20px_rgba(35,134,54,0.15)] transition-all duration-300 hover:-translate-y-0.5"
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#21262d] group-hover:bg-[#238636]/20 transition-colors duration-300">
+                      <feature.icon className="w-5 h-5 text-[#238636] group-hover:text-[#3fb950] transition-colors duration-300" />
+                    </div>
+                    <h3 className="text-base sm:text-lg font-semibold text-[#e6edf3]">
+                      {feature.title}
+                    </h3>
+                  </div>
+                  <p className="text-sm sm:text-base text-[#8b949e] leading-relaxed">
+                    {feature.description}
+                  </p>
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+        </section>
+
+        {/* Footer */}
+        <footer className="border-t border-[#30363d] py-8 sm:py-10 px-4 sm:px-6 mt-auto">
+          <div className="max-w-6xl mx-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8 mb-8">
+              {/* Brand */}
+              <div className="col-span-2 sm:col-span-1">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#238636]">
+                    <Code2 className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="text-lg font-bold text-[#e6edf3]">CollabCode</span>
+                </div>
+                <p className="text-sm text-[#8b949e] leading-relaxed">
+                  Real-time collaborative code editor for teams.
+                </p>
+              </div>
+
+              {/* Product */}
+              <div>
+                <h4 className="text-sm font-semibold text-[#e6edf3] mb-3">Product</h4>
+                <ul className="space-y-2">
+                  <li><span className="text-sm text-[#8b949e] hover:text-[#58a6ff] cursor-pointer transition-colors">Features</span></li>
+                  <li><span className="text-sm text-[#8b949e] hover:text-[#58a6ff] cursor-pointer transition-colors">Pricing</span></li>
+                  <li><span className="text-sm text-[#8b949e] hover:text-[#58a6ff] cursor-pointer transition-colors">Changelog</span></li>
+                </ul>
+              </div>
+
+              {/* Resources */}
+              <div>
+                <h4 className="text-sm font-semibold text-[#e6edf3] mb-3">Resources</h4>
+                <ul className="space-y-2">
+                  <li><span className="text-sm text-[#8b949e] hover:text-[#58a6ff] cursor-pointer transition-colors">Documentation</span></li>
+                  <li><span className="text-sm text-[#8b949e] hover:text-[#58a6ff] cursor-pointer transition-colors">API</span></li>
+                  <li><span className="text-sm text-[#8b949e] hover:text-[#58a6ff] cursor-pointer transition-colors">Support</span></li>
+                </ul>
+              </div>
+
+              {/* Connect */}
+              <div>
+                <h4 className="text-sm font-semibold text-[#e6edf3] mb-3">Connect</h4>
+                <div className="flex items-center gap-3">
+                  <Github className="w-5 h-5 text-[#8b949e] hover:text-[#e6edf3] cursor-pointer transition-colors" />
+                  <Twitter className="w-5 h-5 text-[#8b949e] hover:text-[#e6edf3] cursor-pointer transition-colors" />
+                  <Globe className="w-5 h-5 text-[#8b949e] hover:text-[#e6edf3] cursor-pointer transition-colors" />
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-[#30363d] pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <p className="text-sm text-[#484f58]">
+                Built with ❤️ using Next.js, Y.js &amp; Monaco Editor
+              </p>
+              <div className="flex items-center gap-4 text-xs text-[#484f58]">
+                <span className="hover:text-[#8b949e] cursor-pointer transition-colors">Privacy</span>
+                <span className="hover:text-[#8b949e] cursor-pointer transition-colors">Terms</span>
+                <span className="hover:text-[#8b949e] cursor-pointer transition-colors">Security</span>
+              </div>
+            </div>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 }

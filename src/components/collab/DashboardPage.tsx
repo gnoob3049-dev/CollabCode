@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, type FormEvent } from "react";
+import { useEffect, useState, useCallback, useMemo, type FormEvent } from "react";
 import {
   Code2,
   Plus,
@@ -10,6 +10,10 @@ import {
   Loader2,
   FolderOpen,
   Clock,
+  Search,
+  FileCode2,
+  Hash,
+  ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -53,6 +57,19 @@ const LANGUAGES = [
   "cpp",
 ];
 
+const LANG_COLORS: Record<string, string> = {
+  javascript: "#f7df1e",
+  typescript: "#3178c6",
+  python: "#3572a5",
+  html: "#e34c26",
+  css: "#563d7c",
+  go: "#00add8",
+  rust: "#dea584",
+  java: "#b07219",
+  csharp: "#178600",
+  cpp: "#f34b7d",
+};
+
 function timeAgo(dateStr?: string): string {
   if (!dateStr) return "Unknown";
   const now = Date.now();
@@ -65,6 +82,12 @@ function timeAgo(dateStr?: string): string {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
+}
+
+function isRecent(dateStr?: string): boolean {
+  if (!dateStr) return false;
+  const diff = Date.now() - new Date(dateStr).getTime();
+  return diff < 30 * 60 * 1000; // within 30 minutes
 }
 
 export default function DashboardPage() {
@@ -80,6 +103,7 @@ export default function DashboardPage() {
 
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Create room dialog
   const [createOpen, setCreateOpen] = useState(false);
@@ -92,11 +116,27 @@ export default function DashboardPage() {
   const [inviteCode, setInviteCode] = useState("");
   const [joining, setJoining] = useState(false);
 
+  const filteredRooms = useMemo(() => {
+    if (!searchQuery.trim()) return rooms;
+    const q = searchQuery.toLowerCase();
+    return rooms.filter(
+      (r) =>
+        r.name.toLowerCase().includes(q) ||
+        r.language.toLowerCase().includes(q)
+    );
+  }, [rooms, searchQuery]);
+
+  const totalCollaborators = useMemo(() => {
+    return rooms.reduce((acc, r) => {
+      const count = r.collaboratorCount ?? r.collaborators?.length ?? 1;
+      return acc + count;
+    }, 0);
+  }, [rooms]);
+
   const fetchRooms = useCallback(async () => {
     try {
       const res = await fetch("/api/rooms", { credentials: "include" });
       if (res.status === 401) {
-        // Not authenticated
         setUser(null);
         setCurrentPage("landing");
         return;
@@ -177,7 +217,6 @@ export default function DashboardPage() {
       setNewRoomName("");
       setNewRoomLang("javascript");
 
-      // Enter the room
       setCurrentRoom(data.room);
       setCurrentRoomId(data.room.id);
       setLanguage(data.room.language);
@@ -199,8 +238,6 @@ export default function DashboardPage() {
 
     setJoining(true);
     try {
-      // First try to find the room - we'll join via the invite code
-      // The API handles both finding and joining
       const roomsRes = await fetch("/api/rooms", { credentials: "include" });
       const allRooms = await roomsRes.json();
       const room = (Array.isArray(allRooms) ? allRooms : []).find(
@@ -208,7 +245,6 @@ export default function DashboardPage() {
       );
 
       if (!room) {
-        // Try joining via the join endpoint
         toast.error("Room not found. Check the invite code.");
         return;
       }
@@ -247,168 +283,236 @@ export default function DashboardPage() {
   const avatarColor = user?.avatarColor || "#238636";
 
   return (
-    <div
-      className="min-h-screen flex flex-col"
-      style={{ background: "#0d1117" }}
-    >
-      {/* Top Bar */}
-      <header className="border-b border-[#30363d] px-4 sm:px-6 py-3">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#238636]">
-              <Code2 className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-lg font-bold text-[#e6edf3]">
-              CollabCode
-            </span>
-          </div>
+    <div className="min-h-screen flex flex-col relative">
+      {/* Subtle animated background pattern */}
+      <div className="absolute inset-0 dot-grid opacity-20 pointer-events-none" />
 
-          <div className="flex items-center gap-3">
+      <div className="relative z-10 flex flex-col min-h-screen">
+        {/* Top Bar */}
+        <header className="border-b border-[#30363d] px-4 sm:px-6 py-3 bg-[#0d1117]/80 backdrop-blur-sm">
+          <div className="max-w-6xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white"
-                style={{ backgroundColor: avatarColor }}
-              >
-                {initial}
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#238636] glow-green">
+                <Code2 className="w-5 h-5 text-white" />
               </div>
-              <span className="hidden sm:block text-sm text-[#e6edf3] font-medium">
-                {user?.name}
+              <span className="text-lg font-bold text-[#e6edf3]">
+                CollabCode
               </span>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLogout}
-              className="text-[#8b949e] hover:text-[#f85149] hover:bg-[#21262d]"
-            >
-              <LogOut className="w-4 h-4 mr-1" />
-              <span className="hidden sm:inline">Logout</span>
-            </Button>
-          </div>
-        </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="flex-1 px-4 sm:px-6 py-8">
-        <div className="max-w-6xl mx-auto">
-          {/* Actions */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-[#e6edf3]">
-                Your Rooms
-              </h1>
-              <p className="text-[#8b949e] mt-1">
-                Create or join a room to start coding together
-              </p>
-            </div>
             <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white ring-2 ring-[#238636]/50 ring-offset-2 ring-offset-[#0d1117]"
+                  style={{ backgroundColor: avatarColor }}
+                >
+                  {initial}
+                </div>
+                <span className="hidden sm:block text-sm text-[#e6edf3] font-medium">
+                  {user?.name}
+                </span>
+              </div>
               <Button
-                variant="outline"
-                onClick={() => setJoinOpen(true)}
-                className="border-[#30363d] text-[#e6edf3] hover:bg-[#21262d]"
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="text-[#8b949e] hover:text-[#f85149] hover:bg-[#21262d]"
               >
-                Join Room
-              </Button>
-              <Button
-                onClick={() => setCreateOpen(true)}
-                className="bg-[#238636] hover:bg-[#2ea043] text-white"
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                Create New Room
+                <LogOut className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Logout</span>
               </Button>
             </div>
           </div>
+        </header>
 
-          {/* Room List */}
-          {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 text-[#8b949e] animate-spin" />
+        {/* Main Content */}
+        <main className="flex-1 px-4 sm:px-6 py-8">
+          <div className="max-w-6xl mx-auto">
+            {/* Stats bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+              {[
+                { icon: Hash, label: "Total Rooms", value: rooms.length, color: "#238636" },
+                { icon: Users, label: "Collaborators", value: totalCollaborators, color: "#58a6ff" },
+                { icon: FileCode2, label: "Languages", value: [...new Set(rooms.map(r => r.language))].length, color: "#d29922" },
+                { icon: Clock, label: "Active Now", value: rooms.filter(r => isRecent(r.lastActiveAt)).length, color: "#3fb950" },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className="rounded-lg border border-[#30363d] bg-[#161b22] p-3 sm:p-4 flex items-center gap-3"
+                >
+                  <div
+                    className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: `${stat.color}15` }}
+                  >
+                    <stat.icon className="w-4 h-4" style={{ color: stat.color }} />
+                  </div>
+                  <div>
+                    <div className="text-lg sm:text-xl font-bold text-[#e6edf3]">{stat.value}</div>
+                    <div className="text-xs text-[#8b949e]">{stat.label}</div>
+                  </div>
+                </div>
+              ))}
             </div>
-          ) : rooms.length === 0 ? (
-            <div className="text-center py-20">
-              <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-[#21262d] mx-auto mb-4">
-                <FolderOpen className="w-8 h-8 text-[#8b949e]" />
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-[#e6edf3]">
+                  Your Rooms
+                </h1>
+                <p className="text-[#8b949e] mt-1">
+                  Create or join a room to start coding together
+                </p>
               </div>
-              <h2 className="text-xl font-semibold text-[#e6edf3] mb-2">
-                No rooms yet
-              </h2>
-              <p className="text-[#8b949e] max-w-md mx-auto mb-6">
-                Create a new room to start collaborating, or join an existing
-                one with an invite code.
-              </p>
-              <div className="flex items-center justify-center gap-3">
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                {/* Search input */}
+                <div className="relative flex-1 sm:flex-none sm:w-56">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#484f58]" />
+                  <Input
+                    placeholder="Search rooms..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full h-9 pl-8 bg-[#161b22] border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] text-sm focus:border-[#238636]/50 focus:ring-1 focus:ring-[#238636]/30"
+                  />
+                </div>
                 <Button
                   variant="outline"
                   onClick={() => setJoinOpen(true)}
-                  className="border-[#30363d] text-[#e6edf3] hover:bg-[#21262d]"
+                  className="border-[#30363d] text-[#e6edf3] hover:bg-[#21262d] shrink-0"
                 >
-                  Join with Code
+                  <ArrowRight className="w-4 h-4 mr-1.5" />
+                  <span className="hidden sm:inline">Join Room</span>
+                  <span className="sm:hidden">Join</span>
                 </Button>
                 <Button
                   onClick={() => setCreateOpen(true)}
-                  className="bg-[#238636] hover:bg-[#2ea043] text-white"
+                  className="bg-[#238636] hover:bg-[#2ea043] text-white shrink-0"
                 >
-                  <Plus className="w-4 h-4 mr-1" />
-                  Create Room
+                  <Plus className="w-4 h-4 mr-1.5" />
+                  <span className="hidden sm:inline">Create New Room</span>
+                  <span className="sm:hidden">New</span>
                 </Button>
               </div>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {rooms.map((room) => (
-                <Card
-                  key={room.id}
-                  className="cursor-pointer border-[#30363d] hover:border-[#484f58] transition-colors group"
-                  style={{ background: "#161b22" }}
-                  onClick={() => handleOpenRoom(room)}
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <CardTitle className="text-[#e6edf3] text-base font-semibold line-clamp-1">
-                        {room.name}
-                      </CardTitle>
-                      <Badge
-                        variant="secondary"
-                        className="shrink-0 text-xs bg-[#21262d] text-[#8b949e] border-[#30363d]"
-                      >
-                        {room.language}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription className="text-[#8b949e] text-sm mb-4">
-                      Code:{" "}
-                      <span
-                        className="font-mono text-[#58a6ff] cursor-pointer hover:underline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCopyCode(room.inviteCode);
-                        }}
-                      >
-                        {room.inviteCode}
-                      </span>
-                      <Copy className="inline w-3 h-3 ml-1 text-[#484f58] group-hover:text-[#8b949e]" />
-                    </CardDescription>
-                    <div className="flex items-center justify-between text-xs text-[#8b949e]">
-                      <div className="flex items-center gap-1">
-                        <Users className="w-3.5 h-3.5" />
-                        <span>
-                          {room.collaboratorCount ?? room.collaborators?.length ?? 1} collaborator
-                          {(room.collaboratorCount ?? room.collaborators?.length ?? 1) !== 1 ? "s" : ""}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>{timeAgo(room.lastActiveAt)}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-      </main>
+
+            {/* Room List */}
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="w-8 h-8 text-[#8b949e] animate-spin" />
+              </div>
+            ) : filteredRooms.length === 0 ? (
+              <div className="text-center py-20">
+                <div className="flex items-center justify-center w-20 h-20 rounded-2xl bg-[#21262d] mx-auto mb-6 relative">
+                  <FolderOpen className="w-10 h-10 text-[#484f58]" />
+                  <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#161b22] border-2 border-[#0d1117] flex items-center justify-center">
+                    <Plus className="w-3.5 h-3.5 text-[#8b949e]" />
+                  </div>
+                </div>
+                <h2 className="text-xl font-semibold text-[#e6edf3] mb-2">
+                  {searchQuery ? "No rooms match your search" : "No rooms yet"}
+                </h2>
+                <p className="text-[#8b949e] max-w-md mx-auto mb-6">
+                  {searchQuery
+                    ? "Try adjusting your search query to find what you're looking for."
+                    : "Create a new room to start collaborating, or join an existing one with an invite code."}
+                </p>
+                {!searchQuery && (
+                  <div className="flex items-center justify-center gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => setJoinOpen(true)}
+                      className="border-[#30363d] text-[#e6edf3] hover:bg-[#21262d]"
+                    >
+                      <ArrowRight className="w-4 h-4 mr-1.5" />
+                      Join with Code
+                    </Button>
+                    <Button
+                      onClick={() => setCreateOpen(true)}
+                      className="bg-[#238636] hover:bg-[#2ea043] text-white"
+                    >
+                      <Plus className="w-4 h-4 mr-1.5" />
+                      Create Room
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredRooms.map((room) => {
+                  const langColor = LANG_COLORS[room.language] || "#8b949e";
+                  const recent = isRecent(room.lastActiveAt);
+                  return (
+                    <Card
+                      key={room.id}
+                      className="cursor-pointer border-[#30363d] hover:border-[#238636]/40 transition-all duration-300 group hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] relative overflow-hidden"
+                      style={{ background: "#161b22" }}
+                      onClick={() => handleOpenRoom(room)}
+                    >
+                      {/* Left accent line */}
+                      <div
+                        className="absolute left-0 top-0 bottom-0 w-[3px] transition-all duration-300"
+                        style={{ backgroundColor: langColor, opacity: 0.6 }}
+                      />
+                      <CardHeader className="pb-3 pl-5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <FileCode2 className="w-4 h-4 text-[#8b949e] shrink-0" />
+                            <CardTitle className="text-[#e6edf3] text-base font-semibold line-clamp-1">
+                              {room.name}
+                            </CardTitle>
+                          </div>
+                          {/* Language pill */}
+                          <div
+                            className="shrink-0 flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
+                            style={{
+                              backgroundColor: `${langColor}15`,
+                              color: langColor,
+                              border: `1px solid ${langColor}30`,
+                            }}
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: langColor }} />
+                            {room.language}
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pl-5">
+                        <CardDescription className="text-[#8b949e] text-sm mb-4">
+                          Code:{" "}
+                          <span
+                            className="font-mono text-[#58a6ff] cursor-pointer hover:underline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopyCode(room.inviteCode);
+                            }}
+                          >
+                            {room.inviteCode}
+                          </span>
+                          <Copy className="inline w-3 h-3 ml-1 text-[#484f58] group-hover:text-[#8b949e] transition-colors" />
+                        </CardDescription>
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-1 text-[#8b949e]">
+                            <Users className="w-3.5 h-3.5" />
+                            <span>
+                              {room.collaboratorCount ?? room.collaborators?.length ?? 1} collaborator
+                              {(room.collaboratorCount ?? room.collaborators?.length ?? 1) !== 1 ? "s" : ""}
+                            </span>
+                          </div>
+                          <div
+                            className={`flex items-center gap-1 ${recent ? "text-[#3fb950]" : "text-[#8b949e]"}`}
+                          >
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>{timeAgo(room.lastActiveAt)}</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
 
       {/* Create Room Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -434,7 +538,7 @@ export default function DashboardPage() {
                   placeholder="e.g., Project Alpha"
                   value={newRoomName}
                   onChange={(e) => setNewRoomName(e.target.value)}
-                  className="bg-[#0d1117] border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#58a6ff]"
+                  className="bg-[#0d1117] border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#238636] focus:ring-1 focus:ring-[#238636]/30"
                   autoFocus
                 />
               </div>
@@ -458,7 +562,10 @@ export default function DashboardPage() {
                         value={lang}
                         className="text-[#e6edf3] focus:bg-[#21262d] focus:text-[#e6edf3]"
                       >
-                        {lang.charAt(0).toUpperCase() + lang.slice(1)}
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: LANG_COLORS[lang] }} />
+                          {lang.charAt(0).toUpperCase() + lang.slice(1)}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -515,7 +622,7 @@ export default function DashboardPage() {
                   placeholder="e.g., ABCD-1234"
                   value={inviteCode}
                   onChange={(e) => setInviteCode(e.target.value)}
-                  className="bg-[#0d1117] border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#58a6ff] font-mono"
+                  className="bg-[#0d1117] border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#238636] focus:ring-1 focus:ring-[#238636]/30 font-mono"
                   autoFocus
                 />
               </div>

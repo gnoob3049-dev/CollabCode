@@ -115,3 +115,32 @@ export async function PUT(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// DELETE: Delete a room
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ roomId: string }> }
+) {
+  try {
+    const payload = await getCurrentUser();
+    if (!payload) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
+    const { roomId } = await params;
+    const room = await db.room.findUnique({ where: { id: roomId } });
+    if (!room) {
+      return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+    }
+
+    if (room.ownerId !== payload.userId) {
+      return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+    }
+
+    await db.room.delete({ where: { id: roomId } });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Room DELETE error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

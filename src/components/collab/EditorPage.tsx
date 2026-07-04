@@ -16,7 +16,9 @@ import FileTree from './FileTree';
 import ChatPanel from './ChatPanel';
 import AIPanel from './AIPanel';
 import OutputPanel from './OutputPanel';
-import type { ChatMessage } from '@/store/useStore';
+import RoomSettingsModal from './RoomSettingsModal';
+import EditorStatusBar from './EditorStatusBar';
+import type { ChatMessage, Room } from '@/store/useStore';
 
 const LANGUAGE_MAP: Record<string, string> = {
   javascript: 'javascript',
@@ -80,6 +82,8 @@ export default function EditorPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [currentCode, setCurrentCode] = useState('');
   const [connected, setConnected] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
 
   // Get language from file extension
   const getLanguageFromFilename = useCallback(
@@ -175,7 +179,12 @@ export default function EditorPage() {
     updateFiles();
 
     // Connect Socket.io
-    const socket = io('/?XTransformPort=3003');
+    const socket = io('/?XTransformPort=3003', {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
     socketRef.current = socket;
 
     socket.on('connect', () => {
@@ -274,6 +283,11 @@ export default function EditorPage() {
       // Track current code
       editorInstance.onDidChangeModelContent(() => {
         setCurrentCode(editorInstance.getValue());
+      });
+
+      // Track cursor position
+      editorInstance.onDidChangeCursorPosition((e) => {
+        setCursorPosition({ line: e.position.lineNumber, column: e.position.column });
       });
     },
     [currentFileName, user]
@@ -510,6 +524,36 @@ export default function EditorPage() {
     [currentRoomId, setCurrentRoom]
   );
 
+  const handleSettingsUpdate = useCallback(
+    (updatedRoom: Room) => {
+      setCurrentRoom(updatedRoom);
+      setLanguage(updatedRoom.language);
+    },
+    [setCurrentRoom, setLanguage]
+  );
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMod = e.metaKey || e.ctrlKey;
+      if (isMod && e.key === 's') {
+        e.preventDefault();
+        handleSave();
+      } else if (isMod && e.key === 'Enter') {
+        e.preventDefault();
+        handleRun();
+      } else if (isMod && e.key === 'b') {
+        e.preventDefault();
+        setRightPanelOpen(!rightPanelOpen);
+      } else if (e.key === 'Escape') {
+        setRightPanelOpen(false);
+        setOutputPanelOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSave, handleRun, rightPanelOpen]);
+
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#0d1117]">
       {/* Top bar */}
@@ -526,12 +570,14 @@ export default function EditorPage() {
         onToggleAI={handleToggleAI}
         onToggleOutput={() => setOutputPanelOpen(!outputPanelOpen)}
         onBack={handleBack}
+        onOpenSettings={() => setSettingsOpen(true)}
         rightPanelOpen={rightPanelOpen}
         outputPanelOpen={outputPanelOpen}
         unreadChatCount={unreadChatCount}
         isRunning={isRunning}
         isSaving={isSaving}
         onRenameRoom={handleRenameRoom}
+        isConnected={connected}
       />
 
       {/* Main content area */}
@@ -680,6 +726,25 @@ export default function EditorPage() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Status Bar */}
+      <EditorStatusBar
+        fileName={currentFileName}
+        language={language}
+        cursorPosition={cursorPosition}
+        connected={connected}
+        tabSize={2}
+      />
+
+      {/* Room Settings Modal */}
+      <RoomSettingsModal
+        room={currentRoom}
+        user={user}
+        onlineUsers={onlineUsers}
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onUpdate={handleSettingsUpdate}
+      />
     </div>
   );
 }
