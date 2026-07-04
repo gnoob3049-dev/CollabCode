@@ -1521,6 +1521,55 @@ textarea:focus,
   pointer-events: none;
 }
 
+/* ====== Cycle 11: Fix hydration mismatch — move animation inline styles to CSS ====== */
+
+/* 1. Feature card shimmer border (replaces inline animation/mask styles) */
+.feature-shimmer-border {
+  background: linear-gradient(
+    135deg,
+    rgba(35, 134, 54, 0.4),
+    rgba(88, 166, 255, 0.2),
+    rgba(163, 113, 247, 0.3),
+    rgba(35, 134, 54, 0.4)
+  );
+  background-size: 300% 300%;
+  animation: shimmer 4s ease-in-out infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 1px;
+}
+
+/* 2. CTA button shimmer wrapper */
+.cta-shimmer-wrapper {
+  background: linear-gradient(90deg, #238636, #58a6ff, #238636, #58a6ff);
+  background-size: 300% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+/* 3. Footer gradient shimmer top border */
+.footer-shimmer-line {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    #238636 20%,
+    #58a6ff 50%,
+    #a371f7 80%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 4s ease infinite;
+}
+
+/* 4. Respects reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .feature-shimmer-border,
+  .cta-shimmer-wrapper,
+  .footer-shimmer-line {
+    animation: none;
+  }
+}
+
 /* 10. "Or continue with" divider — enhanced */
 .or-divider {
   display: flex;

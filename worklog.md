@@ -2283,3 +2283,20 @@ CollabCode is now at 29+ components, 15 API routes, 1 mini-service, and 5 utilit
 8. **Git integration** — Show file change history, blame, diff
 9. **Performance optimization** — Lazy load Monaco editor, optimize Y.js for large files
 10. **Syntax highlighting in output panel** — Enhanced ANSI support for more escape codes
+
+---
+Task ID: 11 (Hydration Fix)
+Agent: Main Agent
+Task: Fix React hydration mismatch error caused by inline CSS animation styles in LandingPage.tsx
+
+Work Log:
+- Analyzed hydration error: SSR expands CSS animation shorthand into longhand properties while client React uses shorthand → mismatch on FeatureCard shimmer borders, CTA button wrapper, and footer gradient line
+- Created 3 new CSS classes in `globals.css`: `.feature-shimmer-border`, `.cta-shimmer-wrapper`, `.footer-shimmer-line`
+- Added `@media (prefers-reduced-motion: reduce)` for accessibility (replaces JS `window.matchMedia` check)
+- Updated `LandingPage.tsx`: replaced all 3 inline `style={{ animation: ... }}` blocks with CSS classes
+- Verified: zero lint errors, zero console errors via agent-browser, page renders correctly
+
+Stage Summary:
+- Root Cause: Inline `style` with CSS animation shorthand expanded during SSR vs shorthand on client
+- Fix: Animation/mask styles → CSS classes; reduced motion → CSS media query
+- Files: `globals.css` (+4 rules), `LandingPage.tsx` (-3 inline style blocks)

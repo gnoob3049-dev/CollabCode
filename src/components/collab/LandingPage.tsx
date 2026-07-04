@@ -416,18 +416,7 @@ function FeatureCard({ feature }: { feature: Feature }) {
     >
       {/* Animated shimmer border on hover */}
       <div
-        className="absolute -inset-px rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none z-0"
-        style={{
-          background:
-            "linear-gradient(135deg, rgba(35,134,54,0.4), rgba(88,166,255,0.2), rgba(163,113,247,0.3), rgba(35,134,54,0.4))",
-          backgroundSize: "300% 300%",
-          animation: prefersReducedMotion ? "none" : "shimmer 4s ease-in-out infinite",
-          WebkitMask:
-            "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
-          WebkitMaskComposite: "xor",
-          maskComposite: "exclude",
-          padding: "1px",
-        }}
+        className="absolute -inset-px rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none z-0 feature-shimmer-border"
       />
 
       {/* Inner glow effect on hover */}
@@ -815,13 +804,7 @@ export default function LandingPage() {
             >
               {/* Get Started - glow green on hover */}
               <div
-                className="relative group p-[2px] rounded-lg will-change-transform"
-                style={{
-                  background:
-                    "linear-gradient(90deg, #238636, #58a6ff, #238636, #58a6ff)",
-                  backgroundSize: "300% 100%",
-                  animation: "shimmer 3s ease-in-out infinite",
-                }}
+                className="relative group p-[2px] rounded-lg will-change-transform cta-shimmer-wrapper"
               >
                 <Button
                   onClick={handleGetStarted}
@@ -1075,15 +1058,7 @@ export default function LandingPage() {
         <footer className="relative py-10 sm:py-12 px-4 sm:px-6 mt-auto">
           {/* Animated gradient top border — green → blue → purple */}
           <div
-            className="absolute top-0 left-0 right-0 h-px will-change-transform"
-            style={{
-              background:
-                "linear-gradient(90deg, transparent 0%, #238636 20%, #58a6ff 50%, #a371f7 80%, transparent 100%)",
-              backgroundSize: "200% 100%",
-              animation: prefersReducedMotion
-                ? "none"
-                : "shimmer 4s ease infinite",
-            }}
+            className="absolute top-0 left-0 right-0 h-px will-change-transform footer-shimmer-line"
           />
 
           <div className="max-w-6xl mx-auto pt-2">
