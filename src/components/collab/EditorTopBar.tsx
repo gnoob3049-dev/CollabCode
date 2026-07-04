@@ -27,6 +27,8 @@ import {
   Paintbrush,
   MoreHorizontal,
   FolderTree,
+  ClipboardList,
+  WrapText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -102,6 +104,10 @@ interface EditorTopBarProps {
   isOwner?: boolean;
   onExport?: () => void;
   onToggleMobileFileTree?: () => void;
+  onToggleActivityLog?: () => void;
+  activityLogOpen?: boolean;
+  onToggleWordWrap?: () => void;
+  wordWrap?: 'on' | 'off';
 }
 
 export default function EditorTopBar({
@@ -141,6 +147,10 @@ export default function EditorTopBar({
   isOwner = false,
   onExport,
   onToggleMobileFileTree,
+  onToggleActivityLog,
+  activityLogOpen = false,
+  onToggleWordWrap,
+  wordWrap = 'on',
 }: EditorTopBarProps) {
   const isLockedForUser = isReadOnly && !isOwner;
   const [isEditingName, setIsEditingName] = useState(false);
@@ -176,6 +186,7 @@ export default function EditorTopBar({
   const moreButtons = [
     { label: 'Audio', icon: audioEnabled ? Bell : BellOff, action: onToggleAudio || (() => {}) },
     { label: 'History', icon: History, action: onToggleHistory, active: historyOpen },
+    { label: 'Activity Log', icon: ClipboardList, action: onToggleActivityLog || (() => {}), active: activityLogOpen },
     { label: 'Settings', icon: Settings, action: onOpenSettings },
     { label: 'Shortcuts', icon: HelpCircle, action: onOpenShortcuts },
     ...(onExport ? [{ label: 'Export', icon: Download, action: onExport }] : []),
@@ -185,7 +196,7 @@ export default function EditorTopBar({
     <div className="relative flex flex-col shrink-0">
       {/* Gradient background top bar */}
       <div
-        className="flex items-center justify-between h-11 md:h-12 px-2 md:px-3 shrink-0 gap-1 md:gap-2"
+        className="flex items-center justify-between h-11 md:h-12 px-2 md:px-3 shrink-0 gap-1 md:gap-2 overflow-hidden"
         style={{
           background: 'linear-gradient(180deg, #161b22 0%, #13171e 100%)',
         }}
@@ -243,7 +254,7 @@ export default function EditorTopBar({
         </div>
 
         {/* Center - Language selector (hidden on mobile) */}
-        <div className="hidden md:flex items-center">
+        <div className="hidden md:flex items-center shrink-0">
           <Select value={language} onValueChange={onLanguageChange}>
             <SelectTrigger
               size="sm"
@@ -271,6 +282,27 @@ export default function EditorTopBar({
               ))}
             </SelectContent>
           </Select>
+
+          {/* Word Wrap Toggle */}
+          <div className="hidden sm:flex items-center ml-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={onToggleWordWrap}
+                  className={cn(
+                    'flex items-center justify-center size-7 rounded-md transition-all duration-150 press-effect',
+                    wordWrap === 'on'
+                      ? 'text-[#3fb950] word-wrap-active hover:bg-[#238636]/10'
+                      : 'text-[#484f58] hover:text-[#8b949e] hover:bg-[#30363d]/60'
+                  )}
+                  aria-label="Toggle word wrap"
+                >
+                  <WrapText className="size-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Word Wrap (Alt+Z)</TooltipContent>
+            </Tooltip>
+          </div>
         </div>
 
         {/* Right section */}
@@ -549,7 +581,28 @@ export default function EditorTopBar({
                 <History className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">History</TooltipContent>
+            <TooltipContent side="bottom">History (Ctrl+Shift+H)</TooltipContent>
+          </Tooltip>
+
+          {/* Activity Log — desktop only */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  'hidden sm:flex size-8 hover:bg-[#30363d] press-effect',
+                  activityLogOpen
+                    ? 'text-[#f0883e] bg-[#f0883e]/10'
+                    : 'text-[#8b949e] hover:text-[#e6edf3]'
+                )}
+                onClick={onToggleActivityLog}
+                aria-label="Activity Log"
+              >
+                <ClipboardList className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Activity Log</TooltipContent>
           </Tooltip>
 
           {/* Export — desktop only */}

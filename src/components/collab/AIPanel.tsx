@@ -13,6 +13,7 @@ import {
   Copy,
   Check,
   Square,
+  Sparkle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -202,10 +203,13 @@ export default function AIPanel({
   }, [response]);
 
   const charCount = question.length;
-  const maxChars = 500;
+  const maxChars = 2000;
 
   return (
     <div className="flex flex-col h-full">
+      {/* Gradient header bar */}
+      <div className="ai-gradient-bar" />
+
       {/* Gradient header */}
       <div
         className="px-4 py-3 shrink-0 relative overflow-hidden"
@@ -224,6 +228,9 @@ export default function AIPanel({
                 <Sparkles className="size-3.5 text-white" />
               </div>
               <h3 className="text-sm font-semibold text-[#e6edf3]">AI Assistant</h3>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#a371f7]/15 text-[#a371f7] border border-[#a371f7]/30 font-medium badge-pulse">
+                GPT-4o
+              </span>
               {isStreaming && (
                 <span className="flex items-center gap-1 text-[10px] text-purple-400">
                   <span className="size-1.5 rounded-full bg-purple-400 animate-pulse" />
@@ -297,6 +304,35 @@ export default function AIPanel({
       {/* Response Area */}
       <ScrollArea className="flex-1 min-h-0" ref={scrollRef}>
         <div className="p-3">
+          {!response && !loading && !isStreaming && !error && (
+            <div className="flex flex-col items-center gap-3 py-6">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center animate-pulse"
+                style={{ background: 'linear-gradient(135deg, #bc8cff15, #58a6ff15)' }}
+              >
+                <Sparkles className="size-5 text-[#30363d]" />
+              </div>
+              <span className="text-xs text-[#484f58]">Ask AI about your code</span>
+              <div className="flex flex-wrap justify-center gap-2 mt-1">
+                {[
+                  { label: 'Explain this code', prompt: 'Explain this code:' },
+                  { label: 'Find bugs', prompt: 'Find and fix any bugs in this code:' },
+                  { label: 'Optimize performance', prompt: 'Optimize this code for better performance:' },
+                ].map((s) => (
+                  <button
+                    key={s.label}
+                    onClick={() => askAI(`${s.prompt}\n\nFile: ${currentFileName}\n\`\`\`${language}\n${currentCode}\n\`\`\``)}
+                    className="suggestion-chip"
+                    disabled={loading || isStreaming || !currentCode.trim()}
+                  >
+                    <Sparkle className="size-3" />
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {(loading || isStreaming) && !response && (
             <div className="space-y-3 py-4">
               {/* Shimmer loading animation */}
@@ -346,15 +382,9 @@ export default function AIPanel({
             </div>
           )}
 
-          {!response && !loading && !isStreaming && !error && (
-            <div className="flex flex-col items-center justify-center h-32 text-[#30363d] gap-2">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center animate-pulse"
-                style={{ background: 'linear-gradient(135deg, #bc8cff15, #58a6ff15)' }}
-              >
-                <Sparkles className="size-5 text-[#30363d]" />
-              </div>
-              <span className="text-xs">Ask AI about your code</span>
+          {error && (
+            <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-400 my-2">
+              {error}
             </div>
           )}
         </div>
@@ -377,9 +407,9 @@ export default function AIPanel({
           <div className="flex items-center gap-1.5 shrink-0">
             <span className={cn(
               'text-[10px] tabular-nums',
-              charCount > maxChars * 0.9 ? 'text-[#f85149]' : 'text-[#30363d]'
+              charCount > 1800 ? 'text-[#f85149]' : 'text-[#30363d]'
             )}>
-              {charCount}
+              {charCount} / {maxChars}
             </span>
             {isStreaming ? (
               <Button

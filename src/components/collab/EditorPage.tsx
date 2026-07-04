@@ -31,6 +31,7 @@ import {
   History,
   Download,
   Inbox,
+  ClipboardList,
 } from 'lucide-react';
 import { playSound, isAudioEnabled as checkAudioEnabled, toggleAudio as doToggleAudio } from '@/lib/audio';
 import { useStore } from '@/store/useStore';
@@ -1011,7 +1012,7 @@ export default function EditorPage() {
         id: 'toggle-word-wrap',
         label: 'Toggle Word Wrap',
         icon: WrapText,
-        category: 'View',
+        category: 'Editor',
         action: () =>
           setWordWrap((v) => (v === 'on' ? 'off' : 'on')),
       },
@@ -1071,6 +1072,14 @@ export default function EditorPage() {
         shortcut: ['Ctrl', 'Shift', 'H'],
         category: 'View',
         action: handleToggleVersionHistory,
+      },
+      {
+        id: 'toggle-activity-log',
+        label: 'Toggle Activity Log',
+        icon: ClipboardList,
+        shortcut: ['Ctrl', 'Shift', 'A'],
+        category: 'View',
+        action: () => setActivityLogOpen((v) => !v),
       },
       {
         id: 'toggle-notifications',
@@ -1156,6 +1165,10 @@ export default function EditorPage() {
         e.preventDefault();
         e.stopPropagation();
         handleFormat();
+      } else if (e.altKey && (e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault();
+        e.stopPropagation();
+        setWordWrap((v) => (v === 'on' ? 'off' : 'on'));
       } else if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
@@ -1305,9 +1318,13 @@ export default function EditorPage() {
         isOwner={isOwner}
         onExport={handleExportRoom}
         onToggleMobileFileTree={() => setMobileFileTreeOpen((v) => !v)}
+        onToggleActivityLog={() => setActivityLogOpen((v) => !v)}
+        activityLogOpen={activityLogOpen}
         onToggleNotifications={() => setNotificationsOpen((v) => !v)}
         notificationsOpen={notificationsOpen}
         unreadNotificationCount={notifications.filter((n) => !n.read).length}
+        onToggleWordWrap={() => setWordWrap((w) => (w === 'on' ? 'off' : 'on'))}
+        wordWrap={wordWrap}
       />
 
       {/* Read-only mode banner */}

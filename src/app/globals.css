@@ -1274,3 +1274,108 @@ textarea:focus,
   border-color: rgba(35, 134, 54, 0.4);
   box-shadow: 0 0 0 3px rgba(35, 134, 54, 0.08), 0 0 16px rgba(35, 134, 54, 0.06);
 }
+
+/* ====== Task 2-f: Editor Enhancements + Styling Polish ====== */
+
+/* Word wrap toggle animation */
+@keyframes word-wrap-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+.word-wrap-active {
+  animation: word-wrap-pulse 2s ease-in-out infinite;
+}
+
+/* Chat message hover accent */
+.chat-msg-hover {
+  position: relative;
+  transition: all 0.15s ease;
+}
+.chat-msg-hover:hover {
+  background: rgba(22, 27, 34, 0.5);
+}
+.chat-msg-hover::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  border-radius: 1px;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+.chat-msg-hover:hover::before {
+  background: #238636;
+}
+.chat-msg-hover-remote::before {
+  /* override for remote messages */
+}
+.chat-msg-hover-remote:hover::before {
+  background: #58a6ff;
+}
+
+/* AI panel gradient header */
+@keyframes ai-gradient-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.ai-gradient-bar {
+  height: 2px;
+  background: linear-gradient(90deg, #238636, #58a6ff, #a371f7, #238636);
+  background-size: 300% 100%;
+  animation: ai-gradient-flow 4s ease infinite;
+}
+
+/* Terminal cursor blink */
+@keyframes terminal-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.terminal-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 16px;
+  background: #3fb950;
+  animation: terminal-cursor 1s step-end infinite;
+  vertical-align: text-bottom;
+  margin-left: 2px;
+}
+
+/* Suggestion chip */
+.suggestion-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  background: #21262d;
+  border: 1px solid #30363d;
+  color: #8b949e;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.suggestion-chip:hover {
+  background: #30363d;
+  color: #e6edf3;
+  border-color: #484f58;
+}
+
+/* Color swatch for profile */
+.color-swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 2px solid transparent;
+}
+.color-swatch:hover {
+  transform: scale(1.15);
+}
+.color-swatch.active {
+  border-color: #e6edf3;
+  box-shadow: 0 0 0 2px #0d1117, 0 0 0 4px #e6edf3;
+}

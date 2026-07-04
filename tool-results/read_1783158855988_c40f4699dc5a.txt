@@ -1,0 +1,710 @@
+     1→'use client';
+     2→
+     3→import { useState, useRef, useEffect } from 'react';
+     4→import {
+     5→  ArrowLeft,
+     6→  Play,
+     7→  Save,
+     8→  Share2,
+     9→  MessageSquare,
+    10→  Sparkles,
+    11→  Loader2,
+    12→  PanelRightClose,
+    13→  PanelRightOpen,
+    14→  Terminal,
+    15→  FolderCode,
+    16→  Settings,
+    17→  Wifi,
+    18→  WifiOff,
+    19→  HelpCircle,
+    20→  Eye,
+    21→  Bell,
+    22→  BellOff,
+    23→  History,
+    24→  Lock,
+    25→  Download,
+    26→  Inbox,
+    27→  Paintbrush,
+    28→  MoreHorizontal,
+    29→  FolderTree,
+    30→} from 'lucide-react';
+    31→import { Button } from '@/components/ui/button';
+    32→import {
+    33→  Select,
+    34→  SelectContent,
+    35→  SelectItem,
+    36→  SelectTrigger,
+    37→  SelectValue,
+    38→} from '@/components/ui/select';
+    39→import {
+    40→  Tooltip,
+    41→  TooltipContent,
+    42→  TooltipTrigger,
+    43→} from '@/components/ui/tooltip';
+    44→import { Badge } from '@/components/ui/badge';
+    45→import {
+    46→  DropdownMenu,
+    47→  DropdownMenuContent,
+    48→  DropdownMenuItem,
+    49→  DropdownMenuSeparator,
+    50→  DropdownMenuTrigger,
+    51→} from '@/components/ui/dropdown-menu';
+    52→import { cn } from '@/lib/utils';
+    53→import type { Room, User, PresenceUser } from '@/store/useStore';
+    54→
+    55→const LANGUAGES: Record<string, { value: string; label: string; color: string }> = {
+    56→  javascript: { value: 'javascript', label: 'JavaScript', color: '#f7df1e' },
+    57→  typescript: { value: 'typescript', label: 'TypeScript', color: '#3178c6' },
+    58→  python: { value: 'python', label: 'Python', color: '#3572a5' },
+    59→  java: { value: 'java', label: 'Java', color: '#b07219' },
+    60→  cpp: { value: 'cpp', label: 'C++', color: '#f34b7d' },
+    61→  go: { value: 'go', label: 'Go', color: '#00add8' },
+    62→  html: { value: 'html', label: 'HTML', color: '#e34c26' },
+    63→  css: { value: 'css', label: 'CSS', color: '#563d7c' },
+    64→  sql: { value: 'sql', label: 'SQL', color: '#e38c00' },
+    65→  rust: { value: 'rust', label: 'Rust', color: '#dea584' },
+    66→};
+    67→
+    68→interface EditorTopBarProps {
+    69→  room: Room | null;
+    70→  user: User | null;
+    71→  onlineUsers: PresenceUser[];
+    72→  language: string;
+    73→  onLanguageChange: (lang: string) => void;
+    74→  onRun: () => void;
+    75→  onSave: () => void;
+    76→  onFormat: () => void;
+    77→  onShare: () => void;
+    78→  onToggleChat: () => void;
+    79→  onToggleAI: () => void;
+    80→  onToggleOutput: () => void;
+    81→  onBack: () => void;
+    82→  rightPanelOpen: boolean;
+    83→  outputPanelOpen: boolean;
+    84→  unreadChatCount: number;
+    85→  isRunning: boolean;
+    86→  isSaving: boolean;
+    87→  onRenameRoom: (name: string) => void;
+    88→  onOpenSettings: () => void;
+    89→  onOpenShortcuts: () => void;
+    90→  onTogglePreview: () => void;
+    91→  previewOpen: boolean;
+    92→  showPreview: boolean;
+    93→  isConnected?: boolean;
+    94→  audioEnabled?: boolean;
+    95→  onToggleAudio?: () => void;
+    96→  onToggleHistory: () => void;
+    97→  historyOpen: boolean;
+    98→  onToggleNotifications: () => void;
+    99→  notificationsOpen: boolean;
+   100→  unreadNotificationCount: number;
+   101→  isReadOnly?: boolean;
+   102→  isOwner?: boolean;
+   103→  onExport?: () => void;
+   104→  onToggleMobileFileTree?: () => void;
+   105→}
+   106→
+   107→export default function EditorTopBar({
+   108→  room,
+   109→  user,
+   110→  onlineUsers,
+   111→  language,
+   112→  onLanguageChange,
+   113→  onRun,
+   114→  onSave,
+   115→  onFormat,
+   116→  onShare,
+   117→  onToggleChat,
+   118→  onToggleAI,
+   119→  onToggleOutput,
+   120→  onBack,
+   121→  rightPanelOpen,
+   122→  outputPanelOpen,
+   123→  unreadChatCount,
+   124→  isRunning,
+   125→  isSaving,
+   126→  onRenameRoom,
+   127→  onOpenSettings,
+   128→  onOpenShortcuts,
+   129→  onTogglePreview,
+   130→  previewOpen,
+   131→  showPreview,
+   132→  isConnected = true,
+   133→  audioEnabled = true,
+   134→  onToggleAudio,
+   135→  onToggleHistory,
+   136→  historyOpen,
+   137→  onToggleNotifications,
+   138→  notificationsOpen,
+   139→  unreadNotificationCount,
+   140→  isReadOnly = false,
+   141→  isOwner = false,
+   142→  onExport,
+   143→  onToggleMobileFileTree,
+   144→}: EditorTopBarProps) {
+   145→  const isLockedForUser = isReadOnly && !isOwner;
+   146→  const [isEditingName, setIsEditingName] = useState(false);
+   147→  const [editName, setEditName] = useState('');
+   148→  const nameInputRef = useRef<HTMLInputElement>(null);
+   149→
+   150→  const displayName = isEditingName ? editName : (room?.name || 'Untitled');
+   151→
+   152→  useEffect(() => {
+   153→    if (isEditingName && nameInputRef.current) {
+   154→      nameInputRef.current.focus();
+   155→      nameInputRef.current.select();
+   156→    }
+   157→  }, [isEditingName]);
+   158→
+   159→  const handleNameSubmit = () => {
+   160→    const trimmed = editName.trim();
+   161→    if (trimmed && trimmed !== room?.name) {
+   162→      onRenameRoom(trimmed);
+   163→    }
+   164→    setIsEditingName(false);
+   165→    setEditName('');
+   166→  };
+   167→
+   168→  const startEditing = () => {
+   169→    setEditName(room?.name || '');
+   170→    setIsEditingName(true);
+   171→  };
+   172→
+   173→  const currentLang = LANGUAGES[language];
+   174→
+   175→  // Buttons to show in the "More" dropdown on very small screens
+   176→  const moreButtons = [
+   177→    { label: 'Audio', icon: audioEnabled ? Bell : BellOff, action: onToggleAudio || (() => {}) },
+   178→    { label: 'History', icon: History, action: onToggleHistory, active: historyOpen },
+   179→    { label: 'Settings', icon: Settings, action: onOpenSettings },
+   180→    { label: 'Shortcuts', icon: HelpCircle, action: onOpenShortcuts },
+   181→    ...(onExport ? [{ label: 'Export', icon: Download, action: onExport }] : []),
+   182→  ];
+   183→
+   184→  return (
+   185→    <div className="relative flex flex-col shrink-0">
+   186→      {/* Gradient background top bar */}
+   187→      <div
+   188→        className="flex items-center justify-between h-11 md:h-12 px-2 md:px-3 shrink-0 gap-1 md:gap-2"
+   189→        style={{
+   190→          background: 'linear-gradient(180deg, #161b22 0%, #13171e 100%)',
+   191→        }}
+   192→      >
+   193→        {/* Left section */}
+   194→        <div className="flex items-center gap-2 min-w-0">
+   195→          <Tooltip>
+   196→            <TooltipTrigger asChild>
+   197→              <Button
+   198→                variant="ghost"
+   199→                size="icon"
+   200→                className="size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d] shrink-0 press-effect"
+   201→                onClick={onBack}
+   202→                aria-label="Back to Dashboard"
+   203→              >
+   204→                <ArrowLeft className="size-4" />
+   205→              </Button>
+   206→            </TooltipTrigger>
+   207→            <TooltipContent side="bottom">Back to Dashboard</TooltipContent>
+   208→          </Tooltip>
+   209→
+   210→          <div className="flex items-center gap-1.5 min-w-0">
+   211→            <FolderCode className="size-3.5 text-[#8b949e] shrink-0" />
+   212→            {isLockedForUser && (
+   213→              <Lock className="size-3.5 text-[#f0883e] shrink-0" />
+   214→            )}
+   215→            {isEditingName ? (
+   216→              <input
+   217→                ref={nameInputRef}
+   218→                value={editName}
+   219→                onChange={(e) => setEditName(e.target.value)}
+   220→                onBlur={handleNameSubmit}
+   221→                onKeyDown={(e) => {
+   222→                  if (e.key === 'Enter') {
+   223→                    e.preventDefault();
+   224→                    handleNameSubmit();
+   225→                  }
+   226→                  if (e.key === 'Escape') {
+   227→                    setIsEditingName(false);
+   228→                    setEditName('');
+   229→                  }
+   230→                }}
+   231→                className="bg-[#0d1117] text-sm font-semibold text-[#e6edf3] outline-none px-2 py-0.5 rounded border border-[#238636] max-w-[200px]"
+   232→              />
+   233→            ) : (
+   234→              <button
+   235→                className="text-sm font-semibold text-[#e6edf3] truncate hover:text-white transition-colors"
+   236→                onDoubleClick={startEditing}
+   237→                title="Double-click to rename"
+   238→              >
+   239→                {room?.name || 'Untitled'}
+   240→              </button>
+   241→            )}
+   242→          </div>
+   243→        </div>
+   244→
+   245→        {/* Center - Language selector (hidden on mobile) */}
+   246→        <div className="hidden md:flex items-center">
+   247→          <Select value={language} onValueChange={onLanguageChange}>
+   248→            <SelectTrigger
+   249→              size="sm"
+   250→              className="w-[140px] h-7 text-xs bg-[#0d1117] border-[#30363d] text-[#e6edf3] hover:bg-[#0d1117]/80"
+   251→            >
+   252→              {currentLang && (
+   253→                <div className="flex items-center gap-1.5">
+   254→                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: currentLang.color }} />
+   255→                  <SelectValue />
+   256→                </div>
+   257→              )}
+   258→            </SelectTrigger>
+   259→            <SelectContent className="bg-[#161b22] border-[#30363d] text-[#e6edf3]">
+   260→              {Object.values(LANGUAGES).map((lang) => (
+   261→                <SelectItem
+   262→                  key={lang.value}
+   263→                  value={lang.value}
+   264→                  className="text-[#e6edf3] focus:bg-[#30363d] focus:text-[#e6edf3] text-xs hover:scale-[1.02] transition-transform duration-150"
+   265→                >
+   266→                  <span className="flex items-center gap-2">
+   267→                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: lang.color }} />
+   268→                    {lang.label}
+   269→                  </span>
+   270→                </SelectItem>
+   271→              ))}
+   272→            </SelectContent>
+   273→          </Select>
+   274→        </div>
+   275→
+   276→        {/* Right section */}
+   277→        <div className="flex items-center gap-0.5 md:gap-1 shrink-0">
+   278→          {/* Connection status indicator */}
+   279→          <div className="hidden sm:flex items-center mr-1">
+   280→            {isConnected ? (
+   281→              <Tooltip>
+   282→                <TooltipTrigger asChild>
+   283→                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#238636]/10">
+   284→                    <Wifi className="size-3 text-[#238636]" />
+   285→                    <span className="text-[10px] text-[#238636] font-medium">Live</span>
+   286→                    <span className="size-1.5 rounded-full bg-[#238636] pulse-dot float-subtle" />
+   287→                  </div>
+   288→                </TooltipTrigger>
+   289→                <TooltipContent side="bottom">Connected to room</TooltipContent>
+   290→              </Tooltip>
+   291→            ) : (
+   292→              <Tooltip>
+   293→                <TooltipTrigger asChild>
+   294→                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#f85149]/10">
+   295→                    <WifiOff className="size-3 text-[#f85149]" />
+   296→                    <span className="text-[10px] text-[#f85149] font-medium">Offline</span>
+   297→                  </div>
+   298→                </TooltipTrigger>
+   299→                <TooltipContent side="bottom">Disconnected from room</TooltipContent>
+   300→              </Tooltip>
+   301→            )}
+   302→          </div>
+   303→
+   304→          {/* Online users */}
+   305→          <div className="hidden sm:flex items-center mr-1">
+   306→            <div className="flex -space-x-1.5">
+   307→              {onlineUsers.slice(0, 4).map((u) => (
+   308→                <Tooltip key={u.id}>
+   309→                  <TooltipTrigger asChild>
+   310→                    <div
+   311→                      className="size-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white ring-2 ring-[#13171e]"
+   312→                      style={{ backgroundColor: u.color, boxShadow: `0 0 6px ${u.color}40` }}
+   313→                    >
+   314→                      {u.name.charAt(0).toUpperCase()}
+   315→                    </div>
+   316→                  </TooltipTrigger>
+   317→                  <TooltipContent side="bottom">{u.name}</TooltipContent>
+   318→                </Tooltip>
+   319→              ))}
+   320→              {onlineUsers.length > 4 && (
+   321→                <Tooltip>
+   322→                  <TooltipTrigger asChild>
+   323→                    <div className="size-6 rounded-full flex items-center justify-center text-[10px] font-medium text-[#8b949e] ring-2 ring-[#13171e] bg-[#30363d]">
+   324→                      +{onlineUsers.length - 4}
+   325→                    </div>
+   326→                  </TooltipTrigger>
+   327→                  <TooltipContent side="bottom">
+   328→                    {onlineUsers
+   329→                      .slice(4)
+   330→                      .map((u) => u.name)
+   331→                      .join(', ')}
+   332→                  </TooltipContent>
+   333→                </Tooltip>
+   334→              )}
+   335→            </div>
+   336→          </div>
+   337→
+   338→          <div className="w-px h-5 bg-[#30363d] mx-1 hidden sm:block" />
+   339→
+   340→          {/* Mobile file tree toggle */}
+   341→          {onToggleMobileFileTree && (
+   342→            <Tooltip>
+   343→              <TooltipTrigger asChild>
+   344→                <Button
+   345→                  variant="ghost"
+   346→                  size="icon"
+   347→                  className="md:hidden size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d] press-effect"
+   348→                  onClick={onToggleMobileFileTree}
+   349→                  aria-label="Toggle file tree"
+   350→                >
+   351→                  <FolderTree className="size-4" />
+   352→                </Button>
+   353→              </TooltipTrigger>
+   354→              <TooltipContent side="bottom">File Tree</TooltipContent>
+   355→            </Tooltip>
+   356→          )}
+   357→
+   358→          {/* Share */}
+   359→          <Tooltip>
+   360→            <TooltipTrigger asChild>
+   361→              <Button
+   362→                variant="ghost"
+   363→                size="icon"
+   364→                className="size-7 md:size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d] press-effect"
+   365→                onClick={onShare}
+   366→                aria-label="Share invite link"
+   367→              >
+   368→                <Share2 className="size-3.5 md:size-4" />
+   369→              </Button>
+   370→            </TooltipTrigger>
+   371→            <TooltipContent side="bottom">Copy invite link</TooltipContent>
+   372→          </Tooltip>
+   373→
+   374→          {/* Run */}
+   375→          <Tooltip>
+   376→            <TooltipTrigger asChild>
+   377→              <Button
+   378→                variant="ghost"
+   379→                size="icon"
+   380→                className="size-7 md:size-8 text-[#238636] hover:text-[#3fb950] hover:bg-[#238636]/10 hover:shadow-[0_0_12px_rgba(35,134,54,0.2)] press-effect"
+   381→                onClick={onRun}
+   382→                disabled={isRunning || isLockedForUser}
+   383→                aria-label="Run code"
+   384→              >
+   385→                {isRunning ? (
+   386→                  <Loader2 className="size-3.5 md:size-4 animate-spin" />
+   387→                ) : (
+   388→                  <Play className="size-3.5 md:size-4" />
+   389→                )}
+   390→              </Button>
+   391→            </TooltipTrigger>
+   392→            <TooltipContent side="bottom">Run (Ctrl+Enter)</TooltipContent>
+   393→          </Tooltip>
+   394→
+   395→          {/* Save */}
+   396→          <Tooltip>
+   397→            <TooltipTrigger asChild>
+   398→              <Button
+   399→                variant="ghost"
+   400→                size="icon"
+   401→                className="size-7 md:size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d] press-effect"
+   402→                onClick={onSave}
+   403→                disabled={isSaving || isLockedForUser}
+   404→                aria-label="Save room"
+   405→              >
+   406→                {isSaving ? (
+   407→                  <Loader2 className="size-3.5 md:size-4 animate-spin" />
+   408→                ) : (
+   409→                  <Save className="size-3.5 md:size-4" />
+   410→                )}
+   411→              </Button>
+   412→            </TooltipTrigger>
+   413→            <TooltipContent side="bottom">Save (Ctrl+S)</TooltipContent>
+   414→          </Tooltip>
+   415→
+   416→          <div className="w-px h-4 md:h-5 bg-[#30363d] mx-0.5 md:mx-1" />
+   417→
+   418→          {/* HTML Preview toggle — desktop only */}
+   419→          {showPreview && (
+   420→            <Tooltip>
+   421→              <TooltipTrigger asChild>
+   422→                <Button
+   423→                  variant="ghost"
+   424→                  size="icon"
+   425→                  className={cn(
+   426→                    'hidden md:flex size-8 hover:bg-[#30363d]',
+   427→                    previewOpen
+   428→                      ? 'text-[#e6edf3] bg-[#30363d]'
+   429→                      : 'text-[#8b949e] hover:text-[#e6edf3]'
+   430→                  )}
+   431→                  onClick={onTogglePreview}
+   432→                  aria-label="Toggle preview"
+   433→                >
+   434→                  <Eye className="size-4" />
+   435→                </Button>
+   436→              </TooltipTrigger>
+   437→              <TooltipContent side="bottom">Preview</TooltipContent>
+   438→            </Tooltip>
+   439→          )}
+   440→
+   441→          {/* Terminal toggle */}
+   442→          <Tooltip>
+   443→            <TooltipTrigger asChild>
+   444→              <Button
+   445→                variant="ghost"
+   446→                size="icon"
+   447→                className={cn(
+   448→                  'size-7 md:size-8 hover:bg-[#30363d]',
+   449→                  outputPanelOpen
+   450→                    ? 'text-[#e6edf3] bg-[#30363d]'
+   451→                    : 'text-[#8b949e] hover:text-[#e6edf3]'
+   452→                )}
+   453→                onClick={onToggleOutput}
+   454→                aria-label="Toggle output panel"
+   455→              >
+   456→                <Terminal className="size-3.5 md:size-4" />
+   457→              </Button>
+   458→            </TooltipTrigger>
+   459→            <TooltipContent side="bottom">Terminal</TooltipContent>
+   460→          </Tooltip>
+   461→
+   462→          {/* AI Assist */}
+   463→          <Tooltip>
+   464→            <TooltipTrigger asChild>
+   465→              <Button
+   466→                variant="ghost"
+   467→                size="icon"
+   468→                className={cn(
+   469→                  'size-7 md:size-8 hover:bg-[#30363d]',
+   470→                  rightPanelOpen
+   471→                    ? 'text-purple-400 bg-purple-500/10'
+   472→                    : 'text-[#8b949e] hover:text-purple-400'
+   473→                )}
+   474→                onClick={onToggleAI}
+   475→                aria-label="Toggle AI assistant"
+   476→              >
+   477→                <Sparkles className="size-3.5 md:size-4" />
+   478→              </Button>
+   479→            </TooltipTrigger>
+   480→            <TooltipContent side="bottom">AI</TooltipContent>
+   481→          </Tooltip>
+   482→
+   483→          {/* Chat */}
+   484→          <Tooltip>
+   485→            <TooltipTrigger asChild>
+   486→              <Button
+   487→                variant="ghost"
+   488→                size="icon"
+   489→                className="relative size-7 md:size-8 hover:bg-[#30363d]"
+   490→                onClick={onToggleChat}
+   491→                aria-label={unreadChatCount > 0 ? `Chat (${unreadChatCount})` : 'Chat'}
+   492→              >
+   493→                {unreadChatCount > 0 && (
+   494→                  <Badge className="absolute -top-1 -right-1 size-4 p-0 flex items-center justify-center text-[10px] bg-[#238636] border-none glow-green animate-pulse">
+   495→                    {unreadChatCount > 9 ? '9+' : unreadChatCount}
+   496→                  </Badge>
+   497→                )}
+   498→                <MessageSquare
+   499→                  className={cn(
+   500→                    'size-3.5 md:size-4',
+   501→                    rightPanelOpen
+   502→                      ? 'text-[#e6edf3]'
+   503→                      : 'text-[#8b949e]'
+   504→                  )}
+   505→                />
+   506→              </Button>
+   507→            </TooltipTrigger>
+   508→            <TooltipContent side="bottom">Chat</TooltipContent>
+   509→          </Tooltip>
+   510→
+   511→          {/* Audio — desktop only */}
+   512→          <Tooltip>
+   513→            <TooltipTrigger asChild>
+   514→              <Button
+   515→                variant="ghost"
+   516→                size="icon"
+   517→                className={cn(
+   518→                  'hidden sm:flex size-8 hover:bg-[#30363d]',
+   519→                  audioEnabled
+   520→                    ? 'text-[#e6edf3]'
+   521→                    : 'text-[#484f58] hover:text-[#8b949e]'
+   522→                )}
+   523→                onClick={onToggleAudio}
+   524→                aria-label={audioEnabled ? 'Disable audio' : 'Enable audio'}
+   525→              >
+   526→                {audioEnabled ? <Bell className="size-4" /> : <BellOff className="size-4" />}
+   527→              </Button>
+   528→            </TooltipTrigger>
+   529→            <TooltipContent side="bottom">
+   530→              Audio {audioEnabled ? 'on' : 'off'}
+   531→            </TooltipContent>
+   532→          </Tooltip>
+   533→
+   534→          {/* History — desktop only */}
+   535→          <Tooltip>
+   536→            <TooltipTrigger asChild>
+   537→              <Button
+   538→                variant="ghost"
+   539→                size="icon"
+   540→                className={cn(
+   541→                  'hidden sm:flex size-8 hover:bg-[#30363d]',
+   542→                  historyOpen
+   543→                    ? 'text-[#58a6ff] bg-[#58a6ff]/10'
+   544→                    : 'text-[#8b949e] hover:text-[#e6edf3]'
+   545→                )}
+   546→                onClick={onToggleHistory}
+   547→                aria-label="Version History"
+   548→              >
+   549→                <History className="size-4" />
+   550→              </Button>
+   551→            </TooltipTrigger>
+   552→            <TooltipContent side="bottom">History</TooltipContent>
+   553→          </Tooltip>
+   554→
+   555→          {/* Export — desktop only */}
+   556→          {onExport && (
+   557→            <Tooltip>
+   558→              <TooltipTrigger asChild>
+   559→                <Button
+   560→                  variant="ghost"
+   561→                  size="icon"
+   562→                  className="hidden sm:flex size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d] press-effect"
+   563→                  onClick={onExport}
+   564→                  aria-label="Download as ZIP"
+   565→                >
+   566→                  <Download className="size-4" />
+   567→                </Button>
+   568→              </TooltipTrigger>
+   569→              <TooltipContent side="bottom">Download ZIP</TooltipContent>
+   570→            </Tooltip>
+   571→          )}
+   572→
+   573→          {/* Notifications — desktop only */}
+   574→          <Tooltip>
+   575→            <TooltipTrigger asChild>
+   576→              <Button
+   577→                variant="ghost"
+   578→                size="icon"
+   579→                className={cn(
+   580→                  'hidden sm:flex relative size-8 hover:bg-[#30363d]',
+   581→                  notificationsOpen
+   582→                    ? 'text-[#e6edf3] bg-[#30363d]'
+   583→                    : 'text-[#8b949e] hover:text-[#e6edf3]'
+   584→                )}
+   585→                onClick={onToggleNotifications}
+   586→                aria-label={unreadNotificationCount > 0 ? `Notifications (${unreadNotificationCount})` : 'Notifications'}
+   587→              >
+   588→                {unreadNotificationCount > 0 && (
+   589→                  <Badge className="absolute -top-1 -right-1 size-4 p-0 flex items-center justify-center text-[10px] bg-[#58a6ff] border-none badge-pop">
+   590→                    {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
+   591→                  </Badge>
+   592→                )}
+   593→                <Inbox className="size-4" />
+   594→              </Button>
+   595→            </TooltipTrigger>
+   596→            <TooltipContent side="bottom">Notifications</TooltipContent>
+   597→          </Tooltip>
+   598→
+   599→          {/* Settings — desktop only */}
+   600→          <Tooltip>
+   601→            <TooltipTrigger asChild>
+   602→              <Button
+   603→                variant="ghost"
+   604→                size="icon"
+   605→                className="hidden sm:flex size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d] press-effect"
+   606→                onClick={onOpenSettings}
+   607→                aria-label="Settings"
+   608→              >
+   609→                <Settings className="size-4" />
+   610→              </Button>
+   611→            </TooltipTrigger>
+   612→            <TooltipContent side="bottom">Settings</TooltipContent>
+   613→          </Tooltip>
+   614→
+   615→          {/* Shortcuts — desktop only */}
+   616→          <Tooltip>
+   617→            <TooltipTrigger asChild>
+   618→              <Button
+   619→                variant="ghost"
+   620→                size="icon"
+   621→                className="hidden sm:flex size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d] press-effect"
+   622→                onClick={onOpenShortcuts}
+   623→                aria-label="Keyboard shortcuts"
+   624→              >
+   625→                <HelpCircle className="size-4" />
+   626→              </Button>
+   627→            </TooltipTrigger>
+   628→            <TooltipContent side="bottom">Shortcuts (Ctrl+/)</TooltipContent>
+   629→          </Tooltip>
+   630→
+   631→          {/* Mobile "More" dropdown */}
+   632→          <DropdownMenu>
+   633→            <DropdownMenuTrigger asChild>
+   634→              <Button
+   635→                variant="ghost"
+   636→                size="icon"
+   637→                className="sm:hidden size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d]"
+   638→                aria-label="More actions"
+   639→              >
+   640→                <MoreHorizontal className="size-4" />
+   641→              </Button>
+   642→            </DropdownMenuTrigger>
+   643→            <DropdownMenuContent
+   644→              align="end"
+   645→              className="w-44 bg-[#161b22] border-[#30363d] text-[#e6edf3]"
+   646→            >
+   647→              {moreButtons.map((item) => (
+   648→                <DropdownMenuItem
+   649→                  key={item.label}
+   650→                  className={cn(
+   651→                    'text-[#e6edf3] focus:bg-[#30363d] focus:text-[#e6edf3] gap-2',
+   652→                    'active' in item && item.active && 'text-[#58a6ff]'
+   653→                  )}
+   654→                  onClick={item.action}
+   655→                >
+   656→                  <item.icon className="size-4" />
+   657→                  {item.label}
+   658→                </DropdownMenuItem>
+   659→              ))}
+   660→              <DropdownMenuSeparator className="bg-[#30363d]" />
+   661→              <DropdownMenuItem
+   662→                className="text-[#e6edf3] focus:bg-[#30363d] focus:text-[#e6edf3] gap-2"
+   663→                onClick={onToggleNotifications}
+   664→              >
+   665→                <Inbox className="size-4" />
+   666→                Notifications
+   667→                {unreadNotificationCount > 0 && (
+   668→                  <Badge className="ml-auto size-4 p-0 flex items-center justify-center text-[10px] bg-[#58a6ff] border-none">
+   669→                    {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
+   670→                  </Badge>
+   671→                )}
+   672→              </DropdownMenuItem>
+   673→            </DropdownMenuContent>
+   674→          </DropdownMenu>
+   675→
+   676→          {/* Panel toggle */}
+   677→          <Tooltip>
+   678→            <TooltipTrigger asChild>
+   679→              <Button
+   680→                variant="ghost"
+   681→                size="icon"
+   682→                className="size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d] hidden sm:flex"
+   683→                onClick={rightPanelOpen ? onToggleChat : onToggleAI}
+   684→                aria-label={rightPanelOpen ? 'Close side panel' : 'Open side panel'}
+   685→              >
+   686→                {rightPanelOpen ? (
+   687→                  <PanelRightClose className="size-4" />
+   688→                ) : (
+   689→                  <PanelRightOpen className="size-4" />
+   690→                )}
+   691→              </Button>
+   692→            </TooltipTrigger>
+   693→            <TooltipContent side="bottom">
+   694→              {rightPanelOpen ? 'Close side panel (Ctrl+B)' : 'Open side panel (Ctrl+B)'}
+   695→            </TooltipContent>
+   696→          </Tooltip>
+   697→        </div>
+   698→      </div>
+   699→
+   700→      {/* Thin green accent line at the bottom */}
+   701→      <div
+   702→        className="h-[2px] shrink-0"
+   703→        style={{
+   704→          background: 'linear-gradient(90deg, transparent 0%, #238636 20%, #58a6ff 50%, #238636 80%, transparent 100%)',
+   705→          opacity: 0.5,
+   706→        }}
+   707→      />
+   708→    </div>
+   709→  );
+   710→}

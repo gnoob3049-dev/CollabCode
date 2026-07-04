@@ -1,0 +1,1276 @@
+     1→@import "tailwindcss";
+     2→@import "tw-animate-css";
+     3→
+     4→@custom-variant dark (&:is(.dark *));
+     5→
+     6→@theme inline {
+     7→  --color-background: var(--background);
+     8→  --color-foreground: var(--foreground);
+     9→  --font-sans: var(--font-geist-sans);
+    10→  --font-mono: var(--font-geist-mono);
+    11→  --color-sidebar-ring: var(--sidebar-ring);
+    12→  --color-sidebar-border: var(--sidebar-border);
+    13→  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    14→  --color-sidebar-accent: var(--sidebar-accent);
+    15→  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    16→  --color-sidebar-primary: var(--sidebar-primary);
+    17→  --color-sidebar-foreground: var(--sidebar-foreground);
+    18→  --color-sidebar: var(--sidebar);
+    19→  --color-chart-5: var(--chart-5);
+    20→  --color-chart-4: var(--chart-4);
+    21→  --color-chart-3: var(--chart-3);
+    22→  --color-chart-2: var(--chart-2);
+    23→  --color-chart-1: var(--chart-1);
+    24→  --color-ring: var(--ring);
+    25→  --color-input: var(--input);
+    26→  --color-border: var(--border);
+    27→  --color-destructive: var(--destructive);
+    28→  --color-accent-foreground: var(--accent-foreground);
+    29→  --color-accent: var(--accent);
+    30→  --color-muted-foreground: var(--muted-foreground);
+    31→  --color-muted: var(--muted);
+    32→  --color-secondary-foreground: var(--secondary-foreground);
+    33→  --color-secondary: var(--secondary);
+    34→  --color-primary-foreground: var(--primary-foreground);
+    35→  --color-primary: var(--primary);
+    36→  --color-popover-foreground: var(--popover-foreground);
+    37→  --color-popover: var(--popover);
+    38→  --color-card-foreground: var(--card-foreground);
+    39→  --color-card: var(--card);
+    40→  --radius-sm: calc(var(--radius) - 4px);
+    41→  --radius-md: calc(var(--radius) - 2px);
+    42→  --radius-lg: var(--radius);
+    43→  --radius-xl: calc(var(--radius) + 4px);
+    44→}
+    45→
+    46→:root {
+    47→  --radius: 0.625rem;
+    48→  --background: #0d1117;
+    49→  --foreground: #e6edf3;
+    50→  --card: #161b22;
+    51→  --card-foreground: #e6edf3;
+    52→  --popover: #161b22;
+    53→  --popover-foreground: #e6edf3;
+    54→  --primary: #238636;
+    55→  --primary-foreground: #ffffff;
+    56→  --secondary: #21262d;
+    57→  --secondary-foreground: #e6edf3;
+    58→  --muted: #21262d;
+    59→  --muted-foreground: #8b949e;
+    60→  --accent: #21262d;
+    61→  --accent-foreground: #e6edf3;
+    62→  --destructive: #f85149;
+    63→  --border: #30363d;
+    64→  --input: #30363d;
+    65→  --ring: #58a6ff;
+    66→  --chart-1: #58a6ff;
+    67→  --chart-2: #3fb950;
+    68→  --chart-3: #d29922;
+    69→  --chart-4: #f78166;
+    70→  --chart-5: #bc8cff;
+    71→  --sidebar: #0d1117;
+    72→  --sidebar-foreground: #e6edf3;
+    73→  --sidebar-primary: #238636;
+    74→  --sidebar-primary-foreground: #ffffff;
+    75→  --sidebar-accent: #161b22;
+    76→  --sidebar-accent-foreground: #e6edf3;
+    77→  --sidebar-border: #30363d;
+    78→  --sidebar-ring: #58a6ff;
+    79→}
+    80→
+    81→@layer base {
+    82→  * {
+    83→    @apply border-border outline-ring/50;
+    84→  }
+    85→  body {
+    86→    @apply bg-background text-foreground;
+    87→    background: radial-gradient(ellipse at 50% 0%, #0d1117 0%, #010409 100%);
+    88→    background-attachment: fixed;
+    89→  }
+    90→}
+    91→
+    92→/* Smooth transitions for all interactive elements */
+    93→button, a, [role="button"] {
+    94→  transition: all 0.15s ease;
+    95→}
+    96→
+    97→/* Focus ring styles for keyboard navigation */
+    98→*:focus-visible {
+    99→  outline: 2px solid #238636;
+   100→  outline-offset: 2px;
+   101→}
+   102→
+   103→/* Glow effects */
+   104→.glow-green {
+   105→  box-shadow: 0 0 20px rgba(35, 134, 54, 0.3);
+   106→}
+   107→
+   108→.glow-green-strong {
+   109→  box-shadow: 0 0 30px rgba(35, 134, 54, 0.4), 0 0 60px rgba(35, 134, 54, 0.15);
+   110→}
+   111→
+   112→.glow-blue {
+   113→  box-shadow: 0 0 20px rgba(88, 166, 255, 0.3);
+   114→}
+   115→
+   116→/* Pulse animation for connected status dot */
+   117→@keyframes pulse-dot {
+   118→  0%, 100% {
+   119→    box-shadow: 0 0 0 0 rgba(35, 134, 54, 0.5);
+   120→  }
+   121→  50% {
+   122→    box-shadow: 0 0 0 6px rgba(35, 134, 54, 0);
+   123→  }
+   124→}
+   125→
+   126→.pulse-dot {
+   127→  animation: pulse-dot 2s ease-in-out infinite;
+   128→}
+   129→
+   130→/* Glass morphism class */
+   131→.glass {
+   132→  backdrop-filter: blur(12px);
+   133→  -webkit-backdrop-filter: blur(12px);
+   134→  background: rgba(22, 27, 34, 0.8);
+   135→  border: 1px solid rgba(48, 54, 61, 0.5);
+   136→}
+   137→
+   138→.glass-strong {
+   139→  backdrop-filter: blur(20px);
+   140→  -webkit-backdrop-filter: blur(20px);
+   141→  background: rgba(22, 27, 34, 0.9);
+   142→  border: 1px solid rgba(48, 54, 61, 0.6);
+   143→}
+   144→
+   145→/* Gradient text class */
+   146→.gradient-text {
+   147→  background: linear-gradient(135deg, #238636, #58a6ff);
+   148→  -webkit-background-clip: text;
+   149→  -webkit-text-fill-color: transparent;
+   150→  background-clip: text;
+   151→}
+   152→
+   153→/* Noise texture overlay */
+   154→.noise-bg {
+   155→  position: relative;
+   156→}
+   157→
+   158→.noise-bg::before {
+   159→  content: "";
+   160→  position: absolute;
+   161→  inset: 0;
+   162→  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+   163→  background-repeat: repeat;
+   164→  pointer-events: none;
+   165→  z-index: 0;
+   166→  opacity: 0.5;
+   167→}
+   168→
+   169→/* Animated gradient orb */
+   170→@keyframes float-orb {
+   171→  0%, 100% {
+   172→    transform: translate(-50%, -50%) scale(1);
+   173→  }
+   174→  33% {
+   175→    transform: translate(-45%, -55%) scale(1.1);
+   176→  }
+   177→  66% {
+   178→    transform: translate(-55%, -45%) scale(0.9);
+   179→  }
+   180→}
+   181→
+   182→.animate-orb {
+   183→  animation: float-orb 8s ease-in-out infinite;
+   184→}
+   185→
+   186→/* Dot grid pattern */
+   187→.dot-grid {
+   188→  background-image: radial-gradient(circle, rgba(48, 54, 61, 0.4) 1px, transparent 1px);
+   189→  background-size: 24px 24px;
+   190→}
+   191→
+   192→/* Shimmer animation for AI loading */
+   193→@keyframes shimmer {
+   194→  0% {
+   195→    background-position: -200% 0;
+   196→  }
+   197→  100% {
+   198→    background-position: 200% 0;
+   199→  }
+   200→}
+   201→
+   202→.shimmer {
+   203→  background: linear-gradient(
+   204→    90deg,
+   205→    rgba(48, 54, 61, 0.3) 0%,
+   206→    rgba(48, 54, 61, 0.6) 20%,
+   207→    rgba(88, 166, 255, 0.1) 50%,
+   208→    rgba(48, 54, 61, 0.6) 80%,
+   209→    rgba(48, 54, 61, 0.3) 100%
+   210→  );
+   211→  background-size: 200% 100%;
+   212→  animation: shimmer 2s ease-in-out infinite;
+   213→}
+   214→
+   215→/* Typing indicator bounce */
+   216→@keyframes typing-bounce {
+   217→  0%, 60%, 100% {
+   218→    transform: translateY(0);
+   219→  }
+   220→  30% {
+   221→    transform: translateY(-4px);
+   222→  }
+   223→}
+   224→
+   225→.typing-dot {
+   226→  animation: typing-bounce 1.4s ease-in-out infinite;
+   227→}
+   228→
+   229→.typing-dot:nth-child(2) {
+   230→  animation-delay: 0.2s;
+   231→}
+   232→
+   233→.typing-dot:nth-child(3) {
+   234→  animation-delay: 0.4s;
+   235→}
+   236→
+   237→/* Gradient border animation */
+   238→@keyframes gradient-rotate {
+   239→  0% {
+   240→    --angle: 0deg;
+   241→  }
+   242→  100% {
+   243→    --angle: 360deg;
+   244→  }
+   245→}
+   246→
+   247→/* Pulse border glow for typing container */
+   248→@keyframes pulse-border-glow {
+   249→  0%, 100% {
+   250→    border-color: rgba(35, 134, 54, 0.3);
+   251→    box-shadow: 0 0 15px rgba(35, 134, 54, 0.05), inset 0 0 15px rgba(35, 134, 54, 0.02);
+   252→  }
+   253→  50% {
+   254→    border-color: rgba(35, 134, 54, 0.55);
+   255→    box-shadow: 0 0 25px rgba(35, 134, 54, 0.12), inset 0 0 20px rgba(35, 134, 54, 0.04);
+   256→  }
+   257→}
+   258→
+   259→.pulse-border-glow {
+   260→  animation: pulse-border-glow 3s ease-in-out infinite;
+   261→}
+   262→
+   263→/* Floating bob animation for logos */
+   264→@keyframes float-bob {
+   265→  0%, 100% {
+   266→    transform: translateY(0);
+   267→  }
+   268→  50% {
+   269→    transform: translateY(-5px);
+   270→  }
+   271→}
+   272→
+   273→.float-bob {
+   274→  animation: float-bob 3s ease-in-out infinite;
+   275→}
+   276→
+   277→/* Animated underline for buttons */
+   278→@keyframes underline-slide {
+   279→  0% {
+   280→    transform: translateX(-100%);
+   281→  }
+   282→  100% {
+   283→    transform: translateX(100%);
+   284→  }
+   285→}
+   286→
+   287→.animated-underline {
+   288→  position: relative;
+   289→  overflow: hidden;
+   290→}
+   291→
+   292→.animated-underline::after {
+   293→  content: "";
+   294→  position: absolute;
+   295→  bottom: 2px;
+   296→  left: 0;
+   297→  width: 100%;
+   298→  height: 1.5px;
+   299→  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.7), transparent);
+   300→  animation: underline-slide 2.5s ease-in-out infinite;
+   301→}
+   302→
+   303→/* Pulse ring for avatar with active rooms */
+   304→@keyframes pulse-ring {
+   305→  0% {
+   306→    box-shadow: 0 0 0 0 rgba(35, 134, 54, 0.5);
+   307→  }
+   308→  70% {
+   309→    box-shadow: 0 0 0 4px rgba(35, 134, 54, 0);
+   310→  }
+   311→  100% {
+   312→    box-shadow: 0 0 0 0 rgba(35, 134, 54, 0);
+   313→  }
+   314→}
+   315→
+   316→.pulse-ring-green {
+   317→  animation: pulse-ring 2s ease-in-out infinite;
+   318→}
+   319→
+   320→/* Page transition fade-in */
+   321→@keyframes page-enter {
+   322→  from {
+   323→    opacity: 0;
+   324→    transform: translateY(6px);
+   325→  }
+   326→  to {
+   327→    opacity: 1;
+   328→    transform: translateY(0);
+   329→  }
+   330→}
+   331→
+   332→.page-enter {
+   333→  animation: page-enter 0.35s ease-out both;
+   334→}
+   335→
+   336→/* Custom selection color (green-tinted) */
+   337→::selection {
+   338→  background: rgba(35, 134, 54, 0.35);
+   339→  color: #e6edf3;
+   340→}
+   341→
+   342→/* Subtle glow on focused input fields */
+   343→input:focus,
+   344→textarea:focus,
+   345→[contenteditable]:focus {
+   346→  box-shadow: 0 0 0 3px rgba(35, 134, 54, 0.12), 0 0 12px rgba(35, 134, 54, 0.08);
+   347→}
+   348→
+   349→/* Polished scrollbar - ultra-thin (4px) with rounded caps */
+   350→::-webkit-scrollbar {
+   351→  width: 4px;
+   352→  height: 4px;
+   353→}
+   354→::-webkit-scrollbar-track {
+   355→  background: transparent;
+   356→}
+   357→::-webkit-scrollbar-thumb {
+   358→  background: rgba(48, 54, 61, 0.5);
+   359→  border-radius: 999px;
+   360→}
+   361→::-webkit-scrollbar-thumb:hover {
+   362→  background: rgba(72, 79, 88, 0.8);
+   363→}
+   364→::-webkit-scrollbar-corner {
+   365→  background: transparent;
+   366→}
+   367→/* Firefox scrollbar */
+   368→* {
+   369→  scrollbar-width: thin;
+   370→  scrollbar-color: rgba(48, 54, 61, 0.5) transparent;
+   371→}
+   372→
+   373→/* Monaco editor customizations */
+   374→.monaco-editor .margin,
+   375→.monaco-editor,
+   376→.monaco-editor-background,
+   377→.monaco-editor .inputarea.ime-input {
+   378→  background-color: #161b22 !important;
+   379→}
+   380→
+   381→/* Resize handle cursor */
+   382→.resize-handle {
+   383→  cursor: ns-resize;
+   384→  transition: background-color 0.15s ease;
+   385→}
+   386→
+   387→.resize-handle:hover {
+   388→  background-color: rgba(35, 134, 54, 0.3);
+   389→}
+   390→
+   391→/* ---- NEW: Additional animations & effects for Cycle 4 ---- */
+   392→
+   393→/* Smooth spring entrance for cards */
+   394→@keyframes card-spring-in {
+   395→  0% {
+   396→    opacity: 0;
+   397→    transform: translateY(12px) scale(0.97);
+   398→  }
+   399→  60% {
+   400→    opacity: 1;
+   401→    transform: translateY(-2px) scale(1.005);
+   402→  }
+   403→  100% {
+   404→    opacity: 1;
+   405→    transform: translateY(0) scale(1);
+   406→  }
+   407→}
+   408→
+   409→.card-spring-in {
+   410→  animation: card-spring-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+   411→}
+   412→
+   413→/* Staggered children animation delay helper */
+   414→.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+   415→.stagger-children > *:nth-child(2) { animation-delay: 60ms; }
+   416→.stagger-children > *:nth-child(3) { animation-delay: 120ms; }
+   417→.stagger-children > *:nth-child(4) { animation-delay: 180ms; }
+   418→.stagger-children > *:nth-child(5) { animation-delay: 240ms; }
+   419→.stagger-children > *:nth-child(6) { animation-delay: 300ms; }
+   420→.stagger-children > *:nth-child(7) { animation-delay: 360ms; }
+   421→.stagger-children > *:nth-child(8) { animation-delay: 420ms; }
+   422→.stagger-children > *:nth-child(9) { animation-delay: 480ms; }
+   423→.stagger-children > *:nth-child(10) { animation-delay: 540ms; }
+   424→
+   425→/* Glow button hover effect */
+   426→@keyframes glow-pulse-green {
+   427→  0%, 100% {
+   428→    box-shadow: 0 0 8px rgba(35, 134, 54, 0.3), 0 0 16px rgba(35, 134, 54, 0.1);
+   429→  }
+   430→  50% {
+   431→    box-shadow: 0 0 14px rgba(35, 134, 54, 0.5), 0 0 28px rgba(35, 134, 54, 0.2);
+   432→  }
+   433→}
+   434→
+   435→.glow-btn-green {
+   436→  transition: all 0.3s ease;
+   437→}
+   438→
+   439→.glow-btn-green:hover {
+   440→  animation: glow-pulse-green 1.5s ease-in-out infinite;
+   441→}
+   442→
+   443→/* Gradient shimmer for the "Create" button */
+   444→@keyframes btn-gradient-shift {
+   445→  0% { background-position: 0% 50%; }
+   446→  50% { background-position: 100% 50%; }
+   447→  100% { background-position: 0% 50%; }
+   448→}
+   449→
+   450→.btn-gradient-animated {
+   451→  background-size: 200% 200%;
+   452→  animation: btn-gradient-shift 3s ease infinite;
+   453→}
+   454→
+   455→/* Smooth scale on hover for interactive cards */
+   456→.hover-lift {
+   457→  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+   458→}
+   459→
+   460→.hover-lift:hover {
+   461→  transform: translateY(-3px) scale(1.01);
+   462→  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.4), 0 0 12px rgba(35, 134, 54, 0.08);
+   463→}
+   464→
+   465→/* Focus-visible within cards */
+   466→.card-focus-ring:focus-visible {
+   467→  outline: 2px solid #238636;
+   468→  outline-offset: 2px;
+   469→  border-radius: inherit;
+   470→}
+   471→
+   472→/* File tree item hover slide effect */
+   473→.file-tree-item {
+   474→  position: relative;
+   475→  overflow: hidden;
+   476→}
+   477→
+   478→.file-tree-item::before {
+   479→  content: "";
+   480→  position: absolute;
+   481→  left: 0;
+   482→  top: 0;
+   483→  bottom: 0;
+   484→  width: 2px;
+   485→  background: #238636;
+   486→  transform: scaleY(0);
+   487→  transition: transform 0.2s ease;
+   488→  border-radius: 0 2px 2px 0;
+   489→}
+   490→
+   491→.file-tree-item:hover::before,
+   492→.file-tree-item.active::before {
+   493→  transform: scaleY(1);
+   494→}
+   495→
+   496→/* Chat message slide-in */
+   497→@keyframes chat-msg-in {
+   498→  from {
+   499→    opacity: 0;
+   500→    transform: translateX(8px) scale(0.98);
+   501→  }
+   502→  to {
+   503→    opacity: 1;
+   504→    transform: translateX(0) scale(1);
+   505→  }
+   506→}
+   507→
+   508→.chat-msg-animate {
+   509→  animation: chat-msg-in 0.25s ease-out both;
+   510→}
+   511→
+   512→/* Tooltip subtle fade */
+   513→@keyframes tooltip-fade {
+   514→  from { opacity: 0; transform: translateY(2px); }
+   515→  to { opacity: 1; transform: translateY(0); }
+   516→}
+   517→
+   518→/* Toast notification slide-in */
+   519→@keyframes toast-slide {
+   520→  from {
+   521→    opacity: 0;
+   522→    transform: translateX(100%) scale(0.95);
+   523→  }
+   524→  to {
+   525→    opacity: 1;
+   526→    transform: translateX(0) scale(1);
+   527→  }
+   528→}
+   529→
+   530→/* Status bar gradient shimmer */
+   531→@keyframes status-shimmer {
+   532→  0% { opacity: 0.4; }
+   533→  50% { opacity: 0.6; }
+   534→  100% { opacity: 0.4; }
+   535→}
+   536→
+   537→.status-shimmer {
+   538→  animation: status-shimmer 4s ease-in-out infinite;
+   539→}
+   540→
+   541→/* Improved Monaco editor line highlight */
+   542→.monaco-editor .current-line {
+   543→  border-left: 2px solid rgba(35, 134, 54, 0.4) !important;
+   544→  background: rgba(35, 134, 54, 0.04) !important;
+   545→}
+   546→
+   547→/* Quick action button ripple */
+   548→@keyframes ripple {
+   549→  0% {
+   550→    transform: scale(0);
+   551→    opacity: 0.5;
+   552→  }
+   553→  100% {
+   554→    transform: scale(2.5);
+   555→    opacity: 0;
+   556→  }
+   557→}
+   558→
+   559→/* Dialog overlay backdrop */
+   560→.dialog-overlay {
+   561→  backdrop-filter: blur(4px) saturate(120%);
+   562→  -webkit-backdrop-filter: blur(4px) saturate(120%);
+   563→}
+   564→
+   565→/* Responsive bottom sheet animation */
+   566→@keyframes slide-up-sheet {
+   567→  from {
+   568→    transform: translateY(100%);
+   569→  }
+   570→  to {
+   571→    transform: translateY(0);
+   572→  }
+   573→}
+   574→
+   575→@keyframes slide-down-sheet {
+   576→  from {
+   577→    transform: translateY(0);
+   578→  }
+   579→  to {
+   580→    transform: translateY(100%);
+   581→  }
+   582→}
+   583→
+   584→.bottom-sheet-enter {
+   585→  animation: slide-up-sheet 0.3s cubic-bezier(0.32, 0.72, 0, 1) both;
+   586→}
+   587→
+   588→.bottom-sheet-exit {
+   589→  animation: slide-down-sheet 0.2s ease-in both;
+   590→}
+   591→
+   592→/* Run button success flash */
+   593→@keyframes run-success {
+   594→  0% { background-color: rgba(35, 134, 54, 0.3); }
+   595→  100% { background-color: transparent; }
+   596→}
+   597→
+   598→.run-success-flash {
+   599→  animation: run-success 0.6s ease-out;
+   600→}
+   601→
+   602→/* Terminal cursor blink */
+   603→@keyframes terminal-cursor {
+   604→  0%, 100% { opacity: 1; }
+   605→  50% { opacity: 0; }
+   606→}
+   607→
+   608→.terminal-cursor::after {
+   609→  content: "▋";
+   610→  animation: terminal-cursor 1s step-end infinite;
+   611→  color: #238636;
+   612→  font-size: 0.9em;
+   613→  margin-left: 1px;
+   614→}
+   615→
+   616→/* ---- NEW: Task 5-c styling polish utilities ---- */
+   617→
+   618→/* Shimmer border animation for premium buttons */
+   619→@keyframes shimmer-border {
+   620→  0% {
+   621→    background-position: 0% 0%;
+   622→  }
+   623→  50% {
+   624→    background-position: 100% 100%;
+   625→  }
+   626→  100% {
+   627→    background-position: 0% 0%;
+   628→  }
+   629→}
+   630→
+   631→.shimmer-border {
+   632→  position: relative;
+   633→  border: none !important;
+   634→  background-clip: padding-box;
+   635→}
+   636→
+   637→.shimmer-border::before {
+   638→  content: "";
+   639→  position: absolute;
+   640→  inset: 0;
+   641→  border-radius: inherit;
+   642→  padding: 1.5px;
+   643→  background: linear-gradient(
+   644→    135deg,
+   645→    #238636,
+   646→    #58a6ff,
+   647→    #a371f7,
+   648→    #238636
+   649→  );
+   650→  background-size: 300% 300%;
+   651→  animation: shimmer-border 4s ease-in-out infinite;
+   652→  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+   653→  -webkit-mask-composite: xor;
+   654→  mask-composite: exclude;
+   655→  pointer-events: none;
+   656→}
+   657→
+   658→/* Purple glow effect */
+   659→.glow-purple {
+   660→  box-shadow: 0 0 20px rgba(163, 113, 247, 0.25);
+   661→}
+   662→
+   663→.glow-purple-strong {
+   664→  box-shadow: 0 0 30px rgba(163, 113, 247, 0.35), 0 0 60px rgba(163, 113, 247, 0.12);
+   665→}
+   666→
+   667→/* Code background display class */
+   668→.code-bg {
+   669→  background-color: #0d1117;
+   670→  border: 1px solid #30363d;
+   671→  border-radius: 0.375rem;
+   672→  font-family: 'Geist Mono', 'Fira Code', monospace;
+   673→}
+   674→
+   675→/* Fade-in-up animation for page transitions */
+   676→@keyframes fade-in-up {
+   677→  from {
+   678→    opacity: 0;
+   679→    transform: translateY(8px);
+   680→  }
+   681→  to {
+   682→    opacity: 1;
+   683→    transform: translateY(0);
+   684→  }
+   685→}
+   686→
+   687→.fade-in-up {
+   688→  animation: fade-in-up 0.3s ease-out both;
+   689→}
+   690→
+   691→/* ---- Task 6-d: Comprehensive styling enhancements ---- */
+   692→
+   693→/* 1. Breathing glow effect */
+   694→@keyframes breathe-glow {
+   695→  0%, 100% {
+   696→    transform: scale(1);
+   697→    opacity: 0.5;
+   698→  }
+   699→  50% {
+   700→    transform: scale(1.02);
+   701→    opacity: 0.8;
+   702→  }
+   703→}
+   704→
+   705→.breathe-glow {
+   706→  animation: breathe-glow 3s ease-in-out infinite;
+   707→}
+   708→
+   709→/* 2. Staggered grid animation (12 items) */
+   710→.stagger-grid > *:nth-child(1) { animation-delay: 0ms; }
+   711→.stagger-grid > *:nth-child(2) { animation-delay: 50ms; }
+   712→.stagger-grid > *:nth-child(3) { animation-delay: 100ms; }
+   713→.stagger-grid > *:nth-child(4) { animation-delay: 150ms; }
+   714→.stagger-grid > *:nth-child(5) { animation-delay: 200ms; }
+   715→.stagger-grid > *:nth-child(6) { animation-delay: 250ms; }
+   716→.stagger-grid > *:nth-child(7) { animation-delay: 300ms; }
+   717→.stagger-grid > *:nth-child(8) { animation-delay: 350ms; }
+   718→.stagger-grid > *:nth-child(9) { animation-delay: 400ms; }
+   719→.stagger-grid > *:nth-child(10) { animation-delay: 450ms; }
+   720→.stagger-grid > *:nth-child(11) { animation-delay: 500ms; }
+   721→.stagger-grid > *:nth-child(12) { animation-delay: 550ms; }
+   722→
+   723→/* 3. Text gradient animation */
+   724→@keyframes text-gradient-shift {
+   725→  0% { background-position: 0% 50%; }
+   726→  25% { background-position: 50% 100%; }
+   727→  50% { background-position: 100% 50%; }
+   728→  75% { background-position: 50% 0%; }
+   729→  100% { background-position: 0% 50%; }
+   730→}
+   731→
+   732→.gradient-text-animated {
+   733→  background: linear-gradient(135deg, #238636, #58a6ff, #a371f7, #238636);
+   734→  background-size: 300% 300%;
+   735→  -webkit-background-clip: text;
+   736→  -webkit-text-fill-color: transparent;
+   737→  background-clip: text;
+   738→  animation: text-gradient-shift 4s ease infinite;
+   739→}
+   740→
+   741→/* 4. Subtle float animation */
+   742→@keyframes subtle-float {
+   743→  0%, 100% {
+   744→    transform: translateY(0);
+   745→  }
+   746→  50% {
+   747→    transform: translateY(-3px);
+   748→  }
+   749→}
+   750→
+   751→.subtle-float {
+   752→  animation: subtle-float 4s ease-in-out infinite;
+   753→}
+   754→
+   755→/* 5. Skeleton loading shimmer */
+   756→.skeleton-shimmer {
+   757→  position: relative;
+   758→  overflow: hidden;
+   759→  background: rgba(48, 54, 61, 0.3);
+   760→  border-radius: 4px;
+   761→}
+   762→
+   763→.skeleton-shimmer::after {
+   764→  content: "";
+   765→  position: absolute;
+   766→  inset: 0;
+   767→  background: linear-gradient(
+   768→    90deg,
+   769→    transparent 0%,
+   770→    rgba(230, 237, 243, 0.04) 20%,
+   771→    rgba(230, 237, 243, 0.08) 50%,
+   772→    rgba(230, 237, 243, 0.04) 80%,
+   773→    transparent 100%
+   774→  );
+   775→  animation: shimmer 2s ease-in-out infinite;
+   776→}
+   777→
+   778→/* 6. Badge pulse animation */
+   779→@keyframes badge-pulse {
+   780→  0%, 100% {
+   781→    transform: scale(1);
+   782→  }
+   783→  50% {
+   784→    transform: scale(1.15);
+   785→  }
+   786→}
+   787→
+   788→.badge-pulse {
+   789→  animation: badge-pulse 2s ease-in-out infinite;
+   790→}
+   791→
+   792→/* 7. Button press effect */
+   793→.btn-press:active {
+   794→  transform: scale(0.96);
+   795→  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+   796→  transition: transform 0.08s ease, box-shadow 0.08s ease;
+   797→}
+   798→
+   799→/* 8. Tooltip entrance */
+   800→@keyframes tooltip-enter {
+   801→  0% {
+   802→    opacity: 0;
+   803→    transform: scale(0.95);
+   804→  }
+   805→  100% {
+   806→    opacity: 1;
+   807→    transform: scale(1);
+   808→  }
+   809→}
+   810→
+   811→.tooltip-enter {
+   812→  animation: tooltip-enter 0.15s ease-out both;
+   813→}
+   814→
+   815→/* 9. Scroll indicator bounce */
+   816→@keyframes scroll-bounce {
+   817→  0%, 100% {
+   818→    transform: translateY(0) translateX(-50%);
+   819→  }
+   820→  50% {
+   821→    transform: translateY(-3px) translateX(-50%);
+   822→  }
+   823→}
+   824→
+   825→.scroll-bounce {
+   826→  animation: scroll-bounce 1.5s ease-in-out infinite;
+   827→}
+   828→
+   829→/* 10. Connection status breathing */
+   830→@keyframes status-breathe {
+   831→  0%, 100% {
+   832→    box-shadow: 0 0 0 0 rgba(35, 134, 54, 0.4);
+   833→    opacity: 1;
+   834→  }
+   835→  50% {
+   836→    box-shadow: 0 0 0 4px rgba(35, 134, 54, 0);
+   837→    opacity: 0.7;
+   838→  }
+   839→}
+   840→
+   841→.status-breathe {
+   842→  animation: status-breathe 2.5s ease-in-out infinite;
+   843→}
+   844→
+   845→/* 11. Radial gradient spotlight on hover */
+   846→.spotlight-glow {
+   847→  position: relative;
+   848→  overflow: hidden;
+   849→}
+   850→
+   851→.spotlight-glow::after {
+   852→  content: "";
+   853→  position: absolute;
+   854→  inset: 0;
+   855→  border-radius: inherit;
+   856→  opacity: 0;
+   857→  transition: opacity 0.4s ease;
+   858→  background: radial-gradient(
+   859→    300px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+   860→    rgba(35, 134, 54, 0.06) 0%,
+   861→    transparent 70%
+   862→  );
+   863→  pointer-events: none;
+   864→}
+   865→
+   866→.spotlight-glow:hover::after {
+   867→  opacity: 1;
+   868→}
+   869→
+   870→/* 13. Typing indicator animation (improved) */
+   871→.typing-indicator {
+   872→  display: inline-flex;
+   873→  align-items: center;
+   874→  gap: 3px;
+   875→}
+   876→
+   877→.typing-indicator span {
+   878→  display: inline-block;
+   879→  width: 5px;
+   880→  height: 5px;
+   881→  border-radius: 50%;
+   882→  background-color: #8b949e;
+   883→  animation: typing-dot-advanced 1.4s ease-in-out infinite;
+   884→}
+   885→
+   886→.typing-indicator span:nth-child(1) {
+   887→  animation-delay: 0s;
+   888→}
+   889→.typing-indicator span:nth-child(2) {
+   890→  animation-delay: 0.15s;
+   891→}
+   892→.typing-indicator span:nth-child(3) {
+   893→  animation-delay: 0.3s;
+   894→}
+   895→
+   896→@keyframes typing-dot-advanced {
+   897→  0%, 60%, 100% {
+   898→    transform: translateY(0) scale(1);
+   899→    opacity: 0.4;
+   900→  }
+   901→  30% {
+   902→    transform: translateY(-4px) scale(1.2);
+   903→    opacity: 1;
+   904→  }
+   905→}
+   906→
+   907→/* 14. Glow text shadow */
+   908→.glow-text-green {
+   909→  text-shadow: 0 0 20px rgba(35, 134, 54, 0.5);
+   910→}
+   911→
+   912→/* 15. Editor panel border glow */
+   913→.panel-glow {
+   914→  box-shadow: inset 3px 0 8px -2px rgba(35, 134, 54, 0.15);
+   915→}
+   916→
+   917→/* Code line staggered fade-in for landing page */
+   918→@keyframes code-line-in {
+   919→  from {
+   920→    opacity: 0;
+   921→    transform: translateX(-4px);
+   922→  }
+   923→  to {
+   924→    opacity: 1;
+   925→    transform: translateX(0);
+   926→  }
+   927→}
+   928→
+   929→.code-line-stagger {
+   930→  animation: code-line-in 0.3s ease-out both;
+   931→}
+   932→
+   933→/* Hover underline animation for links */
+   934→.hover-underline-anim {
+   935→  position: relative;
+   936→  display: inline-block;
+   937→}
+   938→
+   939→.hover-underline-anim::after {
+   940→  content: "";
+   941→  position: absolute;
+   942→  bottom: -1px;
+   943→  left: 50%;
+   944→  width: 0;
+   945→  height: 1.5px;
+   946→  background: #238636;
+   947→  transition: width 0.3s ease, left 0.3s ease;
+   948→}
+   949→
+   950→.hover-underline-anim:hover::after {
+   951→  width: 100%;
+   952→  left: 0;
+   953→}
+   954→
+   955→/* Input animated bottom border on focus */
+   956→.input-focus-line {
+   957→  position: relative;
+   958→}
+   959→
+   960→.input-focus-line::after {
+   961→  content: "";
+   962→  position: absolute;
+   963→  bottom: 0;
+   964→  left: 50%;
+   965→  width: 0;
+   966→  height: 2px;
+   967→  background: #238636;
+   968→  border-radius: 1px;
+   969→  transition: width 0.3s ease, left 0.3s ease;
+   970→}
+   971→
+   972→.input-focus-line:focus-within::after {
+   973→  width: 100%;
+   974→  left: 0;
+   975→}
+   976→
+   977→/* ---- Task 7-c: Notifications, Diff, and Styling Polish ---- */
+   978→
+   979→/* Notification slide-in from right */
+   980→@keyframes notification-slide {
+   981→  from {
+   982→    transform: translateX(20px);
+   983→    opacity: 0;
+   984→  }
+   985→  to {
+   986→    transform: translateX(0);
+   987→    opacity: 1;
+   988→  }
+   989→}
+   990→
+   991→.notification-enter {
+   992→  animation: notification-slide 0.25s ease-out both;
+   993→}
+   994→
+   995→/* Count badge pop effect */
+   996→@keyframes count-badge-pop {
+   997→  0% {
+   998→    transform: scale(1);
+   999→  }
+  1000→  50% {
+  1001→    transform: scale(1.3);
+  1002→  }
+  1003→  100% {
+  1004→    transform: scale(1);
+  1005→  }
+  1006→}
+  1007→
+  1008→.badge-pop {
+  1009→  animation: count-badge-pop 0.3s ease-out both;
+  1010→}
+  1011→
+  1012→/* Diff line highlight flash */
+  1013→@keyframes diff-highlight {
+  1014→  0% {
+  1015→    background-color: rgba(88, 166, 255, 0.15);
+  1016→  }
+  1017→  100% {
+  1018→    background-color: transparent;
+  1019→  }
+  1020→}
+  1021→
+  1022→.diff-highlight {
+  1023→  animation: diff-highlight 0.6s ease-out both;
+  1024→}
+  1025→
+  1026→/* Diff line styling */
+  1027→.diff-line-new {
+  1028→  background-color: rgba(35, 134, 54, 0.10);
+  1029→  border-left: 2px solid #238636;
+  1030→}
+  1031→
+  1032→.diff-line-removed {
+  1033→  background-color: rgba(248, 81, 73, 0.10);
+  1034→  border-left: 2px solid #f85149;
+  1035→}
+  1036→
+  1037→.diff-line-unchanged {
+  1038→  /* no special styling */
+  1039→}
+  1040→
+  1041→.diff-line-empty-left {
+  1042→  background-color: rgba(35, 134, 54, 0.03);
+  1043→}
+  1044→
+  1045→.diff-line-empty-right {
+  1046→  background-color: rgba(248, 81, 73, 0.03);
+  1047→}
+  1048→
+  1049→/* Orange pulse border glow for read-only banner */
+  1050→@keyframes pulse-border-orange {
+  1051→  0%, 100% {
+  1052→    border-color: rgba(240, 136, 62, 0.3);
+  1053→    box-shadow: 0 0 10px rgba(240, 136, 62, 0.05);
+  1054→  }
+  1055→  50% {
+  1056→    border-color: rgba(240, 136, 62, 0.55);
+  1057→    box-shadow: 0 0 20px rgba(240, 136, 62, 0.1);
+  1058→  }
+  1059→}
+  1060→
+  1061→/* ---- Cycle 7 Additional Styling ---- */
+  1062→
+  1063→/* Tab drag preview effect */
+  1064→@keyframes tab-drag-lift {
+  1065→  0% { transform: scale(1); box-shadow: 0 0 0 transparent; }
+  1066→  100% { transform: scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+  1067→}
+  1068→
+  1069→.tab-drag-preview {
+  1070→  animation: tab-drag-lift 0.15s ease-out both;
+  1071→}
+  1072→
+  1073→/* Smooth panel transition for all editor panels */
+  1074→.panel-transition {
+  1075→  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+  1076→}
+  1077→
+  1078→/* Reaction emoji hover scale */
+  1079→.emoji-reaction-btn {
+  1080→  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.15s ease;
+  1081→}
+  1082→.emoji-reaction-btn:hover {
+  1083→  transform: scale(1.25);
+  1084→}
+  1085→.emoji-reaction-btn:active {
+  1086→  transform: scale(0.95);
+  1087→}
+  1088→
+  1089→/* Mention dropdown animation */
+  1090→@keyframes mention-dropdown {
+  1091→  from { opacity: 0; transform: translateY(4px) scale(0.98); }
+  1092→  to { opacity: 1; transform: translateY(0) scale(1); }
+  1093→}
+  1094→.mention-dropdown-enter {
+  1095→  animation: mention-dropdown 0.15s ease-out both;
+  1096→}
+  1097→
+  1098→/* Notification badge pop */
+  1099→@keyframes count-badge-pop {
+  1100→  0% { transform: scale(1); }
+  1101→  50% { transform: scale(1.3); }
+  1102→  100% { transform: scale(1); }
+  1103→}
+  1104→.badge-pop {
+  1105→  animation: count-badge-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  1106→}
+  1107→
+  1108→/* Notification slide-in */
+  1109→@keyframes notification-slide {
+  1110→  from { opacity: 0; transform: translateX(12px); }
+  1111→  to { opacity: 1; transform: translateX(0); }
+  1112→}
+  1113→.notification-enter {
+  1114→  animation: notification-slide 0.2s ease-out both;
+  1115→}
+  1116→
+  1117→/* Diff line styles */
+  1118→.diff-line-new {
+  1119→  background-color: rgba(35, 134, 54, 0.1);
+  1120→  border-left: 2px solid #238636;
+  1121→}
+  1122→.diff-line-removed {
+  1123→  background-color: rgba(248, 81, 73, 0.1);
+  1124→  border-left: 2px solid #f85149;
+  1125→}
+  1126→.diff-line-unchanged {
+  1127→  border-left: 2px solid transparent;
+  1128→}
+  1129→.diff-line-empty {
+  1130→  background-color: rgba(88, 166, 255, 0.06);
+  1131→  border-left: 2px solid #30363d;
+  1132→}
+  1133→
+  1134→/* Enhanced scrollbar for notification/activity panels */
+  1135→.panel-scroll::-webkit-scrollbar-thumb {
+  1136→  background: rgba(48, 54, 61, 0.6);
+  1137→  border-radius: 999px;
+  1138→}
+  1139→.panel-scroll::-webkit-scrollbar-thumb:hover {
+  1140→  background: rgba(72, 79, 88, 0.9);
+  1141→}
+  1142→
+  1143→/* Export/download button special hover */
+  1144→@keyframes download-pulse {
+  1145→  0% { box-shadow: 0 0 0 0 rgba(35, 134, 54, 0.4); }
+  1146→  70% { box-shadow: 0 0 0 6px rgba(35, 134, 54, 0); }
+  1147→  100% { box-shadow: 0 0 0 0 rgba(35, 134, 54, 0); }
+  1148→}
+  1149→.download-btn-pulse {
+  1150→  animation: download-pulse 1.5s ease-in-out;
+  1151→}
+  1152→
+  1153→/* Trusted logos section */
+  1154→@keyframes logo-fade-in {
+  1155→  from { opacity: 0; transform: translateY(8px); }
+  1156→  to { opacity: 1; transform: translateY(0); }
+  1157→}
+  1158→.logo-stagger > *:nth-child(1) { animation: logo-fade-in 0.4s ease-out 0ms both; }
+  1159→.logo-stagger > *:nth-child(2) { animation: logo-fade-in 0.4s ease-out 80ms both; }
+  1160→.logo-stagger > *:nth-child(3) { animation: logo-fade-in 0.4s ease-out 160ms both; }
+  1161→.logo-stagger > *:nth-child(4) { animation: logo-fade-in 0.4s ease-out 240ms both; }
+  1162→.logo-stagger > *:nth-child(5) { animation: logo-fade-in 0.4s ease-out 320ms both; }
+  1163→.logo-stagger > *:nth-child(6) { animation: logo-fade-in 0.4s ease-out 400ms both; }
+  1164→
+  1165→/* ====== Cycle 8: Comprehensive Styling Polish ====== */
+  1166→
+  1167→/* 1. Skeleton shimmer loading */
+  1168→@keyframes shimmer-loading {
+  1169→  0% { background-position: -200% 0; }
+  1170→  100% { background-position: 200% 0; }
+  1171→}
+  1172→.skeleton-shimmer {
+  1173→  background: linear-gradient(90deg, #21262d 25%, #30363d 50%, #21262d 75%);
+  1174→  background-size: 200% 100%;
+  1175→  animation: shimmer-loading 2s infinite;
+  1176→}
+  1177→
+  1178→/* 2. Slide in right soft */
+  1179→@keyframes slide-in-right-soft {
+  1180→  from { opacity: 0; transform: translateX(16px); }
+  1181→  to { opacity: 1; transform: translateX(0); }
+  1182→}
+  1183→.slide-in-right-soft {
+  1184→  animation: slide-in-right-soft 0.2s ease-out both;
+  1185→}
+  1186→
+  1187→/* 3. Scale in soft */
+  1188→@keyframes scale-in-soft {
+  1189→  from { opacity: 0; transform: scale(0.96); }
+  1190→  to { opacity: 1; transform: scale(1); }
+  1191→}
+  1192→.scale-in-soft {
+  1193→  animation: scale-in-soft 0.15s ease-out both;
+  1194→}
+  1195→
+  1196→/* 4. Border glow cycle */
+  1197→@keyframes border-glow-cycle {
+  1198→  0% { box-shadow: 0 0 12px rgba(63, 185, 80, 0.2), 0 0 24px rgba(63, 185, 80, 0.08); }
+  1199→  33% { box-shadow: 0 0 12px rgba(88, 166, 255, 0.2), 0 0 24px rgba(88, 166, 255, 0.08); }
+  1200→  66% { box-shadow: 0 0 12px rgba(163, 113, 247, 0.2), 0 0 24px rgba(163, 113, 247, 0.08); }
+  1201→  100% { box-shadow: 0 0 12px rgba(63, 185, 80, 0.2), 0 0 24px rgba(63, 185, 80, 0.08); }
+  1202→}
+  1203→.border-glow-cycle {
+  1204→  animation: border-glow-cycle 6s ease-in-out infinite;
+  1205→}
+  1206→
+  1207→/* 5. Text shimmer */
+  1208→@keyframes text-shimmer {
+  1209→  0% { background-position: 200% center; }
+  1210→  100% { background-position: -200% center; }
+  1211→}
+  1212→.text-shimmer {
+  1213→  background: linear-gradient(90deg, #e6edf3 0%, #3fb950 25%, #e6edf3 50%, #58a6ff 75%, #e6edf3 100%);
+  1214→  background-size: 200% auto;
+  1215→  -webkit-background-clip: text;
+  1216→  background-clip: text;
+  1217→  -webkit-text-fill-color: transparent;
+  1218→  animation: text-shimmer 3s linear infinite;
+  1219→}
+  1220→
+  1221→/* 6. Glass card */
+  1222→.glass-card {
+  1223→  background: rgba(22, 27, 34, 0.7);
+  1224→  backdrop-filter: blur(16px);
+  1225→  -webkit-backdrop-filter: blur(16px);
+  1226→  border: 1px solid rgba(48, 54, 61, 0.6);
+  1227→  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  1228→}
+  1229→
+  1230→/* 7. Hover glow green */
+  1231→.hover-glow-green {
+  1232→  transition: box-shadow 0.3s;
+  1233→}
+  1234→.hover-glow-green:hover {
+  1235→  box-shadow: 0 0 20px rgba(35, 134, 54, 0.2), 0 0 40px rgba(35, 134, 54, 0.1);
+  1236→}
+  1237→
+  1238→/* 8. Hover glow blue */
+  1239→.hover-glow-blue {
+  1240→  transition: box-shadow 0.3s;
+  1241→}
+  1242→.hover-glow-blue:hover {
+  1243→  box-shadow: 0 0 20px rgba(88, 166, 255, 0.2), 0 0 40px rgba(88, 166, 255, 0.1);
+  1244→}
+  1245→
+  1246→/* 9. Hover glow purple */
+  1247→.hover-glow-purple {
+  1248→  transition: box-shadow 0.3s;
+  1249→}
+  1250→.hover-glow-purple:hover {
+  1251→  box-shadow: 0 0 20px rgba(163, 113, 247, 0.2), 0 0 40px rgba(163, 113, 247, 0.1);
+  1252→}
+  1253→
+  1254→/* 10. Press effect */
+  1255→.press-effect:active {
+  1256→  transform: scale(0.97);
+  1257→  transition: transform 0.1s;
+  1258→}
+  1259→
+  1260→/* 11. Float subtle */
+  1261→@keyframes float-subtle {
+  1262→  0%, 100% { transform: translateY(0); }
+  1263→  50% { transform: translateY(-2px); }
+  1264→}
+  1265→.float-subtle {
+  1266→  animation: float-subtle 5s ease-in-out infinite;
+  1267→}
+  1268→
+  1269→/* 12. Input glow focus */
+  1270→.input-glow-focus {
+  1271→  transition: border-color 0.2s, box-shadow 0.2s;
+  1272→}
+  1273→.input-glow-focus:focus {
+  1274→  border-color: rgba(35, 134, 54, 0.4);
+  1275→  box-shadow: 0 0 0 3px rgba(35, 134, 54, 0.08), 0 0 16px rgba(35, 134, 54, 0.06);
+  1276→}

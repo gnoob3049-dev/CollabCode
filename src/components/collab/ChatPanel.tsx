@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, LogIn, MessageSquare, ArrowDown, SmilePlus } from 'lucide-react';
+import { Send, LogIn, MessageSquare, ArrowDown, SmilePlus, Pin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -43,6 +43,17 @@ export default function ChatPanel({
 }: ChatPanelProps) {
   const [input, setInput] = useState('');
   const [showScrollBtn, setShowScrollBtn] = useState(false);
+
+  // Typing animation for placeholder
+  const PLACEHOLDERS = ['Type a message...', 'Say something...', 'Use @ to mention someone...'];
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % PLACEHOLDERS.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -235,17 +246,20 @@ export default function ChatPanel({
             <MessageSquare className="size-3.5 text-[#8b949e]" />
             <h3 className="text-sm font-semibold text-[#e6edf3]">Chat</h3>
           </div>
-          {socket?.connected ? (
-            <span className="flex items-center gap-1.5 text-[10px] text-[#3fb950]">
-              <span className="size-1.5 rounded-full bg-[#238636] pulse-dot" />
-              Connected
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5 text-[10px] text-[#f85149]">
-              <span className="size-1.5 rounded-full bg-[#f85149]" />
-              Disconnected
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            <Pin className="size-3 text-[#484f58] float-subtle" />
+            {socket?.connected ? (
+              <span className="flex items-center gap-1.5 text-[10px] text-[#3fb950]">
+                <span className="size-1.5 rounded-full bg-[#238636] pulse-dot" />
+                Connected
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 text-[10px] text-[#f85149]">
+                <span className="size-1.5 rounded-full bg-[#f85149]" />
+                Disconnected
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -254,9 +268,9 @@ export default function ChatPanel({
         <ScrollArea className="h-full" ref={scrollRef}>
           <div className="p-3 flex flex-col gap-3">
             {messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-32 text-[#30363d] text-xs gap-2">
-                <MessageSquare className="size-6" />
-                <span>No messages yet. Say hi!</span>
+              <div className="flex flex-col items-center justify-center h-32 text-[#484f58] text-xs gap-2 glass-card rounded-xl p-6">
+                <MessageSquare className="size-6 text-[#484f58] breathe-glow" />
+                <span>No messages yet. Start the conversation!</span>
               </div>
             )}
 
@@ -281,8 +295,8 @@ export default function ChatPanel({
                 <div
                   key={msg.id || i}
                   className={cn(
-                    'flex gap-2 max-w-[88%] chat-msg-animate group',
-                    isOwn ? 'self-end flex-row-reverse' : 'self-start'
+                    'flex gap-2 max-w-[88%] chat-msg-animate group pl-2',
+                    isOwn ? 'self-end flex-row-reverse chat-msg-hover' : 'self-start chat-msg-hover chat-msg-hover-remote'
                   )}
                 >
                   {/* Avatar with ring pulse on hover */}
@@ -450,7 +464,7 @@ export default function ChatPanel({
             value={input}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message... (use @ to mention)"
+            placeholder={PLACEHOLDERS[placeholderIndex]}
             rows={1}
             className="flex-1 bg-transparent text-sm text-[#e6edf3] outline-none placeholder-[#484f58] resize-none min-h-[28px] max-h-24 py-0.5 input-glow-focus"
             style={{ lineHeight: '1.5' }}

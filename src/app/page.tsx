@@ -7,6 +7,7 @@ import LandingPage from '@/components/collab/LandingPage';
 import LoginPage from '@/components/collab/LoginPage';
 import RegisterPage from '@/components/collab/RegisterPage';
 import DashboardPage from '@/components/collab/DashboardPage';
+import ProfilePage from '@/components/collab/ProfilePage';
 
 const EditorPage = dynamic(() => import('@/components/collab/EditorPage'), {
   ssr: false,
@@ -92,6 +93,8 @@ export default function Home() {
       return <DashboardPage />;
     case 'editor':
       return <EditorPage />;
+    case 'profile':
+      return <ProfilePage />;
     case 'landing':
     default:
       return <LandingPage />;

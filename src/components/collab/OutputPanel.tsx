@@ -11,6 +11,7 @@ import {
   Circle,
   ExternalLink,
   Info,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -135,7 +136,7 @@ export default function OutputPanel({
   return (
     <div
       ref={panelRef}
-      className="flex flex-col border-t border-[#30363d] h-full min-h-0 relative"
+      className="flex flex-col border-t border-[#30363d] h-full min-h-0 relative panel-glow"
     >
       {/* Resize handle */}
       <div
@@ -158,6 +159,11 @@ export default function OutputPanel({
             <span className="flex items-center gap-1.5">
               <Terminal className="size-3" />
               Output
+              {output && !isHtml && (
+                <span className="text-[9px] text-[#484f58] font-normal ml-1">
+                  {lines.length} lines
+                </span>
+              )}
               {isHtml && (
                 <span className="text-[9px] text-[#e34c26] font-semibold ml-1">HTML</span>
               )}
@@ -237,6 +243,17 @@ export default function OutputPanel({
             <X className="size-3" />
           </Button>
 
+          {/* Clear output (Trash2) */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6 text-[#8b949e] hover:text-[#f85149] hover:bg-[#f85149]/10"
+            onClick={onClear}
+            disabled={!output}
+          >
+            <Trash2 className="size-3" />
+          </Button>
+
           {/* Close */}
           <Button
             variant="ghost"
@@ -313,9 +330,10 @@ export default function OutputPanel({
                 </div>
               ) : (
                 <div className="flex items-center justify-center py-6 text-[#30363d]">
-                  <span className="flex items-center gap-2 text-xs terminal-cursor">
+                  <span className="flex items-center gap-2 text-xs">
                     <Terminal className="size-4" />
                     Run your code to see output here
+                    <span className="terminal-cursor" />
                   </span>
                 </div>
               )}

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type Page = "landing" | "login" | "register" | "dashboard" | "editor";
+export type Page = "landing" | "login" | "register" | "dashboard" | "editor" | "profile";
 
 export interface User {
   id: string;

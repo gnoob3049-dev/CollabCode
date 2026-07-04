@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo, type FormEvent } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef, type FormEvent } from "react";
 import {
   Code2,
   Plus,
@@ -20,6 +20,11 @@ import {
   Palette,
   Star,
   ArrowUpDown,
+  Pencil,
+  Share2,
+  X,
+  TrendingUp,
+  Braces,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -137,6 +142,19 @@ export default function DashboardPage() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Cmd/Ctrl+K to focus search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Create room dialog
   const [createOpen, setCreateOpen] = useState(false);
@@ -398,6 +416,39 @@ export default function DashboardPage() {
     }
   };
 
+  const quickCreateRoom = async (language: string, templateId: string) => {
+    const template = ROOM_TEMPLATES.find(t => t.id === templateId);
+    const templateFiles = template?.id === "blank"
+      ? [{ name: "index.js", content: "" }]
+      : template?.files || [{ name: "index.js", content: "" }];
+
+    try {
+      const res = await fetch("/api/rooms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: `${language.charAt(0).toUpperCase() + language.slice(1)} Room`,
+          language,
+          files: templateFiles,
+        }),
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to create room");
+        return;
+      }
+      toast.success(`Room "${data.room.name}" created!`);
+      setCurrentRoom(data.room);
+      setCurrentRoomId(data.room.id);
+      setLanguage(data.room.language);
+      setCurrentFileName(data.room.files?.[0]?.name || "index.js");
+      setCurrentPage("editor");
+    } catch {
+      toast.error("Something went wrong");
+    }
+  };
+
   const handleOpenRoom = (room: Room) => {
     setCurrentRoom(room);
     setCurrentRoomId(room.id);
@@ -518,28 +569,13 @@ export default function DashboardPage() {
                       <span>My Rooms</span>
                     </DropdownMenuItem>
 
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div>
-                          <DropdownMenuItem
-                            disabled
-                            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#8b949e] cursor-not-allowed opacity-50 hover:bg-[#30363d] focus:bg-[#30363d] outline-none transition-colors duration-100"
-                          >
-                            <Settings className="w-4 h-4" />
-                            <span>Settings</span>
-                            <span className="ml-auto text-[10px] text-[#484f58] bg-[#21262d] px-1.5 py-0.5 rounded-full">
-                              Soon
-                            </span>
-                          </DropdownMenuItem>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent
-                        side="left"
-                        className="bg-[#161b22] border-[#30363d] text-[#e6edf3] text-xs"
-                      >
-                        Coming soon
-                      </TooltipContent>
-                    </Tooltip>
+                    <DropdownMenuItem
+                      onClick={() => setCurrentPage("profile")}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#e6edf3] cursor-pointer hover:bg-[#30363d] focus:bg-[#30363d] focus:text-[#e6edf3] outline-none transition-all duration-150 hover:translate-x-0.5"
+                    >
+                      <Settings className="w-4 h-4 text-[#8b949e]" />
+                      <span>Profile</span>
+                    </DropdownMenuItem>
 
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -588,13 +624,42 @@ export default function DashboardPage() {
             {/* Stats bar */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
               {[
-                { icon: Hash, label: "Total Rooms", value: rooms.length, color: "#238636", glowClass: "hover-glow-green" },
-                { icon: Users, label: "Collaborators", value: totalCollaborators, color: "#58a6ff", glowClass: "hover-glow-blue" },
-                { icon: FileCode2, label: "Languages", value: [...new Set(rooms.map(r => r.language))].length, color: "#d29922", glowClass: "hover-glow-purple" },
-                { icon: Clock, label: "Active Now", value: rooms.filter(r => isRecent(r.lastActiveAt)).length, color: "#3fb950", glowClass: "hover-glow-green" },
+                {
+                  icon: Hash,
+                  label: "Total Rooms",
+                  value: rooms.length,
+                  color: "#238636",
+                  glowClass: "hover-glow-green",
+                  tooltip: `Created this month: ${rooms.filter(r => r.createdAt && new Date(r.createdAt).getMonth() === new Date().getMonth()).length}`,
+                },
+                {
+                  icon: Users,
+                  label: "Collaborators",
+                  value: totalCollaborators,
+                  color: "#58a6ff",
+                  glowClass: "hover-glow-blue",
+                  tooltip: `Across ${rooms.length} room${rooms.length !== 1 ? 's' : ''}`,
+                },
+                {
+                  icon: FileCode2,
+                  label: "Languages",
+                  value: [...new Set(rooms.map(r => r.language))].length,
+                  color: "#d29922",
+                  glowClass: "hover-glow-purple",
+                  tooltip: [...new Set(rooms.map(r => r.language))].join(', ') || 'None yet',
+                },
+                {
+                  icon: Clock,
+                  label: "Active Now",
+                  value: rooms.filter(r => isRecent(r.lastActiveAt)).length,
+                  color: "#3fb950",
+                  glowClass: "hover-glow-green",
+                  tooltip: `${rooms.filter(r => isRecent(r.lastActiveAt)).length} room${rooms.filter(r => isRecent(r.lastActiveAt)).length !== 1 ? 's' : ''} active in last 30 min`,
+                },
               ].map((stat) => (
+                <Tooltip key={stat.label}>
+                  <TooltipTrigger asChild>
                 <div
-                  key={stat.label}
                   className={`rounded-lg border border-[#30363d] p-3 sm:p-4 flex items-center gap-3 transition-transform duration-200 hover:scale-[1.03] cursor-default glass-card scale-in-soft ${stat.glowClass}`}
                   style={{
                     background: `linear-gradient(135deg, ${stat.color}08, ${stat.color}03)`,
@@ -602,16 +667,29 @@ export default function DashboardPage() {
                   }}
                 >
                   <div
-                    className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: `${stat.color}15` }}
+                    className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                    style={{ background: `linear-gradient(135deg, ${stat.color}25, ${stat.color}08)` }}
                   >
                     <stat.icon className="w-4 h-4" style={{ color: stat.color }} />
                   </div>
-                  <div>
-                    <div className="text-lg sm:text-xl font-bold text-[#e6edf3] tabular-nums">{stat.value}</div>
-                    <div className="text-xs text-[#8b949e]">{stat.label}</div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-lg sm:text-xl font-bold text-[#e6edf3] tabular-nums">{stat.value}</span>
+                      {stat.value > 0 && (
+                        <TrendingUp className="w-3 h-3 text-[#3fb950] shrink-0" />
+                      )}
+                    </div>
+                    <div className="text-xs text-[#8b949e] truncate">{stat.label}</div>
                   </div>
                 </div>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="bottom"
+                    className="bg-[#161b22] border-[#30363d] text-[#e6edf3] text-xs"
+                  >
+                    {stat.tooltip}
+                  </TooltipContent>
+                </Tooltip>
               ))}
             </div>
 
@@ -630,13 +708,30 @@ export default function DashboardPage() {
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 {/* Search input */}
                 <div className="relative flex-1 sm:flex-none sm:w-56">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#484f58]" />
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#484f58] pointer-events-none" />
                   <Input
+                    ref={searchInputRef}
                     placeholder="Search rooms..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full h-9 pl-8 bg-[#161b22] border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] text-sm input-glow-focus"
+                    className="w-full h-9 pl-8 pr-[4.5rem] bg-[#161b22] border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] text-sm input-glow-focus"
                   />
+                  {/* Keyboard shortcut badge */}
+                  {!searchQuery && (
+                    <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium text-[#484f58] bg-[#0d1117] border border-[#30363d] rounded">
+                      <span className="text-[9px]">⌘</span>K
+                    </kbd>
+                  )}
+                  {/* Clear button */}
+                  {searchQuery && (
+                    <button
+                      onClick={() => { setSearchQuery(""); searchInputRef.current?.focus(); }}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d] transition-colors"
+                      aria-label="Clear search"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
                 {/* Sort dropdown */}
                 <Select value={sortBy} onValueChange={setSortBy}>
@@ -725,58 +820,91 @@ export default function DashboardPage() {
               </div>
             ) : filteredRooms.length === 0 ? (
               <div className="text-center py-20">
-                <div className="flex items-center justify-center w-24 h-24 rounded-2xl bg-[#21262d] mx-auto mb-6 relative float-bob">
-                  <FolderOpen className="w-12 h-12 text-[#484f58]" />
-                  <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#161b22] border-2 border-[#0d1117] flex items-center justify-center">
-                    <Plus className="w-3.5 h-3.5 text-[#8b949e]" />
+                <div className="flex items-center justify-center gap-4 mx-auto mb-6">
+                  {/* Folder icon */}
+                  <div className="w-20 h-20 rounded-2xl bg-[#21262d] relative float-bob">
+                    <FolderOpen className="w-10 h-10 text-[#484f58] mx-auto mt-5" />
+                    <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#161b22] border-2 border-[#0d1117] flex items-center justify-center">
+                      <Plus className="w-3 h-3 text-[#8b949e]" />
+                    </div>
                   </div>
-                  {/* Pulsing glow ring */}
-                  <div className="absolute -inset-2 rounded-2xl border border-[#238636]/20 animate-[breathe-glow_3s_ease-in-out_infinite] pointer-events-none" />
+                  {/* Code bracket icon */}
+                  <div className="w-20 h-20 rounded-2xl bg-[#21262d] relative float-bob" style={{ animationDelay: '0.5s' }}>
+                    <Braces className="w-10 h-10 text-[#484f58] mx-auto mt-5" />
+                    <div className="absolute -inset-1.5 rounded-2xl border border-[#58a6ff]/15 animate-[breathe-glow_3s_ease-in-out_infinite] pointer-events-none" />
+                  </div>
                 </div>
                 <h2 className="text-xl font-semibold text-[#e6edf3] mb-2">
                   {searchQuery ? "No rooms match your search" : "No rooms yet"}
                 </h2>
-                <p className="text-[#8b949e] max-w-md mx-auto mb-6">
+                <p className="text-[#8b949e] max-w-md mx-auto mb-8">
                   {searchQuery
                     ? "Try adjusting your search query to find what you're looking for."
                     : "Create a new room to start collaborating, or join an existing one with an invite code."}
                 </p>
                 {!searchQuery && (
-                  <div className="flex items-center justify-center gap-3">
-                    <Button
-                      variant="outline"
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3 max-w-lg mx-auto">
+                    {/* JS quick-start card */}
+                    <button
+                      onClick={() => quickCreateRoom("javascript", "hello-js")}
+                      className="flex items-center gap-3 px-4 py-3 rounded-lg border border-[#30363d] bg-[#161b22] hover:border-[#f7df1e]/40 transition-all duration-200 hover-lift glass-card w-full sm:w-auto cursor-pointer text-left group"
+                    >
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, #f7df1e20, #f7df1e08)' }}>
+                        <span className="text-lg leading-none">🟨</span>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-[#e6edf3] group-hover:text-[#f7df1e] transition-colors">Create a JavaScript Room</div>
+                        <div className="text-xs text-[#8b949e]">Hello World starter</div>
+                      </div>
+                    </button>
+                    {/* Python quick-start card */}
+                    <button
+                      onClick={() => quickCreateRoom("python", "hello-python")}
+                      className="flex items-center gap-3 px-4 py-3 rounded-lg border border-[#30363d] bg-[#161b22] hover:border-[#3572a5]/40 transition-all duration-200 hover-lift glass-card w-full sm:w-auto cursor-pointer text-left group"
+                    >
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, #3572a520, #3572a508)' }}>
+                        <span className="text-lg leading-none">🐍</span>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-[#e6edf3] group-hover:text-[#3572a5] transition-colors">Create a Python Room</div>
+                        <div className="text-xs text-[#8b949e]">Print statement starter</div>
+                      </div>
+                    </button>
+                    {/* Join with code card */}
+                    <button
                       onClick={() => setJoinOpen(true)}
-                      className="border-[#30363d] text-[#e6edf3] hover:bg-[#21262d]"
+                      className="flex items-center gap-3 px-4 py-3 rounded-lg border border-[#30363d] bg-[#161b22] hover:border-[#58a6ff]/40 transition-all duration-200 hover-lift glass-card w-full sm:w-auto cursor-pointer text-left group"
                     >
-                      <ArrowRight className="w-4 h-4 mr-1.5" />
-                      Join with Code
-                    </Button>
-                    <Button
-                      onClick={() => setCreateOpen(true)}
-                      className="bg-[#238636] hover:bg-[#2ea043] text-white"
-                    >
-                      <Plus className="w-4 h-4 mr-1.5" />
-                      Create Room
-                    </Button>
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, #58a6ff20, #58a6ff08)' }}>
+                        <ArrowRight className="w-5 h-5 text-[#58a6ff]" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-[#e6edf3] group-hover:text-[#58a6ff] transition-colors">Join with Invite Code</div>
+                        <div className="text-xs text-[#8b949e]">Enter a code to join</div>
+                      </div>
+                    </button>
                   </div>
                 )}
               </div>
             ) : (
               <AnimatePresence mode="popLayout">
               <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredRooms.map((room) => {
+                {filteredRooms.map((room, index) => {
                   const langColor = LANG_COLORS[room.language] || "#8b949e";
                   const recent = isRecent(room.lastActiveAt);
                   const isStarred = favorites.includes(room.id);
                   const collabCount = room.collaboratorCount ?? room.collaborators?.length ?? 1;
+                  const fileCount = room.files?.length ?? 1;
+                  const firstFileContent = room.files?.[0]?.content || "";
+                  const contentPreview = firstFileContent.replace(/\n/g, ' ').trim().slice(0, 60);
                   return (
                     <motion.div
                       layout
                       key={room.id}
-                      initial={{ opacity: 0, scale: 0.97 }}
-                      animate={{ opacity: 1, scale: 1 }}
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.2 }}
+                      transition={{ duration: 0.25, delay: index * 0.05 }}
                     >
                     <Card
                       className="cursor-pointer border-[#30363d] hover:border-[#238636]/40 transition-all duration-300 group hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] relative overflow-hidden hover-lift press-effect"
@@ -804,12 +932,13 @@ export default function DashboardPage() {
                           background: 'linear-gradient(to top, rgba(13,17,23,0.4) 0%, transparent 100%)',
                         }}
                       />
-                      {/* Left accent line — golden when starred */}
+                      {/* Left accent line — golden when starred, thicker with glow */}
                       <div
-                        className="absolute left-0 top-0 bottom-0 w-[3px] transition-all duration-300"
+                        className="absolute left-0 top-0 bottom-0 w-1 transition-all duration-300"
                         style={{
                           backgroundColor: isStarred ? '#d29922' : langColor,
-                          opacity: isStarred ? 1 : 0.6,
+                          opacity: isStarred ? 1 : 0.7,
+                          boxShadow: `0 0 8px ${isStarred ? '#d29922' : langColor}40`,
                         }}
                       />
                       {/* Delete button - top right, visible on hover, owner only */}
@@ -846,23 +975,31 @@ export default function DashboardPage() {
                               {room.name}
                             </CardTitle>
                           </div>
-                          {/* Language pill */}
-                          <div
-                            className="shrink-0 flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium transition-shadow duration-300 hover:shadow-[0_0_8px_var(--glow-color)]"
-                            style={{
-                              backgroundColor: `${langColor}15`,
-                              color: langColor,
-                              border: `1px solid ${langColor}30`,
-                              '--glow-color': `${langColor}40`,
-                            } as React.CSSProperties}
-                          >
-                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: langColor }} />
-                            {room.language}
+                          {/* Language pill + file count */}
+                          <div className="shrink-0 flex items-center gap-1.5">
+                            <div
+                              className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] text-[#8b949e] transition-colors group-hover:text-[#e6edf3]"
+                            >
+                              <FolderOpen className="w-3 h-3" />
+                              {fileCount}
+                            </div>
+                            <div
+                              className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium transition-shadow duration-300 hover:shadow-[0_0_8px_var(--glow-color)]"
+                              style={{
+                                backgroundColor: `${langColor}15`,
+                                color: langColor,
+                                border: `1px solid ${langColor}30`,
+                                '--glow-color': `${langColor}40`,
+                              } as React.CSSProperties}
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: langColor }} />
+                              {room.language}
+                            </div>
                           </div>
                         </div>
                       </CardHeader>
                       <CardContent className="pl-5">
-                        <CardDescription className="text-[#8b949e] text-sm mb-4">
+                        <CardDescription className="text-[#8b949e] text-sm mb-2">
                           Code:{" "}
                           <span
                             className="font-mono text-[#58a6ff] cursor-pointer hover:underline hover:shadow-[0_0_8px_rgba(88,166,255,0.2)] transition-shadow duration-300"
@@ -875,6 +1012,12 @@ export default function DashboardPage() {
                           </span>
                           <Copy className="inline w-3 h-3 ml-1 text-[#484f58] group-hover:text-[#8b949e] transition-colors" />
                         </CardDescription>
+                        {/* Content preview */}
+                        {contentPreview && (
+                          <p className="font-mono text-xs text-[#484f58] truncate mb-3 pl-1 border-l-2 border-[#30363d]">
+                            {contentPreview}...
+                          </p>
+                        )}
                         <div className="flex items-center justify-between text-xs">
                           <div className="flex items-center gap-2">
                             {/* Mini avatar stack */}
@@ -903,6 +1046,29 @@ export default function DashboardPage() {
                             <Clock className="w-3.5 h-3.5" />
                             <span>{timeAgo(room.lastActiveAt)}</span>
                           </div>
+                        </div>
+                        {/* Quick actions row - visible on hover */}
+                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#30363d]/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenRoom(room);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#238636]/15 text-[#3fb950] border border-[#238636]/25 hover:bg-[#238636]/25 transition-colors"
+                          >
+                            <Pencil className="w-3 h-3" />
+                            Edit
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopyCode(room.inviteCode);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#58a6ff]/15 text-[#58a6ff] border border-[#58a6ff]/25 hover:bg-[#58a6ff]/25 transition-colors"
+                          >
+                            <Share2 className="w-3 h-3" />
+                            Share
+                          </button>
                         </div>
                       </CardContent>
                     </Card>
@@ -976,9 +1142,49 @@ export default function DashboardPage() {
               </div>
               <div className="space-y-2">
                 <Label className="text-[#e6edf3]">Template</Label>
-                <div className="max-h-[240px] overflow-y-auto rounded-md border border-[#30363d] bg-[#0d1117] p-2 custom-scrollbar">
+                <div className="max-h-[280px] overflow-y-auto rounded-md border border-[#30363d] bg-[#0d1117] p-2 custom-scrollbar">
+                  {/* Prominent "Start from Scratch" option */}
+                  <button
+                    type="button"
+                    onClick={() => handleTemplateSelect(ROOM_TEMPLATES[0])}
+                    className={`
+                      w-full flex items-center gap-4 rounded-lg p-3 text-left transition-all duration-200 cursor-pointer mb-2
+                      ${selectedTemplate.id === 'blank'
+                        ? 'border-2 border-[#238636] shadow-[0_0_16px_rgba(35,134,54,0.3)] bg-[#238636]/5'
+                        : 'border border-dashed border-[#484f58] hover:border-[#238636]/50 hover:bg-[#21262d]'
+                      }
+                    `}
+                    style={{ background: selectedTemplate.id === 'blank' ? 'linear-gradient(135deg, #23863608, #161b22)' : '#161b22' }}
+                  >
+                    <div className={`
+                      w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors
+                      ${selectedTemplate.id === 'blank' ? 'bg-[#238636]/20' : 'bg-[#21262d]'}
+                    `}>
+                      <Plus className={`w-5 h-5 transition-colors ${selectedTemplate.id === 'blank' ? 'text-[#3fb950]' : 'text-[#8b949e]'}`} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className={`text-sm font-semibold leading-tight transition-colors ${selectedTemplate.id === 'blank' ? 'text-[#3fb950]' : 'text-[#e6edf3]'}`}>Start from Scratch</div>
+                      <div className="text-xs text-[#8b949e] leading-tight mt-0.5">Empty files, ready for anything</div>
+                    </div>
+                    {selectedTemplate.id === 'blank' && (
+                      <div className="ml-auto shrink-0">
+                        <div className="w-5 h-5 rounded-full bg-[#238636] flex items-center justify-center">
+                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      </div>
+                    )}
+                  </button>
+                  {/* Separator */}
+                  <div className="flex items-center gap-2 mb-2 px-1">
+                    <div className="flex-1 h-px bg-[#30363d]" />
+                    <span className="text-[10px] text-[#484f58] uppercase tracking-wider font-medium">Templates</span>
+                    <div className="flex-1 h-px bg-[#30363d]" />
+                  </div>
+                  {/* Template grid (excluding blank) */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 stagger-grid">
-                    {ROOM_TEMPLATES.map((template) => {
+                    {ROOM_TEMPLATES.filter(t => t.id !== 'blank').map((template) => {
                       const isSelected = selectedTemplate.id === template.id;
                       return (
                         <button

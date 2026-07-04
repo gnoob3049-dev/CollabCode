@@ -1,0 +1,1125 @@
+     1→"use client";
+     2→
+     3→import { useEffect, useState, useCallback, useMemo, type FormEvent } from "react";
+     4→import {
+     5→  Code2,
+     6→  Plus,
+     7→  LogOut,
+     8→  Users,
+     9→  Copy,
+    10→  Loader2,
+    11→  FolderOpen,
+    12→  Clock,
+    13→  Search,
+    14→  FileCode2,
+    15→  Hash,
+    16→  ArrowRight,
+    17→  Trash2,
+    18→  ChevronDown,
+    19→  Settings,
+    20→  Palette,
+    21→  Star,
+    22→  ArrowUpDown,
+    23→} from "lucide-react";
+    24→import { toast } from "sonner";
+    25→import { Button } from "@/components/ui/button";
+    26→import { Input } from "@/components/ui/input";
+    27→import { Label } from "@/components/ui/label";
+    28→import { Badge } from "@/components/ui/badge";
+    29→import {
+    30→  Card,
+    31→  CardContent,
+    32→  CardDescription,
+    33→  CardHeader,
+    34→  CardTitle,
+    35→} from "@/components/ui/card";
+    36→import {
+    37→  Dialog,
+    38→  DialogContent,
+    39→  DialogDescription,
+    40→  DialogFooter,
+    41→  DialogHeader,
+    42→  DialogTitle,
+    43→} from "@/components/ui/dialog";
+    44→import {
+    45→  Select,
+    46→  SelectContent,
+    47→  SelectItem,
+    48→  SelectTrigger,
+    49→  SelectValue,
+    50→} from "@/components/ui/select";
+    51→import {
+    52→  AlertDialog,
+    53→  AlertDialogAction,
+    54→  AlertDialogCancel,
+    55→  AlertDialogContent,
+    56→  AlertDialogDescription,
+    57→  AlertDialogFooter,
+    58→  AlertDialogHeader,
+    59→  AlertDialogTitle,
+    60→} from "@/components/ui/alert-dialog";
+    61→import {
+    62→  DropdownMenu,
+    63→  DropdownMenuContent,
+    64→  DropdownMenuGroup,
+    65→  DropdownMenuItem,
+    66→  DropdownMenuSeparator,
+    67→  DropdownMenuTrigger,
+    68→} from "@/components/ui/dropdown-menu";
+    69→import {
+    70→  Tooltip,
+    71→  TooltipTrigger,
+    72→  TooltipContent,
+    73→} from "@/components/ui/tooltip";
+    74→import { AnimatePresence, motion } from "framer-motion";
+    75→import { useStore, type Room } from "@/store/useStore";
+    76→import { ROOM_TEMPLATES, type RoomTemplate } from "@/lib/templates";
+    77→
+    78→const LANGUAGES = [
+    79→  "javascript",
+    80→  "typescript",
+    81→  "python",
+    82→  "html",
+    83→  "css",
+    84→  "go",
+    85→  "rust",
+    86→  "java",
+    87→  "csharp",
+    88→  "cpp",
+    89→  "sql",
+    90→];
+    91→
+    92→const LANG_COLORS: Record<string, string> = {
+    93→  javascript: "#f7df1e",
+    94→  typescript: "#3178c6",
+    95→  python: "#3572a5",
+    96→  html: "#e34c26",
+    97→  css: "#563d7c",
+    98→  go: "#00add8",
+    99→  rust: "#dea584",
+   100→  java: "#b07219",
+   101→  csharp: "#178600",
+   102→  cpp: "#f34b7d",
+   103→  sql: "#e38c00",
+   104→};
+   105→
+   106→function timeAgo(dateStr?: string): string {
+   107→  if (!dateStr) return "Unknown";
+   108→  const now = Date.now();
+   109→  const then = new Date(dateStr).getTime();
+   110→  const diff = now - then;
+   111→  const minutes = Math.floor(diff / 60000);
+   112→  if (minutes < 1) return "Just now";
+   113→  if (minutes < 60) return `${minutes}m ago`;
+   114→  const hours = Math.floor(minutes / 60);
+   115→  if (hours < 24) return `${hours}h ago`;
+   116→  const days = Math.floor(hours / 24);
+   117→  return `${days}d ago`;
+   118→}
+   119→
+   120→function isRecent(dateStr?: string): boolean {
+   121→  if (!dateStr) return false;
+   122→  const diff = Date.now() - new Date(dateStr).getTime();
+   123→  return diff < 30 * 60 * 1000; // within 30 minutes
+   124→}
+   125→
+   126→export default function DashboardPage() {
+   127→  const {
+   128→    user,
+   129→    setUser,
+   130→    setCurrentPage,
+   131→    setCurrentRoom,
+   132→    setCurrentRoomId,
+   133→    setLanguage,
+   134→    setCurrentFileName,
+   135→  } = useStore();
+   136→
+   137→  const [rooms, setRooms] = useState<Room[]>([]);
+   138→  const [loading, setLoading] = useState(true);
+   139→  const [searchQuery, setSearchQuery] = useState("");
+   140→
+   141→  // Create room dialog
+   142→  const [createOpen, setCreateOpen] = useState(false);
+   143→  const [newRoomName, setNewRoomName] = useState("");
+   144→  const [newRoomLang, setNewRoomLang] = useState("javascript");
+   145→  const [selectedTemplate, setSelectedTemplate] = useState<RoomTemplate>(ROOM_TEMPLATES[0]);
+   146→  const [creating, setCreating] = useState(false);
+   147→
+   148→  // Join room dialog
+   149→  const [joinOpen, setJoinOpen] = useState(false);
+   150→  const [inviteCode, setInviteCode] = useState("");
+   151→  const [joining, setJoining] = useState(false);
+   152→
+   153→  // Delete room
+   154→  const [deleteRoomId, setDeleteRoomId] = useState<string | null>(null);
+   155→  const [deleting, setDeleting] = useState(false);
+   156→
+   157→  // Language filter
+   158→  const [languageFilter, setLanguageFilter] = useState<string | null>(null);
+   159→
+   160→  // Sort
+   161→  const [sortBy, setSortBy] = useState<string>('last-active');
+   162→
+   163→  // Favorites
+   164→  const [favorites, setFavorites] = useState<string[]>(() => {
+   165→    if (typeof window === 'undefined') return [];
+   166→    try {
+   167→      const stored = localStorage.getItem('collabcode-favorites');
+   168→      return stored ? JSON.parse(stored) : [];
+   169→    } catch {
+   170→      return [];
+   171→    }
+   172→  });
+   173→
+   174→  const toggleFavorite = useCallback((roomId: string, e?: React.MouseEvent) => {
+   175→    e?.stopPropagation();
+   176→    setFavorites((prev) => {
+   177→      const next = prev.includes(roomId)
+   178→        ? prev.filter((id) => id !== roomId)
+   179→        : [...prev, roomId];
+   180→      try {
+   181→        localStorage.setItem('collabcode-favorites', JSON.stringify(next));
+   182→      } catch {
+   183→        // ignore
+   184→      }
+   185→      return next;
+   186→    });
+   187→  }, []);
+   188→
+   189→  // Unique languages from user's rooms
+   190→  const uniqueLanguages = useMemo(() => {
+   191→    const langs = [...new Set(rooms.map((r) => r.language))];
+   192→    return langs.sort();
+   193→  }, [rooms]);
+   194→
+   195→  const filteredRooms = useMemo(() => {
+   196→    let result = rooms;
+   197→    // Apply search
+   198→    if (searchQuery.trim()) {
+   199→      const q = searchQuery.toLowerCase();
+   200→      result = result.filter(
+   201→        (r) =>
+   202→          r.name.toLowerCase().includes(q) ||
+   203→          r.language.toLowerCase().includes(q)
+   204→      );
+   205→    }
+   206→    // Apply language filter
+   207→    if (languageFilter) {
+   208→      result = result.filter((r) => r.language === languageFilter);
+   209→    }
+   210→    // Apply sort
+   211→    switch (sortBy) {
+   212→      case 'name-asc':
+   213→        result = [...result].sort((a, b) => a.name.localeCompare(b.name));
+   214→        break;
+   215→      case 'name-desc':
+   216→        result = [...result].sort((a, b) => b.name.localeCompare(a.name));
+   217→        break;
+   218→      case 'newest':
+   219→        result = [...result].sort((a, b) => {
+   220→          const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+   221→          const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+   222→          return db - da;
+   223→        });
+   224→        break;
+   225→      case 'oldest':
+   226→        result = [...result].sort((a, b) => {
+   227→          const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+   228→          const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+   229→          return da - db;
+   230→        });
+   231→        break;
+   232→      case 'last-active':
+   233→      default:
+   234→        result = [...result].sort((a, b) => {
+   235→          const da = a.lastActiveAt ? new Date(a.lastActiveAt).getTime() : 0;
+   236→          const db = b.lastActiveAt ? new Date(b.lastActiveAt).getTime() : 0;
+   237→          return db - da;
+   238→        });
+   239→        break;
+   240→    }
+   241→    // Favorites first within same sort
+   242→    result = [...result].sort((a, b) => {
+   243→      const aFav = favorites.includes(a.id) ? 0 : 1;
+   244→      const bFav = favorites.includes(b.id) ? 0 : 1;
+   245→      return aFav - bFav;
+   246→    });
+   247→    return result;
+   248→  }, [rooms, searchQuery, languageFilter, sortBy, favorites]);
+   249→
+   250→  const totalCollaborators = useMemo(() => {
+   251→    return rooms.reduce((acc, r) => {
+   252→      const count = r.collaboratorCount ?? r.collaborators?.length ?? 1;
+   253→      return acc + count;
+   254→    }, 0);
+   255→  }, [rooms]);
+   256→
+   257→  const fetchRooms = useCallback(async () => {
+   258→    try {
+   259→      const res = await fetch("/api/rooms", { credentials: "include" });
+   260→      if (res.status === 401) {
+   261→        setUser(null);
+   262→        setCurrentPage("landing");
+   263→        return;
+   264→      }
+   265→      const data = await res.json();
+   266→      const roomsList = Array.isArray(data) ? data : (data.rooms || []);
+   267→      setRooms(roomsList);
+   268→    } catch {
+   269→      toast.error("Failed to load rooms");
+   270→    } finally {
+   271→      setLoading(false);
+   272→    }
+   273→  }, [setUser, setCurrentPage]);
+   274→
+   275→  const checkAuth = useCallback(async () => {
+   276→    try {
+   277→      const res = await fetch("/api/auth/me", { credentials: "include" });
+   278→      if (!res.ok) {
+   279→        setUser(null);
+   280→        setCurrentPage("landing");
+   281→        return;
+   282→      }
+   283→      const data = await res.json();
+   284→      if (data.user) {
+   285→        setUser(data.user);
+   286→      }
+   287→    } catch {
+   288→      // ignore
+   289→    }
+   290→  }, [setUser, setCurrentPage]);
+   291→
+   292→  useEffect(() => {
+   293→    checkAuth().then(() => fetchRooms());
+   294→  }, [checkAuth, fetchRooms]);
+   295→
+   296→  const handleLogout = async () => {
+   297→    try {
+   298→      await fetch("/api/auth/logout", {
+   299→        method: "POST",
+   300→        credentials: "include",
+   301→      });
+   302→    } catch {
+   303→      // ignore
+   304→    }
+   305→    setUser(null);
+   306→    setCurrentPage("landing");
+   307→    toast.success("Logged out");
+   308→  };
+   309→
+   310→  const handleCreateRoom = async (e: FormEvent) => {
+   311→    e.preventDefault();
+   312→    if (!newRoomName.trim()) {
+   313→      toast.error("Please enter a room name");
+   314→      return;
+   315→    }
+   316→
+   317→    setCreating(true);
+   318→    try {
+   319→      const templateFiles = selectedTemplate.id === "blank"
+   320→        ? [{ name: "index.js", content: "" }]
+   321→        : selectedTemplate.files;
+   322→
+   323→      const res = await fetch("/api/rooms", {
+   324→        method: "POST",
+   325→        headers: { "Content-Type": "application/json" },
+   326→        body: JSON.stringify({
+   327→          name: newRoomName.trim(),
+   328→          language: newRoomLang,
+   329→          files: templateFiles,
+   330→        }),
+   331→        credentials: "include",
+   332→      });
+   333→
+   334→      const data = await res.json();
+   335→
+   336→      if (!res.ok) {
+   337→        toast.error(data.error || "Failed to create room");
+   338→        return;
+   339→      }
+   340→
+   341→      toast.success(`Room "${data.room.name}" created!`);
+   342→      setCreateOpen(false);
+   343→      setNewRoomName("");
+   344→      setNewRoomLang("javascript");
+   345→      setSelectedTemplate(ROOM_TEMPLATES[0]);
+   346→
+   347→      setCurrentRoom(data.room);
+   348→      setCurrentRoomId(data.room.id);
+   349→      setLanguage(data.room.language);
+   350→      setCurrentFileName(data.room.files?.[0]?.name || "index.js");
+   351→      setCurrentPage("editor");
+   352→    } catch {
+   353→      toast.error("Something went wrong");
+   354→    } finally {
+   355→      setCreating(false);
+   356→    }
+   357→  };
+   358→
+   359→  const handleTemplateSelect = (template: RoomTemplate) => {
+   360→    setSelectedTemplate(template);
+   361→    if (template.language && LANGUAGES.includes(template.language)) {
+   362→      setNewRoomLang(template.language);
+   363→    }
+   364→  };
+   365→
+   366→  const handleJoinRoom = async (e: FormEvent) => {
+   367→    e.preventDefault();
+   368→    if (!inviteCode.trim()) {
+   369→      toast.error("Please enter an invite code");
+   370→      return;
+   371→    }
+   372→
+   373→    setJoining(true);
+   374→    try {
+   375→      const roomsRes = await fetch("/api/rooms", { credentials: "include" });
+   376→      const allRooms = await roomsRes.json();
+   377→      const room = (Array.isArray(allRooms) ? allRooms : []).find(
+   378→        (r: Room) => r.inviteCode === inviteCode.trim()
+   379→      );
+   380→
+   381→      if (!room) {
+   382→        toast.error("Room not found. Check the invite code.");
+   383→        return;
+   384→      }
+   385→
+   386→      setCurrentRoom(room);
+   387→      setCurrentRoomId(room.id);
+   388→      setLanguage(room.language);
+   389→      setCurrentFileName("index.js");
+   390→      setJoinOpen(false);
+   391→      setInviteCode("");
+   392→      setCurrentPage("editor");
+   393→      toast.success("Joined room!");
+   394→    } catch {
+   395→      toast.error("Failed to join room");
+   396→    } finally {
+   397→      setJoining(false);
+   398→    }
+   399→  };
+   400→
+   401→  const handleOpenRoom = (room: Room) => {
+   402→    setCurrentRoom(room);
+   403→    setCurrentRoomId(room.id);
+   404→    setLanguage(room.language);
+   405→    setCurrentFileName(
+   406→      room.files?.[0]?.name || "index.js"
+   407→    );
+   408→    setCurrentPage("editor");
+   409→  };
+   410→
+   411→  const handleCopyCode = (code: string) => {
+   412→    navigator.clipboard.writeText(code);
+   413→    toast.success("Invite code copied!");
+   414→  };
+   415→
+   416→  const handleDeleteRoom = async () => {
+   417→    if (!deleteRoomId) return;
+   418→    setDeleting(true);
+   419→    try {
+   420→      const res = await fetch(`/api/rooms/${deleteRoomId}`, {
+   421→        method: "DELETE",
+   422→        credentials: "include",
+   423→      });
+   424→      if (!res.ok) {
+   425→        const data = await res.json();
+   426→        toast.error(data.error || "Failed to delete room");
+   427→        return;
+   428→      }
+   429→      setRooms((prev) => prev.filter((r) => r.id !== deleteRoomId));
+   430→      toast.success("Room deleted successfully");
+   431→      setDeleteRoomId(null);
+   432→    } catch {
+   433→      toast.error("Something went wrong");
+   434→    } finally {
+   435→      setDeleting(false);
+   436→    }
+   437→  };
+   438→
+   439→  const initial = user?.name?.charAt(0)?.toUpperCase() || "?";
+   440→  const avatarColor = user?.avatarColor || "#238636";
+   441→
+   442→  return (
+   443→    <div className="min-h-screen flex flex-col relative">
+   444→      {/* Subtle animated background pattern */}
+   445→      <div className="absolute inset-0 dot-grid opacity-20 pointer-events-none" />
+   446→
+   447→      <div className="relative z-10 flex flex-col min-h-screen">
+   448→        {/* Top Bar */}
+   449→        <header className="sticky top-0 z-50 border-b-0 px-4 sm:px-6 py-3 bg-[#0d1117]/60 backdrop-blur-xl">
+   450→          {/* Gradient bottom border line */}
+   451→          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#238636]/50 to-transparent" />
+   452→          <div className="max-w-6xl mx-auto flex items-center justify-between">
+   453→            <div className="flex items-center gap-2 group cursor-default">
+   454→              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#238636] glow-green transition-transform duration-200 group-hover:scale-110">
+   455→                <Code2 className="w-5 h-5 text-white" />
+   456→              </div>
+   457→              <span className="text-lg font-bold text-[#e6edf3] transition-colors duration-200 group-hover:text-[#3fb950]">
+   458→                CollabCode
+   459→              </span>
+   460→            </div>
+   461→
+   462→            <div className="flex items-center">
+   463→              <DropdownMenu>
+   464→                <DropdownMenuTrigger asChild>
+   465→                  <button
+   466→                    className="flex items-center gap-2 rounded-lg px-2 py-1.5 -mr-2 hover:bg-[#161b22] transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-[#238636]/50"
+   467→                  >
+   468→                    <div className="relative">
+   469→                      <div
+   470→                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white ring-2 ring-[#30363d] ring-offset-2 ring-offset-[#0d1117] transition-all duration-300 hover:ring-[#238636] hover:ring-offset-[#0d1117] ${rooms.some(r => isRecent(r.lastActiveAt)) ? 'ring-[#238636] pulse-ring-green' : ''}`}
+   471→                        style={{ backgroundColor: avatarColor }}
+   472→                      >
+   473→                        {initial}
+   474→                      </div>
+   475→                      {/* Online indicator dot */}
+   476→                      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#3fb950] rounded-full border-2 border-[#0d1117]" />
+   477→                    </div>
+   478→                    <span className="hidden sm:block text-sm text-[#e6edf3] font-medium">
+   479→                      {user?.name}
+   480→                    </span>
+   481→                    <ChevronDown className="hidden sm:block w-3.5 h-3.5 text-[#8b949e]" />
+   482→                  </button>
+   483→                </DropdownMenuTrigger>
+   484→
+   485→                <DropdownMenuContent
+   486→                  sideOffset={8}
+   487→                  align="end"
+   488→                  className="w-64 bg-[#161b22] border-[#30363d] text-[#e6edf3] rounded-xl p-0 overflow-hidden shadow-2xl shadow-black/40"
+   489→                >
+   490→                  {/* Profile section header */}
+   491→                  <div className="px-3 py-3 flex items-center gap-3 border-b border-[#30363d]">
+   492→                    <div
+   493→                      className="w-10 h-10 rounded-full flex items-center justify-center text-base font-bold text-white flex-shrink-0"
+   494→                      style={{ backgroundColor: avatarColor }}
+   495→                    >
+   496→                      {initial}
+   497→                    </div>
+   498→                    <div className="min-w-0">
+   499→                      <p className="text-sm font-semibold text-[#e6edf3] truncate">
+   500→                        {user?.name}
+   501→                      </p>
+   502→                      <p className="text-xs text-[#8b949e] truncate">
+   503→                        {user?.email}
+   504→                      </p>
+   505→                    </div>
+   506→                  </div>
+   507→
+   508→                  {/* Menu items */}
+   509→                  <DropdownMenuGroup className="p-1.5">
+   510→                    <DropdownMenuItem
+   511→                      onClick={() => {
+   512→                        window.scrollTo({ top: 0, behavior: "smooth" });
+   513→                        setSearchQuery("");
+   514→                      }}
+   515→                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#e6edf3] cursor-pointer hover:bg-[#30363d] focus:bg-[#30363d] focus:text-[#e6edf3] outline-none transition-all duration-150 hover:translate-x-0.5"
+   516→                    >
+   517→                      <Users className="w-4 h-4 text-[#8b949e]" />
+   518→                      <span>My Rooms</span>
+   519→                    </DropdownMenuItem>
+   520→
+   521→                    <Tooltip>
+   522→                      <TooltipTrigger asChild>
+   523→                        <div>
+   524→                          <DropdownMenuItem
+   525→                            disabled
+   526→                            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#8b949e] cursor-not-allowed opacity-50 hover:bg-[#30363d] focus:bg-[#30363d] outline-none transition-colors duration-100"
+   527→                          >
+   528→                            <Settings className="w-4 h-4" />
+   529→                            <span>Settings</span>
+   530→                            <span className="ml-auto text-[10px] text-[#484f58] bg-[#21262d] px-1.5 py-0.5 rounded-full">
+   531→                              Soon
+   532→                            </span>
+   533→                          </DropdownMenuItem>
+   534→                        </div>
+   535→                      </TooltipTrigger>
+   536→                      <TooltipContent
+   537→                        side="left"
+   538→                        className="bg-[#161b22] border-[#30363d] text-[#e6edf3] text-xs"
+   539→                      >
+   540→                        Coming soon
+   541→                      </TooltipContent>
+   542→                    </Tooltip>
+   543→
+   544→                    <Tooltip>
+   545→                      <TooltipTrigger asChild>
+   546→                        <div>
+   547→                          <DropdownMenuItem
+   548→                            disabled
+   549→                            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#8b949e] cursor-not-allowed opacity-50 hover:bg-[#30363d] focus:bg-[#30363d] outline-none transition-colors duration-100"
+   550→                          >
+   551→                            <Palette className="w-4 h-4" />
+   552→                            <span>Theme</span>
+   553→                            <span className="ml-auto text-[10px] text-[#484f58] bg-[#21262d] px-1.5 py-0.5 rounded-full">
+   554→                              Soon
+   555→                            </span>
+   556→                          </DropdownMenuItem>
+   557→                        </div>
+   558→                      </TooltipTrigger>
+   559→                      <TooltipContent
+   560→                        side="left"
+   561→                        className="bg-[#161b22] border-[#30363d] text-[#e6edf3] text-xs"
+   562→                      >
+   563→                        Coming soon
+   564→                      </TooltipContent>
+   565→                    </Tooltip>
+   566→                  </DropdownMenuGroup>
+   567→
+   568→                  <DropdownMenuSeparator className="bg-[#30363d] -mx-1" />
+   569→
+   570→                  <div className="p-1.5">
+   571→                    <DropdownMenuItem
+   572→                      onClick={handleLogout}
+   573→                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#f85149] cursor-pointer hover:bg-[#f85149]/10 focus:bg-[#f85149]/10 focus:text-[#f85149] outline-none transition-all duration-150 hover:translate-x-0.5"
+   574→                    >
+   575→                      <LogOut className="w-4 h-4" />
+   576→                      <span>Sign Out</span>
+   577→                    </DropdownMenuItem>
+   578→                  </div>
+   579→                </DropdownMenuContent>
+   580→              </DropdownMenu>
+   581→            </div>
+   582→          </div>
+   583→        </header>
+   584→
+   585→        {/* Main Content */}
+   586→        <main className="flex-1 px-4 sm:px-6 py-8">
+   587→          <div className="max-w-6xl mx-auto">
+   588→            {/* Stats bar */}
+   589→            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+   590→              {[
+   591→                { icon: Hash, label: "Total Rooms", value: rooms.length, color: "#238636", glowClass: "hover-glow-green" },
+   592→                { icon: Users, label: "Collaborators", value: totalCollaborators, color: "#58a6ff", glowClass: "hover-glow-blue" },
+   593→                { icon: FileCode2, label: "Languages", value: [...new Set(rooms.map(r => r.language))].length, color: "#d29922", glowClass: "hover-glow-purple" },
+   594→                { icon: Clock, label: "Active Now", value: rooms.filter(r => isRecent(r.lastActiveAt)).length, color: "#3fb950", glowClass: "hover-glow-green" },
+   595→              ].map((stat) => (
+   596→                <div
+   597→                  key={stat.label}
+   598→                  className={`rounded-lg border border-[#30363d] p-3 sm:p-4 flex items-center gap-3 transition-transform duration-200 hover:scale-[1.03] cursor-default glass-card scale-in-soft ${stat.glowClass}`}
+   599→                  style={{
+   600→                    background: `linear-gradient(135deg, ${stat.color}08, ${stat.color}03)`,
+   601→                    backgroundColor: '#161b22',
+   602→                  }}
+   603→                >
+   604→                  <div
+   605→                    className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+   606→                    style={{ backgroundColor: `${stat.color}15` }}
+   607→                  >
+   608→                    <stat.icon className="w-4 h-4" style={{ color: stat.color }} />
+   609→                  </div>
+   610→                  <div>
+   611→                    <div className="text-lg sm:text-xl font-bold text-[#e6edf3] tabular-nums">{stat.value}</div>
+   612→                    <div className="text-xs text-[#8b949e]">{stat.label}</div>
+   613→                  </div>
+   614→                </div>
+   615→              ))}
+   616→            </div>
+   617→
+   618→            {/* Actions */}
+   619→            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+   620→              <div>
+   621→                <h1 className="text-2xl sm:text-3xl font-bold text-[#e6edf3]">
+   622→                  Your Rooms
+   623→                </h1>
+   624→                <p className="text-[#8b949e] mt-1">
+   625→                  {rooms.length > 0
+   626→                    ? `${rooms.length} room${rooms.length !== 1 ? 's' : ''} · ${new Set(rooms.map(r => r.language)).size} language${new Set(rooms.map(r => r.language)).size !== 1 ? 's' : ''}`
+   627→                    : 'Create or join a room to start coding together'}
+   628→                </p>
+   629→              </div>
+   630→              <div className="flex items-center gap-3 w-full sm:w-auto">
+   631→                {/* Search input */}
+   632→                <div className="relative flex-1 sm:flex-none sm:w-56">
+   633→                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#484f58]" />
+   634→                  <Input
+   635→                    placeholder="Search rooms..."
+   636→                    value={searchQuery}
+   637→                    onChange={(e) => setSearchQuery(e.target.value)}
+   638→                    className="w-full h-9 pl-8 bg-[#161b22] border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] text-sm input-glow-focus"
+   639→                  />
+   640→                </div>
+   641→                {/* Sort dropdown */}
+   642→                <Select value={sortBy} onValueChange={setSortBy}>
+   643→                  <SelectTrigger
+   644→                    className="w-auto h-9 px-2 bg-[#161b22] border-[#30363d] text-[#e6edf3] text-xs shrink-0"
+   645→                    aria-label="Sort rooms"
+   646→                  >
+   647→                    <ArrowUpDown className="w-3.5 h-3.5 mr-1 text-[#8b949e]" />
+   648→                    <SelectValue />
+   649→                  </SelectTrigger>
+   650→                  <SelectContent className="bg-[#161b22] border-[#30363d] text-[#e6edf3]">
+   651→                    <SelectItem value="last-active" className="text-[#e6edf3] focus:bg-[#30363d] focus:text-[#e6edf3]">Last Active</SelectItem>
+   652→                    <SelectItem value="name-asc" className="text-[#e6edf3] focus:bg-[#30363d] focus:text-[#e6edf3]">Name A-Z</SelectItem>
+   653→                    <SelectItem value="name-desc" className="text-[#e6edf3] focus:bg-[#30363d] focus:text-[#e6edf3]">Name Z-A</SelectItem>
+   654→                    <SelectItem value="newest" className="text-[#e6edf3] focus:bg-[#30363d] focus:text-[#e6edf3]">Newest</SelectItem>
+   655→                    <SelectItem value="oldest" className="text-[#e6edf3] focus:bg-[#30363d] focus:text-[#e6edf3]">Oldest</SelectItem>
+   656→                  </SelectContent>
+   657→                </Select>
+   658→                <Button
+   659→                  variant="outline"
+   660→                  onClick={() => setJoinOpen(true)}
+   661→                  className="border-[#30363d] text-[#e6edf3] hover:bg-[#21262d] shrink-0"
+   662→                >
+   663→                  <ArrowRight className="w-4 h-4 mr-1.5" />
+   664→                  <span className="hidden sm:inline">Join Room</span>
+   665→                  <span className="sm:hidden">Join</span>
+   666→                </Button>
+   667→                <div
+   668→                  className="relative p-[1.5px] rounded-md shrink-0"
+   669→                  style={{
+   670→                    background: "linear-gradient(90deg, #238636, #58a6ff, #238636, #58a6ff)",
+   671→                    backgroundSize: "300% 100%",
+   672→                    animation: "shimmer 3s ease-in-out infinite",
+   673→                  }}
+   674→                >
+   675→                  <Button
+   676→                    onClick={() => setCreateOpen(true)}
+   677→                    className="bg-[#238636] hover:bg-[#2ea043] text-white rounded-[5px]"
+   678→                  >
+   679→                    <Plus className="w-4 h-4 mr-1.5" />
+   680→                    <span className="hidden sm:inline">Create New Room</span>
+   681→                    <span className="sm:hidden">New</span>
+   682→                  </Button>
+   683→                </div>
+   684→              </div>
+   685→            </div>
+   686→
+   687→            {/* Language filter pills */}
+   688→            {uniqueLanguages.length > 1 && (
+   689→              <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+   690→                <button
+   691→                  onClick={() => setLanguageFilter(null)}
+   692→                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border whitespace-nowrap transition-all duration-200 ${
+   693→                    languageFilter === null
+   694→                      ? 'bg-[#238636]/20 text-[#3fb950] border-[#238636]/30'
+   695→                      : 'bg-transparent text-[#8b949e] border-[#30363d] hover:bg-[#21262d]'
+   696→                  }`}
+   697→                >
+   698→                  All
+   699→                </button>
+   700→                {uniqueLanguages.map((lang) => {
+   701→                  const color = LANG_COLORS[lang] || '#8b949e';
+   702→                  const isActive = languageFilter === lang;
+   703→                  return (
+   704→                    <button
+   705→                      key={lang}
+   706→                      onClick={() => setLanguageFilter(isActive ? null : lang)}
+   707→                      className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border whitespace-nowrap transition-all duration-200 ${
+   708→                        isActive
+   709→                          ? 'bg-[#238636]/20 text-[#3fb950] border-[#238636]/30'
+   710→                          : 'bg-transparent text-[#8b949e] border-[#30363d] hover:bg-[#21262d]'
+   711→                      }`}
+   712→                    >
+   713→                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+   714→                      {lang.charAt(0).toUpperCase() + lang.slice(1)}
+   715→                    </button>
+   716→                  );
+   717→                })}
+   718→              </div>
+   719→            )}
+   720→
+   721→            {/* Room List */}
+   722→            {loading ? (
+   723→              <div className="flex items-center justify-center py-20">
+   724→                <Loader2 className="w-8 h-8 text-[#8b949e] animate-spin" />
+   725→              </div>
+   726→            ) : filteredRooms.length === 0 ? (
+   727→              <div className="text-center py-20">
+   728→                <div className="flex items-center justify-center w-24 h-24 rounded-2xl bg-[#21262d] mx-auto mb-6 relative float-bob">
+   729→                  <FolderOpen className="w-12 h-12 text-[#484f58]" />
+   730→                  <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#161b22] border-2 border-[#0d1117] flex items-center justify-center">
+   731→                    <Plus className="w-3.5 h-3.5 text-[#8b949e]" />
+   732→                  </div>
+   733→                  {/* Pulsing glow ring */}
+   734→                  <div className="absolute -inset-2 rounded-2xl border border-[#238636]/20 animate-[breathe-glow_3s_ease-in-out_infinite] pointer-events-none" />
+   735→                </div>
+   736→                <h2 className="text-xl font-semibold text-[#e6edf3] mb-2">
+   737→                  {searchQuery ? "No rooms match your search" : "No rooms yet"}
+   738→                </h2>
+   739→                <p className="text-[#8b949e] max-w-md mx-auto mb-6">
+   740→                  {searchQuery
+   741→                    ? "Try adjusting your search query to find what you're looking for."
+   742→                    : "Create a new room to start collaborating, or join an existing one with an invite code."}
+   743→                </p>
+   744→                {!searchQuery && (
+   745→                  <div className="flex items-center justify-center gap-3">
+   746→                    <Button
+   747→                      variant="outline"
+   748→                      onClick={() => setJoinOpen(true)}
+   749→                      className="border-[#30363d] text-[#e6edf3] hover:bg-[#21262d]"
+   750→                    >
+   751→                      <ArrowRight className="w-4 h-4 mr-1.5" />
+   752→                      Join with Code
+   753→                    </Button>
+   754→                    <Button
+   755→                      onClick={() => setCreateOpen(true)}
+   756→                      className="bg-[#238636] hover:bg-[#2ea043] text-white"
+   757→                    >
+   758→                      <Plus className="w-4 h-4 mr-1.5" />
+   759→                      Create Room
+   760→                    </Button>
+   761→                  </div>
+   762→                )}
+   763→              </div>
+   764→            ) : (
+   765→              <AnimatePresence mode="popLayout">
+   766→              <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+   767→                {filteredRooms.map((room) => {
+   768→                  const langColor = LANG_COLORS[room.language] || "#8b949e";
+   769→                  const recent = isRecent(room.lastActiveAt);
+   770→                  const isStarred = favorites.includes(room.id);
+   771→                  const collabCount = room.collaboratorCount ?? room.collaborators?.length ?? 1;
+   772→                  return (
+   773→                    <motion.div
+   774→                      layout
+   775→                      key={room.id}
+   776→                      initial={{ opacity: 0, scale: 0.97 }}
+   777→                      animate={{ opacity: 1, scale: 1 }}
+   778→                      exit={{ opacity: 0, scale: 0.95 }}
+   779→                      transition={{ duration: 0.2 }}
+   780→                    >
+   781→                    <Card
+   782→                      className="cursor-pointer border-[#30363d] hover:border-[#238636]/40 transition-all duration-300 group hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] relative overflow-hidden hover-lift press-effect"
+   783→                      style={{ background: "#161b22" }}
+   784→                      onClick={() => handleOpenRoom(room)}
+   785→                    >
+   786→                      {/* Animated gradient border on hover */}
+   787→                      <div
+   788→                        className="absolute -inset-px opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none z-20"
+   789→                        style={{
+   790→                          background: `linear-gradient(135deg, ${langColor}40, rgba(88,166,255,0.2), ${langColor}30)`,
+   791→                          backgroundSize: '200% 200%',
+   792→                          animation: 'btn-gradient-shift 4s ease infinite',
+   793→                          WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+   794→                          WebkitMaskComposite: 'xor',
+   795→                          maskComposite: 'exclude',
+   796→                          padding: '1.5px',
+   797→                          borderRadius: 'inherit',
+   798→                        }}
+   799→                      />
+   800→                      {/* Gradient overlay at bottom for depth */}
+   801→                      <div
+   802→                        className="absolute bottom-0 left-0 right-0 h-1/3 pointer-events-none"
+   803→                        style={{
+   804→                          background: 'linear-gradient(to top, rgba(13,17,23,0.4) 0%, transparent 100%)',
+   805→                        }}
+   806→                      />
+   807→                      {/* Left accent line — golden when starred */}
+   808→                      <div
+   809→                        className="absolute left-0 top-0 bottom-0 w-[3px] transition-all duration-300"
+   810→                        style={{
+   811→                          backgroundColor: isStarred ? '#d29922' : langColor,
+   812→                          opacity: isStarred ? 1 : 0.6,
+   813→                        }}
+   814→                      />
+   815→                      {/* Delete button - top right, visible on hover, owner only */}
+   816→                      {user?.id === room.ownerId && (
+   817→                        <button
+   818→                          onClick={(e) => {
+   819→                            e.stopPropagation();
+   820→                            setDeleteRoomId(room.id);
+   821→                          }}
+   822→                          className="absolute top-2.5 right-2.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-md text-red-400 hover:bg-red-500/10 hover:shadow-[0_0_12px_rgba(248,81,73,0.3)]"
+   823→                          aria-label="Delete room"
+   824→                        >
+   825→                          <Trash2 className="w-4 h-4" />
+   826→                        </button>
+   827→                      )}
+   828→                      {/* Star button - visible on hover */}
+   829→                      <button
+   830→                        onClick={(e) => toggleFavorite(room.id, e)}
+   831→                        className="absolute top-2.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-md hover:bg-[#21262d]"
+   832→                        style={{ right: user?.id === room.ownerId ? '2.5rem' : '0.625rem' }}
+   833→                        aria-label={isStarred ? 'Unfavorite room' : 'Favorite room'}
+   834→                      >
+   835→                        <Star
+   836→                          className={`w-4 h-4 transition-colors duration-200 ${
+   837→                            isStarred ? 'text-[#d29922] fill-[#d29922]' : 'text-[#8b949e] hover:text-[#d29922]'
+   838→                          }`}
+   839→                        />
+   840→                      </button>
+   841→                      <CardHeader className="pb-3 pl-5">
+   842→                        <div className="flex items-start justify-between gap-2">
+   843→                          <div className="flex items-center gap-2 min-w-0">
+   844→                            <FileCode2 className="w-4 h-4 text-[#8b949e] shrink-0" />
+   845→                            <CardTitle className="text-[#e6edf3] text-base font-semibold line-clamp-1">
+   846→                              {room.name}
+   847→                            </CardTitle>
+   848→                          </div>
+   849→                          {/* Language pill */}
+   850→                          <div
+   851→                            className="shrink-0 flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium transition-shadow duration-300 hover:shadow-[0_0_8px_var(--glow-color)]"
+   852→                            style={{
+   853→                              backgroundColor: `${langColor}15`,
+   854→                              color: langColor,
+   855→                              border: `1px solid ${langColor}30`,
+   856→                              '--glow-color': `${langColor}40`,
+   857→                            } as React.CSSProperties}
+   858→                          >
+   859→                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: langColor }} />
+   860→                            {room.language}
+   861→                          </div>
+   862→                        </div>
+   863→                      </CardHeader>
+   864→                      <CardContent className="pl-5">
+   865→                        <CardDescription className="text-[#8b949e] text-sm mb-4">
+   866→                          Code:{" "}
+   867→                          <span
+   868→                            className="font-mono text-[#58a6ff] cursor-pointer hover:underline hover:shadow-[0_0_8px_rgba(88,166,255,0.2)] transition-shadow duration-300"
+   869→                            onClick={(e) => {
+   870→                              e.stopPropagation();
+   871→                              handleCopyCode(room.inviteCode);
+   872→                            }}
+   873→                          >
+   874→                            {room.inviteCode}
+   875→                          </span>
+   876→                          <Copy className="inline w-3 h-3 ml-1 text-[#484f58] group-hover:text-[#8b949e] transition-colors" />
+   877→                        </CardDescription>
+   878→                        <div className="flex items-center justify-between text-xs">
+   879→                          <div className="flex items-center gap-2">
+   880→                            {/* Mini avatar stack */}
+   881→                            <div className="flex -space-x-1.5">
+   882→                              <div
+   883→                                className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white ring-1 ring-[#30363d]"
+   884→                                style={{ backgroundColor: user?.avatarColor || '#238636' }}
+   885→                                title={room.ownerName === user?.name ? 'You' : (room.ownerName || 'You')}
+   886→                              >
+   887→                                {(room.ownerName === user?.name ? user?.name : (room.ownerName || 'U')).charAt(0).toUpperCase()}
+   888→                              </div>
+   889→                              {collabCount > 1 && (
+   890→                                <div className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-medium text-[#8b949e] ring-1 ring-[#30363d] bg-[#30363d]">
+   891→                                  +{collabCount - 1}
+   892→                                </div>
+   893→                              )}
+   894→                            </div>
+   895→                            <span className="text-[#8b949e]">
+   896→                              {collabCount} collaborator{collabCount !== 1 ? "s" : ""}
+   897→                            </span>
+   898→                          </div>
+   899→                          <div
+   900→                            className={`flex items-center gap-1 ${recent ? "text-[#3fb950]" : "text-[#8b949e]"}`}
+   901→                            title={room.lastActiveAt ? `Last edited: ${new Date(room.lastActiveAt).toLocaleString()}` : undefined}
+   902→                          >
+   903→                            <Clock className="w-3.5 h-3.5" />
+   904→                            <span>{timeAgo(room.lastActiveAt)}</span>
+   905→                          </div>
+   906→                        </div>
+   907→                      </CardContent>
+   908→                    </Card>
+   909→                    </motion.div>
+   910→                  );
+   911→                })}
+   912→              </motion.div>
+   913→              </AnimatePresence>
+   914→            )}
+   915→          </div>
+   916→        </main>
+   917→      </div>
+   918→
+   919→      {/* Create Room Dialog */}
+   920→      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+   921→        <DialogContent
+   922→          className="glass-card"
+   923→          style={{ background: "#161b22", border: "1px solid #30363d" }}
+   924→        >
+   925→          <DialogHeader>
+   926→            <DialogTitle className="text-[#e6edf3]">
+   927→              Create New Room
+   928→            </DialogTitle>
+   929→            <DialogDescription className="text-[#8b949e]">
+   930→              Set up a new collaborative coding room
+   931→            </DialogDescription>
+   932→          </DialogHeader>
+   933→          <form onSubmit={handleCreateRoom}>
+   934→            <div className="space-y-4 py-2">
+   935→              <div className="space-y-2">
+   936→                <Label htmlFor="room-name" className="text-[#e6edf3]">
+   937→                  Room Name
+   938→                </Label>
+   939→                <Input
+   940→                  id="room-name"
+   941→                  placeholder="e.g., Project Alpha"
+   942→                  value={newRoomName}
+   943→                  onChange={(e) => setNewRoomName(e.target.value)}
+   944→                  className="bg-[#0d1117] border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#238636] focus:ring-1 focus:ring-[#238636]/30"
+   945→                  autoFocus
+   946→                />
+   947→              </div>
+   948→              <div className="space-y-2">
+   949→                <Label className="text-[#e6edf3]">Language</Label>
+   950→                <Select value={newRoomLang} onValueChange={setNewRoomLang}>
+   951→                  <SelectTrigger
+   952→                    className="bg-[#0d1117] border-[#30363d] text-[#e6edf3] w-full"
+   953→                  >
+   954→                    <SelectValue placeholder="Select language" />
+   955→                  </SelectTrigger>
+   956→                  <SelectContent
+   957→                    style={{
+   958→                      background: "#161b22",
+   959→                      border: "1px solid #30363d",
+   960→                    }}
+   961→                  >
+   962→                    {LANGUAGES.map((lang) => (
+   963→                      <SelectItem
+   964→                        key={lang}
+   965→                        value={lang}
+   966→                        className="text-[#e6edf3] focus:bg-[#21262d] focus:text-[#e6edf3]"
+   967→                      >
+   968→                        <span className="flex items-center gap-2">
+   969→                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: LANG_COLORS[lang] }} />
+   970→                          {lang.charAt(0).toUpperCase() + lang.slice(1)}
+   971→                        </span>
+   972→                      </SelectItem>
+   973→                    ))}
+   974→                  </SelectContent>
+   975→                </Select>
+   976→              </div>
+   977→              <div className="space-y-2">
+   978→                <Label className="text-[#e6edf3]">Template</Label>
+   979→                <div className="max-h-[240px] overflow-y-auto rounded-md border border-[#30363d] bg-[#0d1117] p-2 custom-scrollbar">
+   980→                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 stagger-grid">
+   981→                    {ROOM_TEMPLATES.map((template) => {
+   982→                      const isSelected = selectedTemplate.id === template.id;
+   983→                      return (
+   984→                        <button
+   985→                          key={template.id}
+   986→                          type="button"
+   987→                          onClick={() => handleTemplateSelect(template)}
+   988→                          className={`
+   989→                            flex flex-col items-center gap-2 rounded-lg p-3 text-center transition-all duration-200 cursor-pointer scale-in-soft
+   990→                            ${isSelected
+   991→                              ? 'border-2 border-[#238636] shadow-[0_0_12px_rgba(35,134,54,0.3)]'
+   992→                              : 'border border-[#30363d] hover:border-[#484f58] hover:scale-[1.02]'
+   993→                            }
+   994→                          `}
+   995→                          style={{ background: '#161b22' }}
+   996→                        >
+   997→                          <span className="text-2xl leading-none">{template.icon}</span>
+   998→                          <span className="text-sm font-medium text-[#e6edf3] leading-tight">{template.name}</span>
+   999→                          <span className="text-xs text-[#8b949e] leading-tight line-clamp-2">{template.description}</span>
+  1000→                        </button>
+  1001→                      );
+  1002→                    })}
+  1003→                  </div>
+  1004→                </div>
+  1005→              </div>
+  1006→            </div>
+  1007→            <DialogFooter className="mt-4">
+  1008→              <Button
+  1009→                type="button"
+  1010→                variant="ghost"
+  1011→                onClick={() => setCreateOpen(false)}
+  1012→                className="text-[#8b949e] hover:text-[#e6edf3]"
+  1013→              >
+  1014→                Cancel
+  1015→              </Button>
+  1016→              <Button
+  1017→                type="submit"
+  1018→                disabled={creating}
+  1019→                className="bg-[#238636] hover:bg-[#2ea043] text-white hover-glow-green"
+  1020→              >
+  1021→                {creating ? (
+  1022→                  <>
+  1023→                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+  1024→                    Creating...
+  1025→                  </>
+  1026→                ) : (
+  1027→                  "Create Room"
+  1028→                )}
+  1029→              </Button>
+  1030→            </DialogFooter>
+  1031→          </form>
+  1032→        </DialogContent>
+  1033→      </Dialog>
+  1034→
+  1035→      {/* Delete Room Confirmation */}
+  1036→      <AlertDialog open={!!deleteRoomId} onOpenChange={(open) => { if (!open) setDeleteRoomId(null); }}>
+  1037→        <AlertDialogContent style={{ background: "#161b22", border: "1px solid #30363d" }}>
+  1038→          <AlertDialogHeader>
+  1039→            <AlertDialogTitle className="text-[#e6edf3]">Delete Room</AlertDialogTitle>
+  1040→            <AlertDialogDescription className="text-[#8b949e]">
+  1041→              Are you sure you want to delete this room? This action cannot be undone.
+  1042→            </AlertDialogDescription>
+  1043→          </AlertDialogHeader>
+  1044→          <AlertDialogFooter>
+  1045→            <AlertDialogCancel className="border-[#30363d] text-[#e6edf3] hover:bg-[#21262d] hover:text-[#e6edf3]">
+  1046→              Cancel
+  1047→            </AlertDialogCancel>
+  1048→            <AlertDialogAction
+  1049→              onClick={(e) => {
+  1050→                e.preventDefault();
+  1051→                handleDeleteRoom();
+  1052→              }}
+  1053→              disabled={deleting}
+  1054→              className="bg-red-600 hover:bg-red-700 text-white"
+  1055→            >
+  1056→              {deleting ? (
+  1057→                <>
+  1058→                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+  1059→                  Deleting...
+  1060→                </>
+  1061→              ) : (
+  1062→                "Delete"
+  1063→              )}
+  1064→            </AlertDialogAction>
+  1065→          </AlertDialogFooter>
+  1066→        </AlertDialogContent>
+  1067→      </AlertDialog>
+  1068→
+  1069→      {/* Join Room Dialog */}
+  1070→      <Dialog open={joinOpen} onOpenChange={setJoinOpen}>
+  1071→        <DialogContent
+  1072→          style={{ background: "#161b22", border: "1px solid #30363d" }}
+  1073→        >
+  1074→          <DialogHeader>
+  1075→            <DialogTitle className="text-[#e6edf3]">Join a Room</DialogTitle>
+  1076→            <DialogDescription className="text-[#8b949e]">
+  1077→              Enter the invite code to join an existing room
+  1078→            </DialogDescription>
+  1079→          </DialogHeader>
+  1080→          <form onSubmit={handleJoinRoom}>
+  1081→            <div className="space-y-4 py-2">
+  1082→              <div className="space-y-2">
+  1083→                <Label htmlFor="invite-code" className="text-[#e6edf3]">
+  1084→                  Invite Code
+  1085→                </Label>
+  1086→                <Input
+  1087→                  id="invite-code"
+  1088→                  placeholder="e.g., ABCD-1234"
+  1089→                  value={inviteCode}
+  1090→                  onChange={(e) => setInviteCode(e.target.value)}
+  1091→                  className="bg-[#0d1117] border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#238636] focus:ring-1 focus:ring-[#238636]/30 font-mono"
+  1092→                  autoFocus
+  1093→                />
+  1094→              </div>
+  1095→            </div>
+  1096→            <DialogFooter className="mt-4">
+  1097→              <Button
+  1098→                type="button"
+  1099→                variant="ghost"
+  1100→                onClick={() => setJoinOpen(false)}
+  1101→                className="text-[#8b949e] hover:text-[#e6edf3]"
+  1102→              >
+  1103→                Cancel
+  1104→              </Button>
+  1105→              <Button
+  1106→                type="submit"
+  1107→                disabled={joining}
+  1108→                className="bg-[#238636] hover:bg-[#2ea043] text-white"
+  1109→              >
+  1110→                {joining ? (
+  1111→                  <>
+  1112→                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+  1113→                    Joining...
+  1114→                  </>
+  1115→                ) : (
+  1116→                  "Join Room"
+  1117→                )}
+  1118→              </Button>
+  1119→            </DialogFooter>
+  1120→          </form>
+  1121→        </DialogContent>
+  1122→      </Dialog>
+  1123→    </div>
+  1124→  );
+  1125→}

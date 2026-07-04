@@ -39,6 +39,9 @@ const SECTIONS: ShortcutSection[] = [
       { keys: ['Ctrl', 'J'], description: 'Toggle Terminal' },
       { keys: ['Ctrl', 'Shift', 'V'], description: 'Toggle Preview' },
       { keys: ['Ctrl', '`'], description: 'Toggle Terminal (Alt)' },
+      { keys: ['Ctrl', 'Shift', 'H'], description: 'Version History' },
+      { keys: ['Ctrl', 'Shift', 'A'], description: 'Activity Log' },
+      { keys: ['Ctrl', 'Shift', 'N'], description: 'Notifications' },
     ],
   },
   {

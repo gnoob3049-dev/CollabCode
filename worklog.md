@@ -1629,3 +1629,313 @@ CollabCode is now at 27+ components, 14 API routes, 1 mini-service, and 4 utilit
 8. **Git integration** — Show file change history, blame, diff
 9. **Terminal emulator** — Built-in terminal for running shell commands
 10. **Real-time collaboration demo** — Test with 2 browser windows to verify Y.js sync
+
+---
+
+## Task 2-b: User Profile Page
+
+### Changes Made
+
+1. **Updated Page type** in `src/store/useStore.ts`:
+   - Added `"profile"` to the `Page` union type
+
+2. **Created API route** `src/app/api/auth/profile/route.ts`:
+   - PUT handler: Updates user's `name` and/or `avatarColor` via JWT-authenticated request
+   - Validates at least one field is provided; returns updated user object
+
+3. **Created ProfilePage component** `src/components/collab/ProfilePage.tsx`:
+   - **Profile Header**: Large avatar circle with initials (uses `avatarColor`), username, email, member since date
+   - **Stats Section**: 4 glass-card stat cards (Rooms Created, Collaborators, Top Language, Joined date) fetched from `/api/rooms`
+   - **Edit Profile Form**: Name input with validation (2-50 chars), 15-color avatar color picker grid with check mark + ring on selected color, live preview of avatar, Save button with loading state
+   - **Animations**: `fadeUp` motion variants, `scale-in-soft` on stat cards, `glass-card`, `input-glow-focus`, `hover-glow-green`, `press-effect` CSS classes
+   - **Navigation**: "Back to Dashboard" button, sticky footer with "CollabCode v1.0"
+   - Dark theme consistent with app (#0d1117, #161b22, #30363d, #e6edf3, #8b949e)
+
+4. **Wired into page.tsx**:
+   - Imported `ProfilePage` and added `case 'profile': return <ProfilePage />;`
+
+5. **Updated Dashboard dropdown** in `src/components/collab/DashboardPage.tsx`:
+   - Changed disabled "Settings / Soon" item to active "Profile" item calling `setCurrentPage('profile')`
+   - Removed Tooltip wrapper and "Soon" badge
+
+### Verification
+- `bun run lint` passes with zero errors
+- Dev server compiles successfully
+
+---
+
+## Task 2-d: Major Landing Page Visual Overhaul
+
+### File Modified: `src/components/collab/LandingPage.tsx`
+
+#### 1. Animated Hero Section
+- Added **3 animated gradient orbs** (green, blue, purple) as a `GradientOrbs` component with slow floating `framer-motion` animations (18s/20s/22s cycles), absolutely positioned behind hero content with 80px blur
+- Added **subtle grid pattern overlay** on the hero background using inline CSS `backgroundImage` with 48px grid lines at 3% opacity
+- Typing effect container retains `pulse-border-glow` class for glow/pulse border animation, plus `will-change-transform` for GPU acceleration
+- Added **second CTA row** below main buttons: "Watch Demo" link with animated play icon (custom SVG triangle inside a circle) that bounces horizontally on a 1.5s loop
+
+#### 2. Enhanced Feature Cards (6 cards)
+- Each card now has a **unique colored circular icon container** at top:
+  - Real-time Sync: green bg (`bg-[#238636]/20`) with `badge-pulse` animation
+  - Live Cursors: blue bg (`bg-[#58a6ff]/15`)
+  - Multi-Language: purple bg (`bg-[#a371f7]/15`)
+  - Live Chat: orange bg (`bg-[#f0883e]/15`)
+  - Code Execution: green bg with Play icon
+  - AI Assistant: purple bg with sparkle rotate animation (`framer-motion` wobble: 15°/-15° repeating)
+- Added **animated shimmer border on hover** using CSS pseudo-element approach with `WebkitMaskComposite: xor` and `shimmer` animation (300% background-size cycling)
+- Description text transitions from `text-[#8b949e]` to `text-[#c9d1d9]` on hover
+- **"Learn more →" link** at bottom of each card: hidden by default, appears on hover via `opacity-0 group-hover:opacity-100` with `translate-y-2 group-hover:translate-y-0` slide-up transition
+
+#### 3. Testimonials Section (NEW)
+- Placed between Features and "Trusted by developers" sections
+- 3 testimonial cards in responsive grid (1 col mobile, 3 col desktop via `md:grid-cols-3`)
+- Each card: quote text in quotes, colored avatar circle with initials, name, role, company
+- Uses `framer-motion` `whileInView` for staggered fade-in (0.15s delay between cards)
+- Cards styled with `.glass-card`, `.hover-lift`, `border-[#30363d]`
+- Testimonials from Sarah Chen (TechFlow), Marcus Rodriguez (DevStudio), Aisha Patel (CodeCraft)
+
+#### 4. Enhanced Stats Counter
+- Replaced static text with **`AnimatedCounter` component** that counts from 0 to target value using `requestAnimationFrame` with easeOutExpo easing
+- Uses `framer-motion` `useInView` hook to trigger animation only when scrolled into view (fires once)
+- Stats updated to: "10,000+" developers, "50,000+" sessions, "99.9%" uptime, "50+" countries
+- Numbers formatted with `toLocaleString()` for thousands separator; decimal support for 99.9%
+
+#### 5. Enhanced Footer
+- **Animated gradient top border**: green → blue → purple gradient with `shimmer` animation (6s cycle, 200% background-size)
+- Added **"Made with 💚 by developers, for developers"** tagline centered above footer grid
+- Social links upgraded: GitHub, Twitter, Discord (`MessageCircle`) icons in bordered rounded-lg containers with hover effects
+- Footer Product links now have icons: Zap (Features), Shield (Pricing), Code2 (Changelog)
+- Footer Resources links now have icons: BookOpen (Documentation), Codepen (API), LifeBuoy (Support)
+
+#### 6. General Improvements
+- Added `will-change-transform` to all animated elements (orbs, feature cards, testimonial cards, stats, hero content)
+- All `framer-motion` animations respect `prefers-reduced-motion`: detected via `window.matchMedia` at module level; when reduced motion is preferred, all `duration` values become 0 and `animate` arrays become empty objects
+- All existing functionality preserved: Get Started, Create Room, View Demo buttons, navigation to login/register/dashboard, typing effect, tech stack badges
+
+### Verification
+- `bun run lint` passes with zero errors
+- Dev server compiles successfully
+
+---
+
+## Dashboard Enhancements (Task 2-e)
+
+### 1. Enhanced Room Cards
+- **File count indicator**: Added a `FolderOpen` icon with file count next to the language badge on each room card. Shows as a small pill with icon + number (e.g., "3 files") that brightens on card hover.
+- **Last edited preview**: Added a monospace text snippet (first 60 chars of first file content) below the invite code description. Truncated with ellipsis, displayed with a subtle left border accent and muted color (`#484f58`).
+- **Quick actions row**: Added "Edit" (green, Pencil icon) and "Share" (blue, Share2 icon) pill buttons that appear on card hover at the bottom, separated by a subtle top border. Both buttons have `e.stopPropagation()` to prevent opening the room.
+- **Thicker left border with glow**: Changed from `w-[3px]` to `w-1` (4px) and added a `boxShadow` glow effect matching the language color (`0 0 8px ${langColor}40`). Starred rooms get golden glow instead.
+
+### 2. Enhanced Empty State
+- **Dual illustration**: Replaced single FolderOpen icon with two side-by-side floating icons — FolderOpen with Plus badge, and a Braces (code bracket) icon with a blue glow ring animation (staggered float animation delay).
+- **Quick-start suggestion cards**: Replaced the old button pair with 3 glass-card styled suggestion cards in a horizontal row (stacks on mobile):
+  - "Create a JavaScript Room" — with JS emoji, creates room with hello-js template
+  - "Create a Python Room" — with Python emoji, creates room with hello-python template
+  - "Join with Invite Code" — with ArrowRight icon, opens the Join Room dialog
+- Added `quickCreateRoom()` function for one-click room creation from the empty state.
+
+### 3. Enhanced Search
+- **Clear button (X)**: Appears when search has text, clears and refocuses input.
+- **⌘K keyboard shortcut badge**: Shows inside input when empty.
+- **Cmd/Ctrl+K handler**: Global `keydown` listener focuses search input.
+- Added `useRef<HTMLInputElement>` for the search input.
+
+### 4. Enhanced Stats Bar
+- **Gradient icon background**: Rounded-full circle with linear gradient.
+- **Trend arrow**: `TrendingUp` icon in green shown when value > 0.
+- **Tooltips**: Each stat wrapped in Tooltip with contextual detail (created this month, room count, language list, active count).
+
+### 5. Room Card Entrance Animation
+- **Fade-in-up** animation: `initial={{ opacity: 0, y: 16 }}` / `animate={{ opacity: 1, y: 0 }}`.
+- **50ms stagger** via `delay: index * 0.05`.
+- Animates on list changes via existing AnimatePresence + motion.div layout.
+
+### 6. Create Room Dialog Enhancement
+- **Prominent "Start from Scratch"**: Full-width button with Plus icon, dashed border, green selection state with checkmark.
+- "Templates" separator between Scratch and the grid.
+- Grid filters out blank template. Max height increased to 280px.
+
+### New Icons: `Pencil`, `Share2`, `X`, `TrendingUp`, `Braces`; `useRef` from React.
+
+### Verification
+- `bun run lint` passes with zero errors
+- Dev server compiles and runs successfully
+- All existing functionality preserved
+
+---
+
+## Task 2-f: Editor Enhancements + Comprehensive Styling Polish
+
+### Part 1: Word Wrap Toggle Button in EditorTopBar
+- **EditorTopBar.tsx**: Added `WrapText` import, new props `onToggleWordWrap?: () => void` and `wordWrap?: 'on' | 'off'`, toggle button between Language selector and connection status (hidden on mobile, visible `sm:`), active state uses green text `text-[#3fb950]` with `.word-wrap-active` pulse animation, `.press-effect` class, tooltip "Word Wrap (Alt+Z)"
+- **EditorPage.tsx**: Passed `onToggleWordWrap` and `wordWrap` props to EditorTopBar, added Alt+Z keyboard shortcut handler in the global keydown listener, changed command palette "Toggle Word Wrap" category from 'View' to 'Editor'
+
+### Part 2: ChatPanel Visual Enhancements
+- **Typing animation**: Added `PLACEHOLDERS` array with 3 cycling texts, `useState` + `useEffect` with `setInterval` (3s) to cycle through: "Type a message...", "Say something...", "Use @ to mention someone..."
+- **Message hover effect**: Added `.chat-msg-hover` and `.chat-msg-hover-remote` classes with CSS `::before` pseudo-element showing 2px left accent border (green for own messages, blue for remote)
+- **Pin indicator**: Added `Pin` icon (already imported) in the chat header right area with `.float-subtle` animation, alongside the existing connection status
+- **Empty state**: Replaced plain empty state with `.glass-card` container, `.breathe-glow` on MessageSquare icon, updated text to "No messages yet. Start the conversation!"
+
+### Part 3: AIPanel Visual Enhancements
+- **Gradient header bar**: Added `<div className="ai-gradient-bar" />` (2px green→blue→purple cycling gradient) at the top of the panel
+- **Model badge**: Added "GPT-4o" pill badge with purple colors and `.badge-pulse` animation next to the "AI Assistant" title
+- **Suggested prompts**: When no conversation is active, shows 3 clickable suggestion chips ("Explain this code", "Find bugs", "Optimize performance") using `.suggestion-chip` CSS class with `Sparkle` icon, each calling `askAI` with appropriate prompt
+- **Character count**: Changed max from 500 to 2000, display format "0 / 2000" in muted text, turns red (`text-[#f85149]`) when > 1800
+- **Input styling**: `.input-glow-focus` class was already applied on the textarea
+
+### Part 4: OutputPanel Visual Enhancements
+- **Clear output button**: Added `Trash2` icon button with red hover color (`hover:text-[#f85149] hover:bg-[#f85149]/10`) in the header, next to the existing Close button
+- **Line count badge**: Added "{N} lines" text next to the Output tab label (shows when output exists and not HTML mode)
+- **Terminal cursor blink**: Changed empty state to use separate `<span className="terminal-cursor" />` element for the blinking green cursor block
+- **Panel glow**: Added `.panel-glow` class to the panel container for left border glow effect
+
+### Part 5: New CSS Classes Added to globals.css
+- `.word-wrap-active` / `@keyframes word-wrap-pulse` — Subtle opacity pulse for active word wrap button
+- `.chat-msg-hover` / `.chat-msg-hover-remote` — Message hover with left accent border (green/blue)
+- `.ai-gradient-bar` / `@keyframes ai-gradient-flow` — Animated gradient bar for AI panel header
+- `.terminal-cursor` / `@keyframes terminal-cursor` — Blinking green cursor block for terminal empty state
+- `.suggestion-chip` — Rounded pill button style for AI suggestion chips
+- `.color-swatch` / `.color-swatch.active` — Profile color swatch with hover/active states
+
+### Verification
+- `bun run lint` passes with zero errors
+- Dev server compiles successfully (no errors in dev.log)
+- All existing functionality preserved
+
+---
+
+## Current Project Status Assessment (After Cycle 9)
+
+CollabCode is now at 28+ components, 15 API routes, 1 mini-service, and 5 utility modules. This cycle focused on activating the dormant Activity Log feature, building a User Profile page, significantly overhauling the Landing Page with animations and testimonials, enhancing the Dashboard with better room cards and empty states, and adding Word Wrap toggle plus comprehensive visual polish to the Chat, AI, and Output panels. The application now has animated gradient orbs on the landing page, testimonial section, profile management, and 6 new CSS utility classes.
+
+## Completed in This Round (Cron Review Cycle 9)
+
+### Bug Fixes
+1. **Toolbar Layout Overlap** — The center section of EditorTopBar (language selector + word wrap toggle) lacked `shrink-0`, causing it to expand and overlay the right section toolbar buttons on certain viewports. Fixed by adding `shrink-0` to the center div and `overflow-hidden` to the toolbar container.
+2. **Activity Log Panel Unreachable** — The ActivityLogPanel component existed from Cycle 6 but had no UI button to open it. Added a ClipboardList button in EditorTopBar (desktop), Ctrl+Shift+A keyboard shortcut, command palette entry, and mobile "More" dropdown entry.
+
+### New Features (7)
+
+1. **User Profile Page** — New `ProfilePage.tsx` component:
+   - Large avatar circle with initials colored by `avatarColor`
+   - Edit form: name input (2-50 chars validated), 15-color picker grid with ring + checkmark
+   - 4 stat cards (Rooms Created, Collaborators, Top Language, Joined) fetched from API
+   - Save with loading state, glass-card styling, fade-in-up animation
+   - New API route: PUT `/api/auth/profile` (update name/avatarColor)
+   - Dashboard dropdown "Settings" changed to "Profile" (active, navigates to profile page)
+   - Page type union updated to include `"profile"`
+
+2. **Activity Log Toggle** — Activated the dormant ActivityLogPanel:
+   - ClipboardList button in EditorTopBar (orange highlight when active)
+   - Ctrl+Shift+A keyboard shortcut
+   - "Toggle Activity Log" command in command palette
+   - Added to mobile "More" dropdown
+   - Added to Keyboard Shortcuts dialog (Panels section)
+
+3. **Word Wrap Toggle** — New editor feature:
+   - WrapText button in toolbar between Language selector and connection status
+   - Alt+Z keyboard shortcut
+   - Active state: green text with `.word-wrap-active` pulse animation
+   - Command palette entry under "Editor" category
+
+4. **Landing Page Visual Overhaul**:
+   - 3 animated gradient orbs (green, blue, purple) floating behind hero with 80px blur
+   - Subtle grid pattern overlay on hero background
+   - "Watch Demo ▶" CTA with animated bouncing play icon
+   - Feature cards: unique colored icon circles, shimmer border on hover, "Learn more →" link
+   - AI Assistant icon has sparkle wobble rotation
+   - **Testimonials Section** (NEW): 3 cards (Sarah Chen, Marcus Rodriguez, Aisha Patel) with staggered whileInView, glass-card, avatar initials
+   - **Animated Stats Counter**: Numbers count from 0 to target with easeOutExpo, triggered by scroll via useInView
+   - Enhanced footer: animated gradient top border, "Made with 💚" tagline, GitHub/Twitter/Discord social links, icons on footer links
+   - All animations respect `prefers-reduced-motion`
+
+5. **Dashboard Enhancements**:
+   - Room cards: file count indicator (FolderOpen icon), first 60 chars code preview, "Edit"/"Share" quick actions on hover, 4px left border with language-colored glow
+   - Enhanced empty state: dual floating icons (FolderOpen + Braces), 3 quick-start suggestion cards (JS room, Python room, Join with code)
+   - Enhanced search: X clear button, ⌘K/Ctrl+K badge in empty input, global keyboard shortcut
+   - Stats bar: gradient icon circles, TrendingUp arrow on non-zero values, contextual tooltips
+   - Room card staggered entrance animation (50ms per card)
+   - Create dialog: prominent "Start from Scratch" option with Plus icon and dashed border
+
+6. **ChatPanel Visual Enhancements**:
+   - Cycling placeholder text (3 phrases rotating every 3s)
+   - Message hover accent borders (green for own, blue for remote via CSS ::before)
+   - Pin icon with float-subtle animation in header
+   - Enhanced empty state: glass-card, breathe-glow icon, "No messages yet" text
+
+7. **AIPanel Visual Enhancements**:
+   - Animated gradient header bar (green→blue→purple, 2px)
+   - "GPT-4o" model badge with badge-pulse animation
+   - 3 suggestion chips when no conversation active (Explain code, Find bugs, Optimize)
+   - Character count display (0/2000, red when >1800)
+
+### Additional Enhancements
+- **OutputPanel**: Clear button (Trash2), line count badge ("13 lines" on Output tab), terminal cursor blink, panel-glow
+- **Keyboard Shortcuts Dialog**: Added Version History, Activity Log, Notifications shortcuts to Panels section
+- **6 new CSS classes**: word-wrap-active, chat-msg-hover/remote, ai-gradient-bar, terminal-cursor, suggestion-chip, color-swatch
+
+### QA Testing Results (via agent-browser)
+- ✅ Landing page: Animated orbs, "Watch Demo" button, testimonials heading, social links, no errors
+- ✅ Dashboard: Stats with trend arrows, room cards with file count + code preview + Edit/Share buttons, quick-start cards in empty state, ⌘K search badge
+- ✅ Profile page: Avatar, name input, 15 color picker, stat cards, "Save Changes" button
+- ✅ Editor: 19 toolbar buttons (new: Toggle Word Wrap, Activity Log), all clickable
+- ✅ AI Panel: "GPT-4o" badge, 3 suggestion chips visible
+- ✅ Output Panel: "13 lines" badge on Output tab
+- ✅ Activity Log: Opens/closes, shows "No activity yet" empty state
+- ✅ ESLint: Zero errors
+- ✅ Dev server: All compiles successful
+- ✅ Browser console: No runtime errors
+
+### QA Screenshots Saved
+- /home/z/my-project/download/qa-9-01-editor-current.png
+- /home/z/my-project/download/qa-9-03-landing.png
+- /home/z/my-project/download/qa-9-04-landing-new.png
+- /home/z/my-project/download/qa-9-05-dashboard-new.png
+- /home/z/my-project/download/qa-9-06-profile.png
+- /home/z/my-project/download/qa-9-07-create-room.png
+- /home/z/my-project/download/qa-9-08-editor-new-features.png
+- /home/z/my-project/download/qa-9-09-editor-ai-output.png
+
+## File Changes Summary
+
+### New Files
+- `src/components/collab/ProfilePage.tsx` — Full profile page with stats, edit form, color picker
+- `src/app/api/auth/profile/route.ts` — PUT endpoint for updating user name/avatarColor
+
+### Modified Files
+- `src/store/useStore.ts` — Added "profile" to Page type union
+- `src/app/page.tsx` — Added ProfilePage import and case
+- `src/components/collab/EditorTopBar.tsx` — Activity Log button, Word Wrap button, layout fix (shrink-0, overflow-hidden)
+- `src/components/collab/EditorPage.tsx` — Activity Log props, Word Wrap props, ClipboardList import, command palette entries
+- `src/components/collab/KeyboardShortcutsDialog.tsx` — 3 new shortcuts in Panels section
+- `src/components/collab/LandingPage.tsx` — Major overhaul: orbs, testimonials, animated stats, enhanced footer, feature card improvements
+- `src/components/collab/DashboardPage.tsx` — Enhanced room cards, empty state, search (⌘K), stats tooltips, staggered animations, create dialog
+- `src/components/collab/ChatPanel.tsx` — Cycling placeholder, message hover accents, pin icon, enhanced empty state
+- `src/components/collab/AIPanel.tsx` — Gradient bar, model badge, suggestion chips, character count
+- `src/components/collab/OutputPanel.tsx` — Clear button, line count badge, terminal cursor, panel-glow
+- `src/app/globals.css` — 6+ new CSS classes and animations
+
+## Services Running
+- Next.js dev server: port 3000
+- CollabCode WebSocket service: port 3003 (not running this session)
+
+## Unresolved Issues / Risks
+1. **Socket.io connection shows "Offline"** — Caddy gateway may not properly proxy WebSocket for Socket.io polling transport. Critical for chat/presence/reactions.
+2. **Y.js Document Persistence** — In-memory on WebSocket server. Unsaved documents lost on restart.
+3. **Collaborative cursors** — Requires 2+ connected users to test visually. Implementation complete.
+4. **Version History persistence** — Currently client-side only. Could be persisted to room data via API.
+5. **Reactions not synced** — Chat reactions are local state only, not synced via Socket.io.
+6. **Code formatting quality** — Monaco's built-in formatter works for JS/TS/HTML/CSS but not for Python/Go/Rust.
+7. **agent-browser limitations** — Cannot type into Monaco editor. Radix overlays interfere with click targeting.
+
+## Priority Recommendations for Next Phase
+1. **Fix Socket.io WebSocket through Caddy** — Critical for chat, presence, and reactions sync
+2. **Version History persistence** — Save snapshots to room data via API for cross-session history
+3. **Sync reactions via Socket.io** — Persist and broadcast reaction changes to all users
+4. **Mobile responsive testing** — Verify bottom sheets, file tree overlay, and touch interactions
+5. **Collaborative selection highlighting** — Multi-line remote selections
+6. **Multi-cursor coloring** — Better visual distinction between remote users
+7. **Git integration** — Show file change history, blame, diff
+8. **Terminal emulator** — Built-in terminal for running shell commands
+9. **Real-time collaboration demo** — Test with 2 browser windows to verify Y.js sync
+10. **Performance optimization** — Lazy load Monaco editor, optimize Y.js for large files
