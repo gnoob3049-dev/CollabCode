@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
-import archiver = require('archiver');
+import { create as createArchiver } from 'archiver';
 
 export async function GET(
   _request: NextRequest,
@@ -44,7 +44,7 @@ export async function GET(
 
     // Create ZIP in memory
     const chunks: Uint8Array[] = [];
-    const archive = archiver('zip', { zlib: { level: 9 } });
+    const archive = createArchiver('zip', { zlib: { level: 9 } });
 
     archive.on('data', (chunk: Buffer) => {
       chunks.push(new Uint8Array(chunk));
