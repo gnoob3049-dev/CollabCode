@@ -16,6 +16,26 @@ import {
 } from "@/components/ui/card";
 import { useStore } from "@/store/useStore";
 
+const bgCodeLines = [
+  'import { YDoc } from "yjs";',
+  'const doc = new YDoc();',
+  'const ytext = doc.getText("code");',
+  'ytext.insert(0, "Hello, ");',
+  'doc.on("update", (update) => {',
+  '  ws.send(update);',
+  '});',
+  'function highlight(code, lang) {',
+  '  return tokenize(code, Grammar[lang]);',
+  '}',
+  'const ast = parse(source, {',
+  '  ecmaVersion: 2024,',
+  '  sourceType: "module",',
+  '});',
+  'export default function Editor() {',
+  '  return <Monaco theme="dark" />;',
+  '}',
+];
+
 export default function RegisterPage() {
   const { setCurrentPage, setUser } = useStore();
   const [name, setName] = useState("");
@@ -87,6 +107,18 @@ export default function RegisterPage() {
 
       {/* Subtle dot grid */}
       <div className="absolute inset-0 dot-grid opacity-20 pointer-events-none" />
+
+      {/* Decorative background code snippet */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-[0.04]">
+        <div className="absolute top-[8%] left-[8%] right-[8%] font-mono text-xs leading-relaxed text-[#a371f7] select-none whitespace-pre">
+          {bgCodeLines.map((line, i) => (
+            <div key={i} className="flex">
+              <span className="text-[#484f58] mr-4 w-6 text-right shrink-0">{i + 1}</span>
+              <span>{line}</span>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <Card className={`w-full max-w-md glass relative z-10 overflow-hidden transition-shadow duration-500 ${formFocused ? 'glow-green-strong' : 'glow-green'}`}>
         {/* Subtle top gradient accent */}
@@ -168,9 +200,11 @@ export default function RegisterPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full py-5 text-base font-semibold rounded-lg text-white transition-all duration-300 hover:shadow-[0_0_20px_rgba(35,134,54,0.3)]"
+              className="w-full py-5 text-base font-semibold rounded-lg text-white transition-all duration-300 hover:shadow-[0_0_24px_rgba(35,134,54,0.5),0_0_48px_rgba(35,134,54,0.2)] hover:scale-[1.02] active:scale-[0.98]"
               style={{
-                background: "linear-gradient(135deg, #238636, #2ea043)",
+                background: "linear-gradient(135deg, #238636 0%, #1a7f37 50%, #0d7a4e 100%)",
+                backgroundSize: "200% 200%",
+                animation: "btn-gradient-shift 4s ease infinite",
               }}
             >
               {loading ? (

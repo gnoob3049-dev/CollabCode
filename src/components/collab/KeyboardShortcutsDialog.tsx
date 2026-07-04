@@ -11,6 +11,7 @@ import {
 interface ShortcutEntry {
   keys: string[];
   description: string;
+  comingSoon?: boolean;
 }
 
 interface ShortcutSection {
@@ -24,19 +25,28 @@ const SECTIONS: ShortcutSection[] = [
     shortcuts: [
       { keys: ['Ctrl', 'S'], description: 'Save' },
       { keys: ['Ctrl', 'Enter'], description: 'Run Code' },
+      { keys: ['Ctrl', 'D'], description: 'Duplicate Line', comingSoon: true },
+      { keys: ['Ctrl', 'Z'], description: 'Undo' },
+      { keys: ['Ctrl', 'Shift', 'Z'], description: 'Redo' },
+      { keys: ['Ctrl', 'F'], description: 'Find' },
+      { keys: ['Ctrl', 'H'], description: 'Replace' },
     ],
   },
   {
     title: 'Panels',
     shortcuts: [
       { keys: ['Ctrl', 'B'], description: 'Toggle Side Panel' },
-      { keys: ['Ctrl', '`'], description: 'Toggle Terminal' },
+      { keys: ['Ctrl', 'J'], description: 'Toggle Terminal' },
+      { keys: ['Ctrl', 'Shift', 'V'], description: 'Toggle Preview' },
+      { keys: ['Ctrl', '`'], description: 'Toggle Terminal (Alt)' },
     ],
   },
   {
     title: 'Navigation',
     shortcuts: [
       { keys: ['Ctrl', 'Shift', 'P'], description: 'Command Palette' },
+      { keys: ['Ctrl', 'G'], description: 'Go to Line' },
+      { keys: ['Ctrl', 'P'], description: 'Quick Open File' },
       { keys: ['Ctrl', '/'], description: 'Show Shortcuts' },
       { keys: ['Escape'], description: 'Close Panels' },
     ],
@@ -62,8 +72,15 @@ function KeyBadge({ label }: { label: string }) {
 
 function ShortcutRow({ shortcut }: { shortcut: ShortcutEntry }) {
   return (
-    <div className="flex items-center justify-between py-2 px-1 rounded hover:bg-[#30363d]/40 transition-colors">
-      <span className="text-sm text-[#8b949e]">{shortcut.description}</span>
+    <div className="flex items-center justify-between py-2 px-2 rounded-md hover:bg-[#30363d]/40 transition-all duration-150 border-l-2 border-transparent hover:border-l-[#238636]/70 -ml-2 pl-3">
+      <span className="text-sm text-[#8b949e] flex items-center gap-2">
+        {shortcut.description}
+        {shortcut.comingSoon && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#21262d] text-[#484f58] border border-[#30363d]">
+            soon
+          </span>
+        )}
+      </span>
       <div className="flex items-center gap-1">
         {shortcut.keys.map((key, i) => (
           <span key={i} className="flex items-center gap-1">
@@ -90,12 +107,15 @@ export default function KeyboardShortcutsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-md p-0 overflow-hidden"
+        className="sm:max-w-lg p-0 overflow-hidden"
         style={{
           backgroundColor: '#161b22',
           borderColor: '#30363d',
         }}
       >
+        {/* Gradient top accent line */}
+        <div className="h-1 bg-gradient-to-r from-[#238636] via-[#58a6ff] to-[#a371f7]" />
+
         <DialogHeader className="p-5 pb-0">
           <DialogTitle
             className="text-base font-semibold text-[#e6edf3]"
@@ -107,7 +127,7 @@ export default function KeyboardShortcutsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="px-5 pb-5 pt-2 space-y-4">
+        <div className="px-5 pb-3 pt-2 space-y-4 max-h-[60vh] overflow-y-auto">
           {SECTIONS.map((section) => (
             <div key={section.title}>
               <h3
@@ -122,6 +142,14 @@ export default function KeyboardShortcutsDialog({
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-3 border-t border-[#30363d]/50 flex items-center justify-between">
+          <span className="text-[10px] text-[#30363d]">CollabCode v1.0</span>
+          <span className="text-[10px] text-[#30363d]">
+            {SECTIONS.reduce((acc, s) => acc + s.shortcuts.length, 0)} shortcuts
+          </span>
         </div>
       </DialogContent>
     </Dialog>

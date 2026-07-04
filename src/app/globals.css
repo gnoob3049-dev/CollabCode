@@ -346,16 +346,16 @@ textarea:focus,
   box-shadow: 0 0 0 3px rgba(35, 134, 54, 0.12), 0 0 12px rgba(35, 134, 54, 0.08);
 }
 
-/* Polished scrollbar - thinner with rounded caps */
+/* Polished scrollbar - ultra-thin (4px) with rounded caps */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(48, 54, 61, 0.6);
+  background: rgba(48, 54, 61, 0.5);
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
@@ -367,7 +367,7 @@ textarea:focus,
 /* Firefox scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(48, 54, 61, 0.6) transparent;
+  scrollbar-color: rgba(48, 54, 61, 0.5) transparent;
 }
 
 /* Monaco editor customizations */
@@ -611,4 +611,79 @@ textarea:focus,
   color: #238636;
   font-size: 0.9em;
   margin-left: 1px;
+}
+
+/* ---- NEW: Task 5-c styling polish utilities ---- */
+
+/* Shimmer border animation for premium buttons */
+@keyframes shimmer-border {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
+.shimmer-border {
+  position: relative;
+  border: none !important;
+  background-clip: padding-box;
+}
+
+.shimmer-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: linear-gradient(
+    135deg,
+    #238636,
+    #58a6ff,
+    #a371f7,
+    #238636
+  );
+  background-size: 300% 300%;
+  animation: shimmer-border 4s ease-in-out infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Purple glow effect */
+.glow-purple {
+  box-shadow: 0 0 20px rgba(163, 113, 247, 0.25);
+}
+
+.glow-purple-strong {
+  box-shadow: 0 0 30px rgba(163, 113, 247, 0.35), 0 0 60px rgba(163, 113, 247, 0.12);
+}
+
+/* Code background display class */
+.code-bg {
+  background-color: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 0.375rem;
+  font-family: 'Geist Mono', 'Fira Code', monospace;
+}
+
+/* Fade-in-up animation for page transitions */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fade-in-up 0.3s ease-out both;
 }

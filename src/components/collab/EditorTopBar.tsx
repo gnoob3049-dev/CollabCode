@@ -358,12 +358,12 @@ export default function EditorTopBar({
                       : 'text-[#8b949e] hover:text-[#e6edf3]'
                   )}
                   onClick={onTogglePreview}
-                  aria-label="Toggle HTML preview"
+                  aria-label="Toggle preview"
                 >
                   <Eye className="size-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">Toggle HTML Preview (Ctrl+Shift+V)</TooltipContent>
+              <TooltipContent side="bottom">Toggle Preview (Ctrl+Shift+V)</TooltipContent>
             </Tooltip>
           )}
 

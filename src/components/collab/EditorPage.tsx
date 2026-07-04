@@ -25,6 +25,9 @@ import {
   WrapText,
   Map,
   Eye,
+  Search,
+  Replace,
+  FileSearch,
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -38,6 +41,8 @@ import KeyboardShortcutsDialog from './KeyboardShortcutsDialog';
 import EditorStatusBar from './EditorStatusBar';
 import CommandPalette, { type CommandItem } from './CommandPalette';
 import HtmlPreview from './HtmlPreview';
+import MarkdownPreview from './MarkdownPreview';
+import EditorTabs from './EditorTabs';
 import type { ChatMessage, Room } from '@/store/useStore';
 
 const LANGUAGE_MAP: Record<string, string> = {
@@ -128,6 +133,8 @@ export default function EditorPage() {
         css: 'css',
         sql: 'sql',
         rs: 'rust',
+        md: 'markdown',
+        mdx: 'markdown',
       };
       return map[ext] || language;
     },
@@ -305,10 +312,11 @@ export default function EditorPage() {
         });
       }
 
-      // Track current code
-      editorInstance.onDidChangeModelContent(() => {
-        setCurrentCode(editorInstance.getValue());
-      });
+      // Track current code — also sync immediately on mount
+      const syncCode = () => setCurrentCode(editorInstance.getValue());
+      editorInstance.onDidChangeModelContent(syncCode);
+      // Initial sync after a tick to capture content set during mount
+      setTimeout(syncCode, 100);
 
       // Track cursor position
       editorInstance.onDidChangeCursorPosition((e) => {
@@ -334,6 +342,7 @@ export default function EditorPage() {
 
       if (modelValue !== yjsValue) {
         editorInstance.setValue(yjsValue);
+        setCurrentCode(yjsValue);
       }
 
       bindingRef.current?.destroy();
@@ -527,6 +536,12 @@ export default function EditorPage() {
     return ext === 'html' || ext === 'htm' || ext === 'css';
   }, [currentFileName]);
 
+  // Determine if current file is a Markdown file
+  const isMarkdownFile = useMemo(() => {
+    const ext = currentFileName.split('.').pop()?.toLowerCase() || '';
+    return ext === 'md' || ext === 'mdx';
+  }, [currentFileName]);
+
   const handleTogglePreview = useCallback(() => {
     setHtmlPreviewOpen((v) => !v);
   }, []);
@@ -696,8 +711,38 @@ export default function EditorPage() {
         action: () => setMinimapEnabled((v) => !v),
       },
       {
-        id: 'toggle-html-preview',
-        label: 'Toggle HTML Preview',
+        id: 'find',
+        label: 'Find in File',
+        icon: Search,
+        shortcut: ['Ctrl', 'F'],
+        category: 'Editor Actions',
+        action: () => editorRef.current?.getAction('actions.find')?.run(),
+      },
+      {
+        id: 'replace',
+        label: 'Find and Replace',
+        icon: Replace,
+        shortcut: ['Ctrl', 'H'],
+        category: 'Editor Actions',
+        action: () => editorRef.current?.getAction('editor.action.startFindReplaceAction')?.run(),
+      },
+      {
+        id: 'quick-open-file',
+        label: 'Quick Open File',
+        icon: FileSearch,
+        shortcut: ['Ctrl', 'P'],
+        category: 'Navigation',
+        action: () => {
+          if (files.length <= 1) return;
+          const name = window.prompt('Open file:', files.join(', '));
+          if (name?.trim() && files.includes(name.trim())) {
+            setCurrentFileName(name.trim());
+          }
+        },
+      },
+      {
+        id: 'toggle-preview',
+        label: 'Toggle Preview',
         icon: Eye,
         shortcut: ['Ctrl', 'Shift', 'V'],
         category: 'View',
@@ -742,6 +787,10 @@ export default function EditorPage() {
         e.preventDefault();
         e.stopPropagation();
         setRightPanelOpen(!rightPanelOpen);
+      } else if (isMod && !e.shiftKey && (e.key === 'p' || e.key === 'P')) {
+        // Block browser print dialog — let command palette handle Ctrl+Shift+P
+        e.preventDefault();
+        e.stopPropagation();
       } else if (isMod && e.key === '/') {
         e.preventDefault();
         e.stopPropagation();
@@ -749,7 +798,7 @@ export default function EditorPage() {
       } else if (isMod && e.shiftKey && (e.key === 'V' || e.key === 'v')) {
         e.preventDefault();
         e.stopPropagation();
-        if (isHtmlFile) handleTogglePreview();
+        if (isHtmlFile || isMarkdownFile) handleTogglePreview();
       } else if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
@@ -760,7 +809,7 @@ export default function EditorPage() {
     };
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [handleSave, handleRun, rightPanelOpen, commandPaletteOpen, isHtmlFile, handleTogglePreview]);
+  }, [handleSave, handleRun, rightPanelOpen, commandPaletteOpen, isHtmlFile, isMarkdownFile, handleTogglePreview]);
 
   // Remote cursor decorations: CSS for y-monaco's built-in selection highlighting
   // + name labels for each remote user's cursor position
@@ -880,7 +929,7 @@ export default function EditorPage() {
         onOpenShortcuts={() => setShortcutsOpen(true)}
         onTogglePreview={handleTogglePreview}
         previewOpen={htmlPreviewOpen}
-        showPreview={isHtmlFile}
+        showPreview={isHtmlFile || isMarkdownFile}
         rightPanelOpen={rightPanelOpen}
         outputPanelOpen={outputPanelOpen}
         unreadChatCount={unreadChatCount}
@@ -906,6 +955,26 @@ export default function EditorPage() {
 
         {/* Editor + Output */}
         <div className="flex flex-col flex-1 min-w-0">
+          {/* Editor Tabs */}
+          <EditorTabs
+            files={files}
+            activeFile={currentFileName}
+            onSelectFile={(name) => {
+              setCurrentFileName(name);
+              // If HTML preview is open and new file isn't HTML, close it
+              const ext = name.split('.').pop()?.toLowerCase() || '';
+              if (htmlPreviewOpen && !['html', 'htm', 'css'].includes(ext)) {
+                setHtmlPreviewOpen(false);
+              }
+            }}
+            onCloseFile={(name) => {
+              if (files.length <= 1) {
+                toast.error('Cannot close the only file');
+                return;
+              }
+              handleDeleteFile(name);
+            }}
+          />
           {/* Editor + Preview horizontal split */}
           <div className="flex flex-1 min-h-0">
             {/* Monaco Editor */}
@@ -966,6 +1035,26 @@ export default function EditorPage() {
                   className="overflow-hidden shrink-0"
                 >
                   <HtmlPreview
+                    code={currentCode}
+                    visible={htmlPreviewOpen}
+                    onClose={() => setHtmlPreviewOpen(false)}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Markdown Preview Panel */}
+            <AnimatePresence initial={false}>
+              {htmlPreviewOpen && isMarkdownFile && (
+                <motion.div
+                  key="markdown-preview"
+                  initial={{ width: 0, opacity: 0 }}
+                  animate={{ width: '50%', opacity: 1 }}
+                  exit={{ width: 0, opacity: 0 }}
+                  transition={{ type: 'tween', duration: 0.2 }}
+                  className="overflow-hidden shrink-0"
+                >
+                  <MarkdownPreview
                     code={currentCode}
                     visible={htmlPreviewOpen}
                     onClose={() => setHtmlPreviewOpen(false)}

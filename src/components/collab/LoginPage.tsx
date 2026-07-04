@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardContent,
@@ -16,6 +17,26 @@ import {
 } from "@/components/ui/card";
 import { useStore } from "@/store/useStore";
 
+const bgCodeLines = [
+  'const session = new CollabSession();',
+  'await session.connect(roomId);',
+  'session.on("sync", () => {',
+  '  editor.applyChanges();',
+  '});',
+  'function handlePresence(user) {',
+  '  renderCursor(user.color, user.pos);',
+  '}',
+  'export { session, handlePresence };',
+  'const ws = new WebSocket(gateway);',
+  'ws.onmessage = (e) => patch(e.data);',
+  'class CRDTDocument extends Y.Doc {',
+  '  #bindings = new WeakMap();',
+  '  bind(key, editor) {',
+  '    this.#bindings.set(key, editor);',
+  '  }',
+  '}',
+];
+
 export default function LoginPage() {
   const { setCurrentPage, setUser } = useStore();
   const [email, setEmail] = useState("");
@@ -23,6 +44,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formFocused, setFormFocused] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -79,6 +101,18 @@ export default function LoginPage() {
       {/* Subtle dot grid */}
       <div className="absolute inset-0 dot-grid opacity-20 pointer-events-none" />
 
+      {/* Decorative background code snippet */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-[0.04]">
+        <div className="absolute top-[10%] left-[5%] right-[5%] font-mono text-xs leading-relaxed text-[#58a6ff] select-none whitespace-pre">
+          {bgCodeLines.map((line, i) => (
+            <div key={i} className="flex">
+              <span className="text-[#484f58] mr-4 w-6 text-right shrink-0">{i + 1}</span>
+              <span>{line}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <Card className={`w-full max-w-md glass relative z-10 overflow-hidden transition-shadow duration-500 ${formFocused ? 'glow-green-strong' : 'glow-green'}`}>
         {/* Subtle top gradient accent */}
         <div
@@ -117,9 +151,18 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-[#e6edf3]">
-                Password
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-[#e6edf3]">
+                  Password
+                </Label>
+                <a
+                  href="#"
+                  className="text-xs text-[#58a6ff] hover:text-[#79c0ff] transition-colors"
+                  onClick={(e) => e.preventDefault()}
+                >
+                  Forgot password?
+                </a>
+              </div>
               <div className="relative">
                 <Input
                   id="password"
@@ -140,12 +183,28 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
+
+            {/* Remember me */}
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="remember"
+                checked={rememberMe}
+                onCheckedChange={(checked) => setRememberMe(checked === true)}
+                className="border-[#30363d] data-[state=checked]:bg-[#238636] data-[state=checked]:border-[#238636]"
+              />
+              <Label htmlFor="remember" className="text-sm text-[#8b949e] cursor-pointer select-none">
+                Remember me
+              </Label>
+            </div>
+
             <Button
               type="submit"
               disabled={loading}
-              className="w-full py-5 text-base font-semibold rounded-lg text-white transition-all duration-300 hover:shadow-[0_0_20px_rgba(35,134,54,0.3)]"
+              className="w-full py-5 text-base font-semibold rounded-lg text-white transition-all duration-300 hover:shadow-[0_0_24px_rgba(35,134,54,0.5),0_0_48px_rgba(35,134,54,0.2)] hover:scale-[1.02] active:scale-[0.98]"
               style={{
-                background: "linear-gradient(135deg, #238636, #2ea043)",
+                background: "linear-gradient(135deg, #238636 0%, #1a7f37 50%, #0d7a4e 100%)",
+                backgroundSize: "200% 200%",
+                animation: "btn-gradient-shift 4s ease infinite",
               }}
             >
               {loading ? (

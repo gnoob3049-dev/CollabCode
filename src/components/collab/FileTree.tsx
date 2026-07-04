@@ -15,6 +15,7 @@ import {
   PanelLeftOpen,
   Files,
   Circle,
+  ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -213,16 +214,8 @@ export default function FileTree({
         <div className="flex items-center gap-2">
           <Files className="size-3.5 text-[#8b949e]" />
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8b949e]">
-            Explorer
+            Files{files.length > 0 && ` (${files.length})`}
           </span>
-          {files.length > 0 && (
-            <Badge
-              variant="secondary"
-              className="h-4 px-1.5 text-[10px] bg-[#30363d] text-[#8b949e] border-0 rounded-full"
-            >
-              {files.length}
-            </Badge>
-          )}
         </div>
         <div className="flex items-center gap-0.5">
           <Tooltip>
@@ -310,7 +303,7 @@ export default function FileTree({
                         'group file-tree-item flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-all duration-150 text-sm relative',
                         isActive
                           ? 'active bg-[#161b22] text-[#e6edf3] shadow-[inset_0_0_0_1px_rgba(35,134,54,0.15)]'
-                          : 'text-[#8b949e] hover:bg-[#161b22]/80 hover:text-[#e6edf3] hover:translate-x-0.5'
+                          : 'text-[#8b949e] hover:bg-[#161b22]/80 hover:text-[#e6edf3]'
                       )}
                       onClick={() => onSelectFile(file)}
                       onDoubleClick={() => {
@@ -318,9 +311,15 @@ export default function FileTree({
                         setRenameValue(file);
                       }}
                     >
-                      {/* Active file dot indicator */}
+                      {/* Active file animated green dot */}
                       {isActive && (
-                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-[#238636] rounded-r" />
+                        <span
+                          className="shrink-0 w-2 h-2 rounded-full bg-[#238636] animate-[pulse-dot_2s_ease-in-out_infinite]"
+                          style={{ boxShadow: '0 0 6px rgba(35, 134, 54, 0.6)' }}
+                        />
+                      )}
+                      {!isActive && (
+                        <span className="shrink-0 w-2" />
                       )}
                       <Icon className={cn('size-4 shrink-0', color)} />
                       <Tooltip>
@@ -336,13 +335,15 @@ export default function FileTree({
                               onClick={(e) => e.stopPropagation()}
                             />
                           ) : (
-                            <span className="truncate text-xs font-mono">{file}</span>
+                            <span className="truncate text-xs font-mono flex-1">{file}</span>
                           )}
                         </TooltipTrigger>
                         <TooltipContent side="right">
                           <span className="font-mono">{file}</span>
                         </TooltipContent>
                       </Tooltip>
+                      {/* Hover arrow indicator */}
+                      <ChevronRight className="size-3 shrink-0 text-[#30363d] opacity-0 group-hover:opacity-100 group-hover:text-[#8b949e] transition-all duration-150" />
                     </div>
                   </ContextMenuTrigger>
                   <ContextMenuContent className="w-48 bg-[#161b22] border-[#30363d] text-[#e6edf3]">
@@ -374,14 +375,30 @@ export default function FileTree({
             );
           })}
 
+          {/* NEW FILE button at bottom of list */}
+          {files.length > 0 && !showNewFileInput && (
+            <button
+              onClick={() => setShowNewFileInput(true)}
+              className="flex items-center gap-2 px-3 py-2 mx-1 mt-1 rounded-md text-xs text-[#238636] hover:bg-[#238636]/10 transition-colors duration-150 w-full"
+            >
+              <Plus className="size-3" />
+              <span className="font-medium">New File</span>
+            </button>
+          )}
+
           {files.length === 0 && !showNewFileInput && (
-            <div className="px-2 py-6 text-center">
-              <File className="size-6 text-[#30363d] mx-auto mb-2 animate-pulse" />
-              <p className="text-[#484f58] text-xs">
-                No files yet.
+            <div className="px-2 py-8 text-center">
+              {/* Pulsing border container with animated FileCode icon */}
+              <div
+                className="w-14 h-14 mx-auto mb-3 rounded-xl border border-[#30363d] flex items-center justify-center animate-[pulse-border-glow_3s_ease-in-out_infinite] bg-[#0d1117]"
+              >
+                <FileCode className="size-7 text-[#484f58] animate-pulse" />
+              </div>
+              <p className="text-[#8b949e] text-xs font-medium">
+                No files yet
               </p>
-              <p className="text-[#30363d] text-xs mt-0.5">
-                Click + to create one.
+              <p className="text-[#484f58] text-xs mt-1">
+                Create your first file to start coding
               </p>
             </div>
           )}

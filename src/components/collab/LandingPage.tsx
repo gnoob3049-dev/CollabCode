@@ -17,9 +17,11 @@ import {
   Zap,
   Shield,
   Users,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStore } from "@/store/useStore";
+import { ROOM_TEMPLATES } from "@/lib/templates";
 
 const codeSnippets = [
   'const result = await fetch("/api/data");',
@@ -181,8 +183,9 @@ const itemVariants = {
 };
 
 export default function LandingPage() {
-  const { setCurrentPage, isAuthenticated } = useStore();
+  const { setCurrentPage, setCurrentRoomId, isAuthenticated, setUser } = useStore();
   const [visibleFeatures, setVisibleFeatures] = useState(false);
+  const [creatingDemo, setCreatingDemo] = useState(false);
   const featuresRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
 
@@ -219,6 +222,48 @@ export default function LandingPage() {
       setCurrentPage("dashboard");
     } else {
       setCurrentPage("login");
+    }
+  };
+
+  const handleViewDemo = async () => {
+    if (!isAuthenticated) {
+      setCurrentPage("register");
+      return;
+    }
+
+    setCreatingDemo(true);
+    try {
+      const htmlCssTemplate = ROOM_TEMPLATES.find((t) => t.id === "html-css");
+      const templateFiles = htmlCssTemplate?.files || [{ name: "index.html", content: "" }];
+
+      const res = await fetch("/api/rooms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Demo Room",
+          language: "html",
+          files: templateFiles,
+        }),
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        if (res.status === 401) {
+          setUser(null);
+          setCurrentPage("landing");
+          return;
+        }
+        return;
+      }
+
+      const data = await res.json();
+      setCurrentRoomId(data.room.id);
+      setCurrentPage("editor");
+    } catch {
+      // silently fail
+    } finally {
+      setCreatingDemo(false);
     }
   };
 
@@ -277,31 +322,52 @@ export default function LandingPage() {
               variants={itemVariants}
               className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12 sm:mb-16"
             >
-              {/* Animated gradient border button */}
-              <div className="relative group p-[2px] rounded-lg bg-gradient-to-r from-[#238636] via-[#58a6ff] to-[#238636] bg-[length:200%_100%] animate-[gradient-rotate_3s_linear_infinite]"
+              {/* Get Started - glow green on hover */}
+              <div
+                className="relative group p-[2px] rounded-lg"
                 style={{
-                  animation: "shimmer 3s ease-in-out infinite",
-                  backgroundSize: "200% 100%",
                   background: "linear-gradient(90deg, #238636, #58a6ff, #238636, #58a6ff)",
                   backgroundSize: "300% 100%",
+                  animation: "shimmer 3s ease-in-out infinite",
                 }}
               >
                 <Button
                   onClick={handleGetStarted}
                   size="lg"
-                  className="w-full sm:w-auto px-8 py-6 text-base font-semibold rounded-lg bg-[#238636] hover:bg-[#2ea043] text-white"
+                  className="w-full sm:w-auto px-8 py-6 text-base font-semibold rounded-lg bg-[#238636] hover:bg-[#2ea043] text-white transition-shadow duration-300 hover:shadow-[0_0_24px_rgba(35,134,54,0.5),0_0_48px_rgba(35,134,54,0.2)]"
                 >
                   <span className="animated-underline">Get Started</span>
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </div>
+              {/* Create a Room - subtle glow */}
               <Button
                 onClick={handleCreateRoom}
                 variant="outline"
                 size="lg"
-                className="w-full sm:w-auto px-8 py-6 text-base font-semibold rounded-lg border-[#30363d] text-[#e6edf3] hover:bg-[#21262d]"
+                className="w-full sm:w-auto px-8 py-6 text-base font-semibold rounded-lg border-[#30363d] text-[#e6edf3] hover:bg-[#21262d] transition-shadow duration-300 hover:shadow-[0_0_16px_rgba(88,166,255,0.15)]"
               >
                 Create a Room
+              </Button>
+              {/* View Demo button */}
+              <Button
+                onClick={handleViewDemo}
+                variant="ghost"
+                size="lg"
+                disabled={creatingDemo}
+                className="w-full sm:w-auto px-8 py-6 text-base font-medium rounded-lg text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] transition-all duration-300 hover:shadow-[0_0_16px_rgba(163,113,247,0.15)] border border-transparent hover:border-[#a371f7]/30"
+              >
+                {creatingDemo ? (
+                  <span className="flex items-center gap-2">
+                    <span className="size-4 border-2 border-[#8b949e]/30 border-t-[#a371f7] rounded-full animate-spin" />
+                    Loading...
+                  </span>
+                ) : (
+                  <>
+                    <Eye className="mr-2 w-4 h-4" />
+                    View Demo
+                  </>
+                )}
               </Button>
             </motion.div>
 
@@ -370,19 +436,41 @@ export default function LandingPage() {
                 <motion.div
                   key={feature.title}
                   variants={itemVariants}
-                  className="group rounded-xl border border-[#30363d] bg-[#161b22] p-5 sm:p-6 hover:border-[#238636]/50 hover:shadow-[0_0_20px_rgba(35,134,54,0.15)] transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02]"
+                  className="group relative rounded-xl border border-[#30363d] bg-[#161b22] p-5 sm:p-6 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:border-[#238636]/50 hover:shadow-[0_0_20px_rgba(35,134,54,0.15)]"
                 >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#21262d] group-hover:bg-[#238636]/20 transition-colors duration-300">
-                      <feature.icon className="w-5 h-5 text-[#238636] group-hover:text-[#3fb950] transition-colors duration-300" />
+                  {/* Inner glow effect on hover */}
+                  <div
+                    className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                    style={{
+                      background: "radial-gradient(ellipse at 50% 0%, rgba(35,134,54,0.06) 0%, transparent 70%)",
+                    }}
+                  />
+                  {/* Animated gradient border on hover */}
+                  <div
+                    className="absolute -inset-px rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                    style={{
+                      background: "linear-gradient(135deg, rgba(35,134,54,0.4), rgba(88,166,255,0.2), rgba(163,113,247,0.3))",
+                      backgroundSize: "200% 200%",
+                      animation: "btn-gradient-shift 4s ease infinite",
+                      WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+                      WebkitMaskComposite: "xor",
+                      maskComposite: "exclude",
+                      padding: "1px",
+                    }}
+                  />
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#21262d] group-hover:bg-[#238636]/20 transition-colors duration-300">
+                        <feature.icon className="w-5 h-5 text-[#238636] group-hover:text-[#3fb950] transition-colors duration-300" />
+                      </div>
+                      <h3 className="text-base sm:text-lg font-semibold text-[#e6edf3]">
+                        {feature.title}
+                      </h3>
                     </div>
-                    <h3 className="text-base sm:text-lg font-semibold text-[#e6edf3]">
-                      {feature.title}
-                    </h3>
+                    <p className="text-sm sm:text-base text-[#8b949e] leading-relaxed">
+                      {feature.description}
+                    </p>
                   </div>
-                  <p className="text-sm sm:text-base text-[#8b949e] leading-relaxed">
-                    {feature.description}
-                  </p>
                 </motion.div>
               ))}
             </motion.div>

@@ -1,6 +1,17 @@
 'use client';
 
+import { useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+
+const AVATAR_COLORS = [
+  '#238636', '#58a6ff', '#a371f7', '#f85149', '#d29922',
+  '#3fb950', '#79c0ff', '#d2a8ff', '#ffa657', '#ff7b72',
+];
 
 interface EditorStatusBarProps {
   fileName: string;
@@ -18,6 +29,21 @@ export default function EditorStatusBar({
   tabSize,
 }: EditorStatusBarProps) {
   const displayLanguage = language.charAt(0).toUpperCase() + language.slice(1);
+  const [copied, setCopied] = useState(false);
+
+  // Simulated collaborator count (in real app, this would come from presence data)
+  const collaboratorCount = 3;
+  const visibleAvatars = Math.min(collaboratorCount, 5);
+  const overflowCount = Math.max(0, collaboratorCount - 5);
+
+  const handleCopyFileName = useCallback(() => {
+    navigator.clipboard.writeText(fileName).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }).catch(() => {
+      // silently fail
+    });
+  }, [fileName]);
 
   return (
     <div
@@ -48,7 +74,24 @@ export default function EditorStatusBar({
 
       {/* Left side */}
       <div className="relative flex items-center gap-1 pl-2.5 pr-3">
-        <span className="text-[#e6edf3] font-medium">{fileName}</span>
+        {/* File name with click-to-copy */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={handleCopyFileName}
+              className="text-[#e6edf3] font-medium hover:text-[#3fb950] transition-colors duration-150 cursor-pointer"
+            >
+              {copied ? (
+                <span className="text-[#3fb950]">Copied!</span>
+              ) : (
+                fileName
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs">
+            Click to copy file name
+          </TooltipContent>
+        </Tooltip>
         <span className="text-[#30363d]">│</span>
         <span className="transition-colors duration-200 hover:text-[#e6edf3] cursor-default">{displayLanguage}</span>
         <span className="text-[#30363d]">│</span>
@@ -64,7 +107,54 @@ export default function EditorStatusBar({
       </div>
 
       {/* Right side */}
-      <div className="relative flex items-center gap-1.5 pl-3 pr-2.5">
+      <div className="relative flex items-center gap-2 pl-3 pr-2.5">
+        {/* Problems indicator */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-sm transition-colors duration-200 hover:text-[#e6edf3] hover:bg-[#21262d] cursor-default">
+              <span style={{ color: '#238636' }}>✓</span>
+              <span>0 errors, 0 warnings</span>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs">
+            No problems detected
+          </TooltipContent>
+        </Tooltip>
+
+        <span className="text-[#30363d]">│</span>
+
+        {/* Collaborator avatar dots */}
+        {collaboratorCount > 0 && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="flex items-center gap-0.5 cursor-default">
+                {Array.from({ length: visibleAvatars }).map((_, i) => (
+                  <span
+                    key={i}
+                    className="inline-block rounded-full -ml-0.5 first:ml-0 transition-transform duration-150 hover:scale-125"
+                    style={{
+                      width: '8px',
+                      height: '8px',
+                      backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length],
+                      boxShadow: `0 0 4px ${AVATAR_COLORS[i % AVATAR_COLORS.length]}60`,
+                    }}
+                  />
+                ))}
+                {overflowCount > 0 && (
+                  <span className="text-[10px] text-[#8b949e] ml-0.5">
+                    +{overflowCount}
+                  </span>
+                )}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">
+              {collaboratorCount} collaborator{collaboratorCount !== 1 ? 's' : ''} online
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        <span className="text-[#30363d]">│</span>
+
         <span
           className={cn(
             'flex items-center gap-1.5 px-1.5 py-0.5 rounded-sm transition-colors duration-300',
