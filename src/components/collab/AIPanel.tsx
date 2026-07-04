@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface AIPanelProps {
   currentCode: string;
@@ -268,8 +269,4 @@ export default function AIPanel({
       </div>
     </div>
   );
-}
-
-function cn(...classes: (string | boolean | undefined | null)[]) {
-  return classes.filter(Boolean).join(' ');
 }

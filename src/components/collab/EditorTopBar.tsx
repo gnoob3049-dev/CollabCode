@@ -16,6 +16,7 @@ import {
   Settings,
   Wifi,
   WifiOff,
+  HelpCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -67,6 +68,7 @@ interface EditorTopBarProps {
   isSaving: boolean;
   onRenameRoom: (name: string) => void;
   onOpenSettings: () => void;
+  onOpenShortcuts: () => void;
   isConnected?: boolean;
 }
 
@@ -90,6 +92,7 @@ export default function EditorTopBar({
   isSaving,
   onRenameRoom,
   onOpenSettings,
+  onOpenShortcuts,
   isConnected = true,
 }: EditorTopBarProps) {
   const [isEditingName, setIsEditingName] = useState(false);
@@ -410,6 +413,21 @@ export default function EditorTopBar({
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">Room Settings</TooltipContent>
+          </Tooltip>
+
+          {/* Shortcuts help */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#30363d]"
+                onClick={onOpenShortcuts}
+              >
+                <HelpCircle className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Keyboard Shortcuts</TooltipContent>
           </Tooltip>
 
           {/* Panel toggle */}

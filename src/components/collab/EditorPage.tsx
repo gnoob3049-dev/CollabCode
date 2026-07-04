@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import Editor, { type OnMount, type editor } from '@monaco-editor/react';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
@@ -8,7 +8,23 @@ import { MonacoBinding } from 'y-monaco';
 import { io, type Socket } from 'socket.io-client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { MessageSquare, Sparkles } from 'lucide-react';
+import {
+  MessageSquare,
+  Sparkles,
+  FilePlus,
+  Pencil,
+  Trash2,
+  Save,
+  Play,
+  Terminal,
+  PanelRight,
+  Paintbrush,
+  LayoutDashboard,
+  Settings,
+  Keyboard,
+  WrapText,
+  Map,
+} from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import EditorTopBar from './EditorTopBar';
@@ -17,7 +33,9 @@ import ChatPanel from './ChatPanel';
 import AIPanel from './AIPanel';
 import OutputPanel from './OutputPanel';
 import RoomSettingsModal from './RoomSettingsModal';
+import KeyboardShortcutsDialog from './KeyboardShortcutsDialog';
 import EditorStatusBar from './EditorStatusBar';
+import CommandPalette, { type CommandItem } from './CommandPalette';
 import type { ChatMessage, Room } from '@/store/useStore';
 
 const LANGUAGE_MAP: Record<string, string> = {
@@ -83,6 +101,10 @@ export default function EditorPage() {
   const [currentCode, setCurrentCode] = useState('');
   const [connected, setConnected] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [wordWrap, setWordWrap] = useState<'on' | 'off'>('on');
+  const [minimapEnabled, setMinimapEnabled] = useState(false);
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
 
   // Get language from file extension
@@ -532,27 +554,284 @@ export default function EditorPage() {
     [setCurrentRoom, setLanguage]
   );
 
-  // Keyboard shortcuts
+  // Apply word wrap and minimap options to Monaco
+  useEffect(() => {
+    editorRef.current?.updateOptions({
+      wordWrap,
+      minimap: { enabled: minimapEnabled },
+    });
+  }, [wordWrap, minimapEnabled]);
+
+  // Build command palette items
+  const commandItems: CommandItem[] = useMemo(
+    () => [
+      {
+        id: 'new-file',
+        label: 'New File',
+        icon: FilePlus,
+        category: 'File Operations',
+        action: () => {
+          const name = window.prompt('Enter file name:', 'untitled.js');
+          if (name?.trim()) handleCreateFile(name.trim());
+        },
+      },
+      {
+        id: 'rename-file',
+        label: 'Rename File',
+        icon: Pencil,
+        category: 'File Operations',
+        action: () => {
+          const newName = window.prompt(
+            'Enter new name:',
+            currentFileName
+          );
+          if (newName?.trim() && newName.trim() !== currentFileName) {
+            handleRenameFile(currentFileName, newName.trim());
+          }
+        },
+      },
+      {
+        id: 'delete-file',
+        label: 'Delete Current File',
+        icon: Trash2,
+        category: 'File Operations',
+        action: () => {
+          if (files.length <= 1) {
+            toast.error('Cannot delete the only file');
+            return;
+          }
+          handleDeleteFile(currentFileName);
+        },
+      },
+      {
+        id: 'save-room',
+        label: 'Save Room',
+        icon: Save,
+        shortcut: ['Ctrl', 'S'],
+        category: 'File Operations',
+        action: handleSave,
+      },
+      {
+        id: 'run-code',
+        label: 'Run Code',
+        icon: Play,
+        shortcut: ['Ctrl', 'Enter'],
+        category: 'Editor Actions',
+        action: handleRun,
+      },
+      {
+        id: 'toggle-terminal',
+        label: 'Toggle Terminal',
+        icon: Terminal,
+        category: 'Editor Actions',
+        action: () => setOutputPanelOpen(!outputPanelOpen),
+      },
+      {
+        id: 'toggle-side-panel',
+        label: 'Toggle Side Panel',
+        icon: PanelRight,
+        shortcut: ['Ctrl', 'B'],
+        category: 'Editor Actions',
+        action: () => setRightPanelOpen(!rightPanelOpen),
+      },
+      {
+        id: 'format-document',
+        label: 'Format Document',
+        icon: Paintbrush,
+        category: 'Editor Actions',
+        action: () => {
+          editorRef.current
+            ?.getAction('editor.action.formatDocument')
+            ?.run();
+        },
+      },
+      {
+        id: 'go-to-dashboard',
+        label: 'Go to Dashboard',
+        icon: LayoutDashboard,
+        category: 'Navigation',
+        action: handleBack,
+      },
+      {
+        id: 'open-settings',
+        label: 'Open Settings',
+        icon: Settings,
+        category: 'Navigation',
+        action: () => setSettingsOpen(true),
+      },
+      {
+        id: 'toggle-shortcuts',
+        label: 'Toggle Keyboard Shortcuts',
+        icon: Keyboard,
+        shortcut: ['Ctrl', '/'],
+        category: 'Navigation',
+        action: () => setShortcutsOpen((v) => !v),
+      },
+      {
+        id: 'toggle-word-wrap',
+        label: 'Toggle Word Wrap',
+        icon: WrapText,
+        category: 'View',
+        action: () =>
+          setWordWrap((v) => (v === 'on' ? 'off' : 'on')),
+      },
+      {
+        id: 'toggle-minimap',
+        label: 'Toggle Minimap',
+        icon: Map,
+        category: 'View',
+        action: () => setMinimapEnabled((v) => !v),
+      },
+    ],
+    [
+      handleCreateFile,
+      handleRenameFile,
+      handleDeleteFile,
+      handleSave,
+      handleRun,
+      handleBack,
+      currentFileName,
+      files.length,
+      outputPanelOpen,
+      rightPanelOpen,
+    ]
+  );
+
+  // Keyboard shortcuts — capture phase to intercept before Monaco
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // When command palette is open, let it handle everything
+      if (commandPaletteOpen) return;
+
       const isMod = e.metaKey || e.ctrlKey;
       if (isMod && e.key === 's') {
         e.preventDefault();
+        e.stopPropagation();
         handleSave();
       } else if (isMod && e.key === 'Enter') {
         e.preventDefault();
+        e.stopPropagation();
         handleRun();
+      } else if (isMod && e.shiftKey && (e.key === 'P' || e.key === 'p')) {
+        e.preventDefault();
+        e.stopPropagation();
+        setCommandPaletteOpen(true);
       } else if (isMod && e.key === 'b') {
         e.preventDefault();
+        e.stopPropagation();
         setRightPanelOpen(!rightPanelOpen);
+      } else if (isMod && e.key === '/') {
+        e.preventDefault();
+        e.stopPropagation();
+        setShortcutsOpen(true);
       } else if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
         setRightPanelOpen(false);
         setOutputPanelOpen(false);
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSave, handleRun, rightPanelOpen]);
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [handleSave, handleRun, rightPanelOpen, commandPaletteOpen]);
+
+  // Remote cursor decorations: CSS for y-monaco's built-in selection highlighting
+  // + name labels for each remote user's cursor position
+  useEffect(() => {
+    const provider = providerRef.current;
+    const editorInstance = editorRef.current;
+    if (!provider || !editorInstance) return;
+
+    const awareness = provider.awareness;
+    let labelDecorations: string[] = [];
+    const styleEl = document.createElement('style');
+    styleEl.dataset.collabCursor = 'true';
+    document.head.appendChild(styleEl);
+
+    const updateRemoteCursors = () => {
+      const states = awareness.getStates();
+      const localClientId = awareness.clientID;
+      let css = '';
+      const newLabelDecorations: editor.IModelDeltaDecoration[] = [];
+      const model = editorInstance.getModel();
+
+      states.forEach((state: any, clientId: number) => {
+        if (clientId === localClientId) return;
+
+        const user = state.user as { name?: string; color?: string } | undefined;
+        const name = user?.name || 'Anonymous';
+        const color = user?.color || '#8b949e';
+        const safeId = clientId.toString().replace(/[^a-z0-9]/gi, '');
+
+        // Inject CSS for y-monaco's built-in selection/cursor decoration classes
+        css += `.yRemoteSelection-${safeId} { background-color: ${color}33 !important; }\n`;
+        css += `.yRemoteSelectionHead-${safeId} { border-left: 2px solid ${color} !important; }\n`;
+
+        if (!model) return;
+
+        // Resolve cursor line from awareness state
+        let cursorLine: number | null = null;
+
+        // Method 1: y-monaco sets 'selection' with Y.RelativePositions
+        if (state.selection?.head != null && ydocRef.current) {
+          const ytext = ydocRef.current.getText(currentFileName);
+          if (ytext) {
+            const headAbs = Y.createAbsolutePositionFromRelativePosition(
+              state.selection.head,
+              ytext.doc
+            );
+            if (headAbs !== null && headAbs.type === ytext) {
+              cursorLine = model.getPositionAt(headAbs.index).lineNumber;
+            }
+          }
+        }
+
+        // Method 2: fallback to 'cursor' field with { line, column }
+        if (cursorLine === null && state.cursor?.line != null) {
+          cursorLine = state.cursor.line;
+        }
+
+        // Add name label decoration at the cursor line
+        if (cursorLine !== null) {
+          const safeLine = Math.max(1, cursorLine);
+          css += `.cc-label-${safeId} { background: ${color}; color: #fff; font-size: 11px; padding: 1px 6px; border-radius: 3px 3px 3px 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; line-height: 16px; display: inline-block; margin-left: 4px; vertical-align: middle; pointer-events: none; }\n`;
+
+          newLabelDecorations.push({
+            range: {
+              startLineNumber: safeLine,
+              startColumn: 1,
+              endLineNumber: safeLine,
+              endColumn: 1,
+            },
+            options: {
+              isWholeLine: true,
+              after: {
+                content: `  ${name} `,
+                inlineClassName: `cc-label-${safeId}`,
+              },
+            },
+          });
+        }
+      });
+
+      styleEl.textContent = css;
+      labelDecorations = editorInstance.deltaDecorations(
+        labelDecorations,
+        newLabelDecorations
+      );
+    };
+
+    awareness.on('change', updateRemoteCursors);
+    updateRemoteCursors();
+
+    return () => {
+      awareness.off('change', updateRemoteCursors);
+      editorInstance.deltaDecorations(labelDecorations, []);
+      if (styleEl.parentNode) {
+        document.head.removeChild(styleEl);
+      }
+    };
+  }, [currentFileName]);
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#0d1117]">
@@ -571,6 +850,7 @@ export default function EditorPage() {
         onToggleOutput={() => setOutputPanelOpen(!outputPanelOpen)}
         onBack={handleBack}
         onOpenSettings={() => setSettingsOpen(true)}
+        onOpenShortcuts={() => setShortcutsOpen(true)}
         rightPanelOpen={rightPanelOpen}
         outputPanelOpen={outputPanelOpen}
         unreadChatCount={unreadChatCount}
@@ -615,7 +895,7 @@ export default function EditorPage() {
                 fontSize: 13,
                 fontFamily: "'Geist Mono', 'Fira Code', 'Cascadia Code', monospace",
                 fontLigatures: true,
-                minimap: { enabled: false },
+                minimap: { enabled: minimapEnabled },
                 lineNumbers: 'on',
                 scrollBeyondLastLine: false,
                 renderLineHighlight: 'line',
@@ -626,7 +906,7 @@ export default function EditorPage() {
                 bracketPairColorization: { enabled: true },
                 automaticLayout: true,
                 tabSize: 2,
-                wordWrap: 'on',
+                wordWrap: wordWrap,
                 suggestOnTriggerCharacters: true,
                 quickSuggestions: true,
                 parameterHints: { enabled: true },
@@ -744,6 +1024,19 @@ export default function EditorPage() {
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         onUpdate={handleSettingsUpdate}
+      />
+
+      {/* Keyboard Shortcuts Dialog */}
+      <KeyboardShortcutsDialog
+        open={shortcutsOpen}
+        onOpenChange={setShortcutsOpen}
+      />
+
+      {/* Command Palette */}
+      <CommandPalette
+        open={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+        commands={commandItems}
       />
     </div>
   );

@@ -22,6 +22,7 @@ export interface Room {
   language: string;
   files: RoomFile[];
   collaborators: string[];
+  ownerId?: string;
   ownerName?: string;
   lastActiveAt?: string;
   createdAt?: string;

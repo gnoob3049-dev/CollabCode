@@ -142,7 +142,7 @@ function TypingEffect() {
   }, []);
 
   return (
-    <div className="glass glow-green rounded-xl p-5 sm:p-7 font-mono text-sm sm:text-base relative overflow-hidden">
+    <div className="glass glow-green rounded-xl p-5 sm:p-7 font-mono text-sm sm:text-base relative overflow-hidden pulse-border-glow">
       <div className="absolute inset-0 bg-gradient-to-br from-[#238636]/5 to-[#58a6ff]/5 pointer-events-none" />
       <div className="relative z-10">
         <div className="flex items-center gap-2 mb-4">
@@ -291,7 +291,7 @@ export default function LandingPage() {
                   size="lg"
                   className="w-full sm:w-auto px-8 py-6 text-base font-semibold rounded-lg bg-[#238636] hover:bg-[#2ea043] text-white"
                 >
-                  Get Started
+                  <span className="animated-underline">Get Started</span>
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </div>
@@ -370,7 +370,7 @@ export default function LandingPage() {
                 <motion.div
                   key={feature.title}
                   variants={itemVariants}
-                  className="group rounded-xl border border-[#30363d] bg-[#161b22] p-5 sm:p-6 hover:border-[#238636]/50 hover:shadow-[0_0_20px_rgba(35,134,54,0.15)] transition-all duration-300 hover:-translate-y-0.5"
+                  className="group rounded-xl border border-[#30363d] bg-[#161b22] p-5 sm:p-6 hover:border-[#238636]/50 hover:shadow-[0_0_20px_rgba(35,134,54,0.15)] transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02]"
                 >
                   <div className="flex items-center gap-3 mb-3">
                     <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#21262d] group-hover:bg-[#238636]/20 transition-colors duration-300">
@@ -446,6 +446,27 @@ export default function LandingPage() {
                 <span className="hover:text-[#8b949e] cursor-pointer transition-colors">Terms</span>
                 <span className="hover:text-[#8b949e] cursor-pointer transition-colors">Security</span>
               </div>
+            </div>
+
+            {/* Built with tech stack icons */}
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+              {[
+                { name: "React", color: "#61dafb" },
+                { name: "Y.js", color: "#ff8c42" },
+                { name: "Monaco", color: "#007acc" },
+                { name: "Socket.io", color: "#8b949e" },
+              ].map((tech) => (
+                <span
+                  key={tech.name}
+                  className="px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-mono text-[#8b949e] border transition-colors duration-200 hover:text-[#e6edf3]"
+                  style={{
+                    borderColor: `${tech.color}40`,
+                    color: tech.color,
+                  }}
+                >
+                  {tech.name}
+                </span>
+              ))}
             </div>
           </div>
         </footer>

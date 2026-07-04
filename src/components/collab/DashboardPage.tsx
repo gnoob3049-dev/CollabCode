@@ -14,6 +14,7 @@ import {
   FileCode2,
   Hash,
   ArrowRight,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { AnimatePresence, motion } from "framer-motion";
 import { useStore, type Room } from "@/store/useStore";
 
 const LANGUAGES = [
@@ -115,6 +127,10 @@ export default function DashboardPage() {
   const [joinOpen, setJoinOpen] = useState(false);
   const [inviteCode, setInviteCode] = useState("");
   const [joining, setJoining] = useState(false);
+
+  // Delete room
+  const [deleteRoomId, setDeleteRoomId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const filteredRooms = useMemo(() => {
     if (!searchQuery.trim()) return rooms;
@@ -279,6 +295,29 @@ export default function DashboardPage() {
     toast.success("Invite code copied!");
   };
 
+  const handleDeleteRoom = async () => {
+    if (!deleteRoomId) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/rooms/${deleteRoomId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || "Failed to delete room");
+        return;
+      }
+      setRooms((prev) => prev.filter((r) => r.id !== deleteRoomId));
+      toast.success("Room deleted successfully");
+      setDeleteRoomId(null);
+    } catch {
+      toast.error("Something went wrong");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const initial = user?.name?.charAt(0)?.toUpperCase() || "?";
   const avatarColor = user?.avatarColor || "#238636";
 
@@ -303,7 +342,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white ring-2 ring-[#238636]/50 ring-offset-2 ring-offset-[#0d1117]"
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white ring-2 ${rooms.some(r => isRecent(r.lastActiveAt)) ? 'ring-[#238636] pulse-ring-green' : 'ring-[#238636]/50'} ring-offset-2 ring-offset-[#0d1117]`}
                   style={{ backgroundColor: avatarColor }}
                 >
                   {initial}
@@ -384,14 +423,23 @@ export default function DashboardPage() {
                   <span className="hidden sm:inline">Join Room</span>
                   <span className="sm:hidden">Join</span>
                 </Button>
-                <Button
-                  onClick={() => setCreateOpen(true)}
-                  className="bg-[#238636] hover:bg-[#2ea043] text-white shrink-0"
+                <div
+                  className="relative p-[1.5px] rounded-md shrink-0"
+                  style={{
+                    background: "linear-gradient(90deg, #238636, #58a6ff, #238636, #58a6ff)",
+                    backgroundSize: "300% 100%",
+                    animation: "shimmer 3s ease-in-out infinite",
+                  }}
                 >
-                  <Plus className="w-4 h-4 mr-1.5" />
-                  <span className="hidden sm:inline">Create New Room</span>
-                  <span className="sm:hidden">New</span>
-                </Button>
+                  <Button
+                    onClick={() => setCreateOpen(true)}
+                    className="bg-[#238636] hover:bg-[#2ea043] text-white rounded-[5px]"
+                  >
+                    <Plus className="w-4 h-4 mr-1.5" />
+                    <span className="hidden sm:inline">Create New Room</span>
+                    <span className="sm:hidden">New</span>
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -437,13 +485,21 @@ export default function DashboardPage() {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <AnimatePresence mode="popLayout">
+              <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredRooms.map((room) => {
                   const langColor = LANG_COLORS[room.language] || "#8b949e";
                   const recent = isRecent(room.lastActiveAt);
                   return (
-                    <Card
+                    <motion.div
+                      layout
                       key={room.id}
+                      initial={{ opacity: 0, scale: 0.97 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                    <Card
                       className="cursor-pointer border-[#30363d] hover:border-[#238636]/40 transition-all duration-300 group hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] relative overflow-hidden"
                       style={{ background: "#161b22" }}
                       onClick={() => handleOpenRoom(room)}
@@ -453,6 +509,19 @@ export default function DashboardPage() {
                         className="absolute left-0 top-0 bottom-0 w-[3px] transition-all duration-300"
                         style={{ backgroundColor: langColor, opacity: 0.6 }}
                       />
+                      {/* Delete button - top right, visible on hover, owner only */}
+                      {user?.id === room.ownerId && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteRoomId(room.id);
+                          }}
+                          className="absolute top-2.5 right-2.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-md text-red-400 hover:bg-red-500/10"
+                          aria-label="Delete room"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                       <CardHeader className="pb-3 pl-5">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
@@ -498,7 +567,8 @@ export default function DashboardPage() {
                             </span>
                           </div>
                           <div
-                            className={`flex items-center gap-1 ${recent ? "text-[#3fb950]" : "text-[#8b949e]"}`}
+                            className={`flex items-center gap-1 ${recent ? "text-[#3fb950]" : "text-[#8b949e]"} group/tooltip relative`}
+                            title={room.lastActiveAt ? `Last edited: ${new Date(room.lastActiveAt).toLocaleString()}` : undefined}
                           >
                             <Clock className="w-3.5 h-3.5" />
                             <span>{timeAgo(room.lastActiveAt)}</span>
@@ -506,9 +576,11 @@ export default function DashboardPage() {
                         </div>
                       </CardContent>
                     </Card>
+                    </motion.div>
                   );
                 })}
-              </div>
+              </motion.div>
+              </AnimatePresence>
             )}
           </div>
         </main>
@@ -599,6 +671,40 @@ export default function DashboardPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Room Confirmation */}
+      <AlertDialog open={!!deleteRoomId} onOpenChange={(open) => { if (!open) setDeleteRoomId(null); }}>
+        <AlertDialogContent style={{ background: "#161b22", border: "1px solid #30363d" }}>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[#e6edf3]">Delete Room</AlertDialogTitle>
+            <AlertDialogDescription className="text-[#8b949e]">
+              Are you sure you want to delete this room? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-[#30363d] text-[#e6edf3] hover:bg-[#21262d] hover:text-[#e6edf3]">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteRoom();
+              }}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Join Room Dialog */}
       <Dialog open={joinOpen} onOpenChange={setJoinOpen}>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Code2, Loader2 } from "lucide-react";
+import { Code2, Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,9 @@ export default function LoginPage() {
   const { setCurrentPage, setUser } = useStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [formFocused, setFormFocused] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -77,7 +79,7 @@ export default function LoginPage() {
       {/* Subtle dot grid */}
       <div className="absolute inset-0 dot-grid opacity-20 pointer-events-none" />
 
-      <Card className="w-full max-w-md glass glow-green relative z-10 overflow-hidden">
+      <Card className={`w-full max-w-md glass relative z-10 overflow-hidden transition-shadow duration-500 ${formFocused ? 'glow-green-strong' : 'glow-green'}`}>
         {/* Subtle top gradient accent */}
         <div
           className="absolute top-0 left-0 right-0 h-[2px]"
@@ -88,7 +90,7 @@ export default function LoginPage() {
 
         <CardHeader className="text-center pb-4">
           <div className="flex items-center justify-center gap-2 mb-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#238636] glow-green">
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#238636] glow-green float-bob">
               <Code2 className="w-6 h-6 text-white" />
             </div>
             <span className="text-xl font-bold text-[#e6edf3]">CollabCode</span>
@@ -99,7 +101,7 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" onFocus={() => setFormFocused(true)} onBlur={() => setFormFocused(false)}>
             <div className="space-y-2">
               <Label htmlFor="email" className="text-[#e6edf3]">
                 Email
@@ -118,15 +120,25 @@ export default function LoginPage() {
               <Label htmlFor="password" className="text-[#e6edf3]">
                 Password
               </Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="bg-[#0d1117]/80 border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#238636] focus:ring-1 focus:ring-[#238636]/30 transition-all"
-                autoComplete="current-password"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="bg-[#0d1117]/80 border-[#30363d] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#238636] focus:ring-1 focus:ring-[#238636]/30 transition-all pr-10"
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#484f58] hover:text-[#8b949e] transition-colors"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
             <Button
               type="submit"
@@ -146,6 +158,13 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
+
+          {/* Separator */}
+          <div className="flex items-center gap-3 my-4 px-1">
+            <div className="flex-1 h-px bg-[#30363d]" />
+            <span className="text-xs text-[#484f58]">or continue with</span>
+            <div className="flex-1 h-px bg-[#30363d]" />
+          </div>
         </CardContent>
         <CardFooter className="justify-center pb-5">
           <p className="text-sm text-[#8b949e]">
